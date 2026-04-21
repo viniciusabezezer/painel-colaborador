@@ -1,0 +1,246 @@
+@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700&display=swap');
+
+:root {
+    /* Color Palette - School Identity */
+    --primary-green: #2E7D32;
+    --primary-green-rgb: 46, 125, 50;
+    --primary-orange: #F57C00;
+    --primary-orange-rgb: 245, 124, 0;
+    --bg-white: #F8F9FA;
+    --text-dark: #1A1A1A;
+    --text-muted: #666666;
+    
+    /* Layout Tokens */
+    --card-bg: rgba(255, 255, 255, 0.85);
+    --card-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.07);
+    --card-border: rgba(255, 255, 255, 0.18);
+    --radius-lg: 24px;
+    --radius-md: 16px;
+    --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: 'Outfit', sans-serif;
+    background-color: var(--bg-white);
+    color: var(--text-dark);
+    line-height: 1.6;
+    overflow-x: hidden;
+    min-height: 100vh;
+    background: radial-gradient(circle at top right, rgba(245, 124, 0, 0.05), transparent),
+                radial-gradient(circle at bottom left, rgba(46, 125, 50, 0.05), transparent);
+}
+
+.container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 2rem;
+}
+
+/* Glassmorphism Classes */
+.glass {
+    background: var(--card-bg);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid var(--card-border);
+    box-shadow: var(--card-shadow);
+}
+
+/* Animations */
+@keyframes fadeInDown {
+    from {
+        opacity: 0;
+        transform: translateY(-20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@keyframes fadeInUp {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@keyframes float {
+    0% { transform: translateY(0px); }
+    50% { transform: translateY(-5px); }
+    100% { transform: translateY(0px); }
+}
+
+/* Header Styles */
+header {
+    text-align: center;
+    margin-bottom: 4rem;
+    animation: fadeInDown 1s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.badge {
+    display: inline-block;
+    background: rgba(46, 125, 50, 0.1);
+    color: var(--primary-green);
+    padding: 0.5rem 1.25rem;
+    border-radius: 50px;
+    font-weight: 600;
+    font-size: 0.85rem;
+    margin-bottom: 1.5rem;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+h1 {
+    font-size: 3rem;
+    font-weight: 700;
+    background: linear-gradient(135deg, var(--primary-green) 0%, var(--primary-orange) 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    margin-bottom: 1rem;
+}
+
+.subtitle {
+    color: var(--text-muted);
+    font-size: 1.25rem;
+    max-width: 600px;
+    margin: 0 auto;
+}
+
+/* Grid Layout */
+.form-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+    gap: 1.5rem;
+    opacity: 0;
+    animation: fadeInUp 0.8s ease-out 0.2s forwards;
+}
+
+.form-card {
+    text-decoration: none;
+    color: inherit;
+    padding: 2rem;
+    border-radius: var(--radius-lg);
+    display: flex;
+    flex-direction: column;
+    transition: var(--transition);
+}
+
+.form-card:hover {
+    transform: translateY(-12px);
+    border-color: rgba(var(--primary-orange-rgb), 0.4);
+    background: rgba(255, 255, 255, 0.95);
+    box-shadow: 0 20px 40px rgba(0,0,0,0.08);
+}
+
+.icon-wrapper {
+    width: 60px;
+    height: 60px;
+    border-radius: var(--radius-md);
+    background: linear-gradient(135deg, rgba(var(--primary-green-rgb), 0.1) 0%, rgba(var(--primary-orange-rgb), 0.1) 100%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 1.5rem;
+    font-size: 1.8rem;
+    transition: var(--transition);
+}
+
+.form-card:hover .icon-wrapper {
+    background: linear-gradient(135deg, var(--primary-green) 0%, var(--primary-orange) 100%);
+    color: white;
+    animation: float 2s ease-in-out infinite;
+}
+
+.form-card h3 {
+    font-size: 1.4rem;
+    margin-bottom: 0.75rem;
+    color: var(--primary-green);
+    transition: var(--transition);
+}
+
+.form-card:hover h3 {
+    color: var(--primary-orange);
+}
+
+.form-card p {
+    color: var(--text-muted);
+    font-size: 0.95rem;
+    flex-grow: 1;
+}
+
+.card-footer {
+    margin-top: 2rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    color: var(--primary-green);
+    font-weight: 600;
+    font-size: 0.85rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    transition: var(--transition);
+}
+
+.form-card:hover .card-footer {
+    color: var(--primary-orange);
+    gap: 1rem;
+}
+
+/* Restriction Info Section */
+.restriction-info {
+    margin-top: 5rem;
+    padding: 3rem;
+    border-radius: var(--radius-lg);
+    text-align: center;
+    animation: fadeInUp 0.8s ease-out 0.4s forwards;
+    opacity: 0;
+}
+
+.restriction-info h4 {
+    color: var(--primary-orange);
+    margin-bottom: 1rem;
+    font-size: 1.25rem;
+}
+
+.domains {
+    display: flex;
+    justify-content: center;
+    gap: 1rem;
+    flex-wrap: wrap;
+    margin-top: 1.5rem;
+}
+
+.domain-tag {
+    background: rgba(0,0,0,0.05);
+    padding: 0.5rem 1rem;
+    border-radius: 8px;
+    font-family: monospace;
+    font-size: 0.9rem;
+}
+
+/* Footer */
+footer {
+    margin-top: 5rem;
+    padding: 3rem 0;
+    border-top: 1px solid rgba(0,0,0,0.05);
+    text-align: center;
+    color: var(--text-muted);
+    font-size: 0.9rem;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    h1 { font-size: 2.25rem; }
+    .container { padding: 1.5rem; }
+    .form-grid { grid-template-columns: 1fr; }
+}
