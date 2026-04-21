@@ -106,6 +106,35 @@ body::before {
 .delay-3 { animation-delay: 0.3s; }
 
 /* Header Styles */
+#quote-container {
+    max-width: 800px;
+    margin: 0 auto 3rem;
+    padding: 1.5rem 2rem;
+    border-radius: 20px;
+    text-align: center;
+    border: 1px solid hsla(var(--h-orange), 100%, 60%, 0.15);
+    background: hsla(var(--h-orange), 100%, 60%, 0.05);
+    position: relative;
+    overflow: hidden;
+}
+
+#paulo-freire-quote {
+    font-size: 1.1rem;
+    font-style: italic;
+    font-weight: 500;
+    color: var(--orange-deep);
+    margin-bottom: 0.5rem;
+    line-height: 1.5;
+}
+
+#quote-container .author {
+    font-size: 0.75rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    color: var(--orange-vibrant);
+}
+
 header {
     text-align: center;
     margin-bottom: 6rem;
@@ -348,6 +377,10 @@ footer .branding-text {
         gap: 1.5rem;
     }
     .form-card { padding: 2rem; }
+    .form-card h3 {
+        font-size: 1.6rem;
+        margin-bottom: 0.75rem;
+    }
     .school-logo { height: 90px; }
     .restriction-info { padding: 3rem 1.5rem; }
 }

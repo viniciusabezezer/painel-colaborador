@@ -10,6 +10,11 @@
 <body>
 
     <div class="container">
+        <div id="quote-container" class="glass reveal delay-1">
+            <p id="paulo-freire-quote">"Carregando reflexão..."</p>
+            <span class="author">— Paulo Freire</span>
+        </div>
+
         <header class="reveal">
             <!-- School Logo -->
             <div class="logo-container">
@@ -125,5 +130,48 @@
         </footer>
     </div>
 
+    <script>
+        const quotes = [
+            "Educação não transforma o mundo. Educação muda as pessoas. Pessoas transformam o mundo.",
+            "Se a educação sozinha não transforma a sociedade, sem ela tampouco a sociedade muda.",
+            "A leitura do mundo precede a leitura da palavra.",
+            "Ninguém educa ninguém, ninguém educa a si mesmo, os homens se educam entre si.",
+            "Ensinar não é transmitir conhecimento, mas criar as possibilidades para a sua produção.",
+            "A esperança não é um esperar passivo, mas um esperar ativo.",
+            "Não há saber mais ou saber menos: há saberes diferentes.",
+            "É preciso que a leitura seja um ato de amor.",
+            "A alegria não chega apenas no encontro do achado, mas faz parte do processo da busca.",
+            "A educação é um ato de amor, por isso, um ato de coragem.",
+            "Onde quer que haja mulheres e homens, há sempre o que aprender.",
+            "A educação é sempre uma teoria do conhecimento posta em prática.",
+            "Ai daqueles que pararem com sua capacidade de sonhar e de invenção.",
+            "Ninguém sabe tudo, ninguém ignora tudo.",
+            "Lutar pela esperança é um dever imperioso.",
+            "A cabeça pensa onde os pés pisam.",
+            "Sem a curiosidade que me move, não aprendo nem ensino.",
+            "Ninguém nasce feito. Vamos nos fazendo aos poucos.",
+            "Eu sou um intelectual que não tem medo de ser amoroso.",
+            "Transformar o mundo é um ato político.",
+            "Mudar é difícil, mas é possível.",
+            "Assumir-se como sujeito da história é uma das tarefas da educação.",
+            "A alfabetização é a habilidade de ler o mundo.",
+            "O estudo não é um ato de consumir ideias, mas de criá-las.",
+            "Educar é impregnar de sentido o que fazemos a cada instante.",
+            "A paz se constrói com a superação de realidades sociais perversas.",
+            "Não é no silêncio que os homens se fazem, mas na palavra e na ação.",
+            "Gosto de ser gente porque sei que posso ir mais além.",
+            "Se a educação sozinha não transforma a sociedade, sem ela tampouco a sociedade muda.",
+            "Ninguém educa ninguém, ninguém educa a si mesmo, os homens se educam entre si.",
+            "A alegria não chega apenas no encontro do achado, mas faz parte da busca."
+        ];
+
+        function setDailyQuote() {
+            const dayOfYear = Math.floor((new Date() - new Date(new Date().getFullYear(), 0, 0)) / (1000 * 60 * 60 * 24));
+            const quoteIndex = dayOfYear % quotes.length;
+            document.getElementById('paulo-freire-quote').innerText = `"${quotes[quoteIndex]}"`;
+        }
+
+        setDailyQuote();
+    </script>
 </body>
 </html>
