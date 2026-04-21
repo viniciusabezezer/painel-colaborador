@@ -383,37 +383,55 @@ footer .branding-text {
         font-size: 2.8rem;
         letter-spacing: -2px;
     }
-    .container { padding: 3rem 1.5rem; }
-    header { margin-bottom: 4rem; }
-    .form-grid { 
-        grid-template-columns: 1fr;
-        gap: 1.5rem;
-    }
     .form-card { 
-        padding: 1.2rem 1.5rem;
-        border-radius: 18px;
-    }
-    .form-card h3 {
-        font-size: 1.4rem;
-        margin-bottom: 0.4rem;
+        flex-direction: row;
+        align-items: center;
+        padding: 0.8rem 1rem;
+        gap: 1rem;
+        border-radius: 14px;
+        min-height: 80px;
     }
     .icon-wrapper {
-        width: 50px;
-        height: 50px;
-        margin-bottom: 1rem;
+        width: 44px;
+        height: 44px;
+        margin-bottom: 0;
+        flex-shrink: 0;
+        border-radius: 10px;
     }
     .icon-wrapper svg {
-        width: 24px;
-        height: 24px;
+        width: 20px;
+        height: 20px;
     }
-    .card-footer {
-        margin-top: 1rem;
+    .form-card > div:not(.icon-wrapper):not(.card-footer) {
+        display: none; /* Hide paragraphs on mobile for list view if requested, or just minimize */
+    }
+    .form-card h3 {
+        font-size: 1.1rem;
+        margin-bottom: 0;
+        flex-grow: 1;
+        white-space: normal;
+        line-height: 1.2;
+        padding-right: 0.5rem;
     }
     .form-card p {
-        font-size: 0.9rem;
+        display: none;
+    }
+    .card-footer {
+        margin-top: 0;
+        flex-shrink: 0;
+    }
+    .card-footer span {
+        display: none;
+    }
+    .arrow {
+        width: 32px;
+        height: 32px;
+        font-size: 1rem;
     }
     .school-logo { height: 80px; }
-    .restriction-info { padding: 3rem 1.5rem; margin-top: 4rem; }
+    .restriction-info { padding: 3rem 1.5rem; margin-top: 3rem; }
+    .badge { margin-bottom: 1.5rem; }
+    header { margin-bottom: 3rem; }
 }
 
 /* Logo Styling Refined */
