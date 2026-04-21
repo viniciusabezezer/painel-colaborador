@@ -108,23 +108,29 @@ body::before {
 /* Header Styles */
 #quote-container {
     max-width: 800px;
-    margin: 0 auto 3rem;
-    padding: 1.5rem 2rem;
-    border-radius: 20px;
+    margin: 0 auto 2.5rem;
+    padding: 1rem 1.5rem;
+    border-radius: 16px;
     text-align: center;
     border: 1px solid hsla(var(--h-orange), 100%, 60%, 0.15);
     background: hsla(var(--h-orange), 100%, 60%, 0.05);
     position: relative;
     overflow: hidden;
+    animation: quoteSlide 1.5s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+@keyframes quoteSlide {
+    0% { transform: translateX(-100%); opacity: 0; }
+    100% { transform: translateX(0); opacity: 1; }
 }
 
 #paulo-freire-quote {
-    font-size: 1.1rem;
+    font-size: 1rem;
     font-style: italic;
     font-weight: 500;
     color: var(--orange-deep);
-    margin-bottom: 0.5rem;
-    line-height: 1.5;
+    margin-bottom: 0.25rem;
+    line-height: 1.4;
 }
 
 #quote-container .author {
@@ -185,8 +191,8 @@ h1 {
 .form-card {
     text-decoration: none;
     color: inherit;
-    padding: 3rem;
-    border-radius: var(--radius-lg);
+    padding: 2rem;
+    border-radius: 24px;
     display: flex;
     flex-direction: column;
     transition: var(--transition);
@@ -219,14 +225,14 @@ h1 {
 }
 
 .icon-wrapper {
-    width: 85px;
-    height: 85px;
-    border-radius: var(--radius-md);
+    width: 65px;
+    height: 65px;
+    border-radius: 16px;
     background: var(--white);
     display: flex;
     align-items: center;
     justify-content: center;
-    margin-bottom: 2.5rem;
+    margin-bottom: 1.5rem;
     box-shadow: 10px 10px 30px rgba(0,0,0,0.04);
     transition: var(--transition);
     z-index: 1;
@@ -252,8 +258,8 @@ h1 {
 }
 
 .form-card h3 {
-    font-size: 1.7rem;
-    margin-bottom: 1.25rem;
+    font-size: 1.5rem;
+    margin-bottom: 0.75rem;
     color: var(--text-dark);
     font-weight: 700;
     transition: var(--transition);
@@ -276,7 +282,7 @@ h1 {
 }
 
 .card-footer {
-    margin-top: 3rem;
+    margin-top: 1.5rem;
     display: flex;
     align-items: center;
     justify-content: space-between;
@@ -376,13 +382,31 @@ footer .branding-text {
         grid-template-columns: 1fr;
         gap: 1.5rem;
     }
-    .form-card { padding: 2rem; }
-    .form-card h3 {
-        font-size: 1.6rem;
-        margin-bottom: 0.75rem;
+    .form-card { 
+        padding: 1.2rem 1.5rem;
+        border-radius: 18px;
     }
-    .school-logo { height: 90px; }
-    .restriction-info { padding: 3rem 1.5rem; }
+    .form-card h3 {
+        font-size: 1.4rem;
+        margin-bottom: 0.4rem;
+    }
+    .icon-wrapper {
+        width: 50px;
+        height: 50px;
+        margin-bottom: 1rem;
+    }
+    .icon-wrapper svg {
+        width: 24px;
+        height: 24px;
+    }
+    .card-footer {
+        margin-top: 1rem;
+    }
+    .form-card p {
+        font-size: 0.9rem;
+    }
+    .school-logo { height: 80px; }
+    .restriction-info { padding: 3rem 1.5rem; margin-top: 4rem; }
 }
 
 /* Logo Styling Refined */
