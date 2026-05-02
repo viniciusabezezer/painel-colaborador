@@ -666,13 +666,13 @@ footer .branding-text {
         height: 20px;
     }
     .form-card p {
-        display: none;
+        font-size: 0.75rem;
     }
     .form-card h3 {
         font-size: 0.95rem;
     }
     .card-footer span {
-        display: none;
+        font-size: 0.6rem;
     }
     .arrow {
         width: 30px;
