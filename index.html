@@ -223,6 +223,16 @@
                         <label for="copies-count">Número de Cópias</label>
                         <input type="number" id="copies-count" placeholder="Ex: 30" min="1" max="999">
                     </div>
+                    <div class="copies-field">
+                        <label for="copies-coordinator">Coordenador(a)</label>
+                        <select id="copies-coordinator">
+                            <option value="">Selecione...</option>
+                            <option value="Betim">Betim</option>
+                            <option value="Francisca Luíza">Francisca Luíza</option>
+                            <option value="Rosinele">Rosinele</option>
+                            <option value="Vinícius">Vinícius</option>
+                        </select>
+                    </div>
                     <button class="generate-btn" onclick="generateCopiesMessage()">Gerar mensagem ✓</button>
                 </div>
                 <div id="copies-result-step" style="display:none">
@@ -396,14 +406,16 @@
             document.getElementById('copies-teacher').value = '';
             document.getElementById('copies-subject').value = '';
             document.getElementById('copies-count').value = '';
+            document.getElementById('copies-coordinator').value = '';
         }
 
         function generateCopiesMessage() {
             const teacher = document.getElementById('copies-teacher').value.trim();
             const subject = document.getElementById('copies-subject').value.trim();
             const count = document.getElementById('copies-count').value.trim();
+            const coordinator = document.getElementById('copies-coordinator').value;
 
-            if (!teacher || !subject || !count || count < 1) {
+            if (!teacher || !subject || !count || count < 1 || !coordinator) {
                 alert('Por favor, preencha todos os campos corretamente.');
                 return;
             }
@@ -419,7 +431,7 @@
                 `📄 Qtd. de cópias: ${count}\n\n` +
                 `📅 ${dateStr} às ${timeStr}\n` +
                 `🏫 EEMTI Profa. Maria Luíza Saboia\n\n` +
-                `_Autorizado pela Coordenação_`;
+                `_Autorizado por: ${coordinator} (Coordenação)_`;
 
             document.getElementById('copies-message-preview').textContent = copiesWhatsAppMessage;
             document.getElementById('copies-form-step').style.display = 'none';
