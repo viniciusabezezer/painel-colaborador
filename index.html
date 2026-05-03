@@ -137,6 +137,21 @@
                         <div class="arrow">&rarr;</div>
                     </div>
                 </a>
+
+                <!-- Autorização de Cópias -->
+                <button class="form-card glass reveal delay-2" onclick="openCopiesModal()">
+                    <div class="icon-wrapper copies-card-icon">
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
+                    </div>
+                    <div class="card-text">
+                        <h3>🖨️ Autorização de Cópias</h3>
+                        <p>Exclusivo da coordenação. Gere a mensagem de autorização para a Secretaria via WhatsApp.</p>
+                    </div>
+                    <div class="card-footer">
+                        <span>Autorizar</span>
+                        <div class="arrow">&rarr;</div>
+                    </div>
+                </button>
             </div>
 
             <section class="restriction-info glass reveal">
@@ -179,6 +194,46 @@
                 <button id="chat-send-btn" onclick="sendMessage()">
                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M2.01 21L23 12L2.01 3L2 10L17 12L2 14L2.01 21Z" fill="currentColor"/></svg>
                 </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Copies Authorization Modal -->
+    <div id="copies-overlay" class="chat-overlay" onclick="closeCopiesFromOverlay(event)">
+        <div class="copies-modal" onclick="event.stopPropagation()">
+            <div class="copies-header">
+                <div class="chat-header-info">
+                    <div class="copies-avatar">🖨️</div>
+                    <h3>Autorização de Cópias</h3>
+                </div>
+                <button class="chat-close-btn" onclick="closeCopiesModal()" aria-label="Fechar">&times;</button>
+            </div>
+            <div class="copies-body">
+                <div id="copies-form-step">
+                    <p class="copies-instruction">Preencha os dados informados pelo professor para gerar a mensagem de autorização.</p>
+                    <div class="copies-field">
+                        <label for="copies-teacher">Nome do(a) Professor(a)</label>
+                        <input type="text" id="copies-teacher" placeholder="Ex: Joana Costa" autocomplete="off">
+                    </div>
+                    <div class="copies-field">
+                        <label for="copies-subject">Disciplina</label>
+                        <input type="text" id="copies-subject" placeholder="Ex: Matemática" autocomplete="off">
+                    </div>
+                    <div class="copies-field">
+                        <label for="copies-count">Número de Cópias</label>
+                        <input type="number" id="copies-count" placeholder="Ex: 30" min="1" max="999">
+                    </div>
+                    <button class="generate-btn" onclick="generateCopiesMessage()">Gerar mensagem ✓</button>
+                </div>
+                <div id="copies-result-step" style="display:none">
+                    <p class="copies-instruction">Mensagem pronta! Compartilhe com o grupo da Secretaria.</p>
+                    <div class="message-preview" id="copies-message-preview"></div>
+                    <button class="whatsapp-btn" onclick="sendWhatsApp()">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
+                        Compartilhar no WhatsApp
+                    </button>
+                    <button class="back-btn" onclick="showCopiesForm()">← Nova autorização</button>
+                </div>
             </div>
         </div>
     </div>
@@ -314,6 +369,66 @@
                 isLoading = false;
                 document.getElementById('chat-send-btn').disabled = false;
             }
+        }
+        /* ========== Copies Authorization Modal ========== */
+        let copiesWhatsAppMessage = '';
+
+        function openCopiesModal() {
+            const overlay = document.getElementById('copies-overlay');
+            overlay.classList.add('active');
+            document.body.style.overflow = 'hidden';
+            showCopiesForm();
+            setTimeout(() => document.getElementById('copies-teacher').focus(), 300);
+        }
+
+        function closeCopiesModal() {
+            document.getElementById('copies-overlay').classList.remove('active');
+            document.body.style.overflow = '';
+        }
+
+        function closeCopiesFromOverlay(event) {
+            if (event.target === event.currentTarget) closeCopiesModal();
+        }
+
+        function showCopiesForm() {
+            document.getElementById('copies-form-step').style.display = 'block';
+            document.getElementById('copies-result-step').style.display = 'none';
+            document.getElementById('copies-teacher').value = '';
+            document.getElementById('copies-subject').value = '';
+            document.getElementById('copies-count').value = '';
+        }
+
+        function generateCopiesMessage() {
+            const teacher = document.getElementById('copies-teacher').value.trim();
+            const subject = document.getElementById('copies-subject').value.trim();
+            const count = document.getElementById('copies-count').value.trim();
+
+            if (!teacher || !subject || !count || count < 1) {
+                alert('Por favor, preencha todos os campos corretamente.');
+                return;
+            }
+
+            const now = new Date();
+            const dateStr = now.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' });
+            const timeStr = now.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+
+            copiesWhatsAppMessage =
+                `✅ *AUTORIZAÇÃO DE CÓPIAS*\n\n` +
+                `👤 Professor(a): ${teacher}\n` +
+                `📚 Disciplina: ${subject}\n` +
+                `📄 Qtd. de cópias: ${count}\n\n` +
+                `📅 ${dateStr} às ${timeStr}\n` +
+                `🏫 EEMTI Profa. Maria Luíza Saboia\n\n` +
+                `_Autorizado pela Coordenação_`;
+
+            document.getElementById('copies-message-preview').textContent = copiesWhatsAppMessage;
+            document.getElementById('copies-form-step').style.display = 'none';
+            document.getElementById('copies-result-step').style.display = 'block';
+        }
+
+        function sendWhatsApp() {
+            if (!copiesWhatsAppMessage) return;
+            window.open('https://wa.me/?text=' + encodeURIComponent(copiesWhatsAppMessage), '_blank');
         }
     </script>
 </body>
