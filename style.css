@@ -733,6 +733,7 @@ footer .branding-text {
     padding: 24px;
     overflow-y: auto;
     flex: 1;
+    background-color: #ffffff;
 }
 
 .copies-instruction {
