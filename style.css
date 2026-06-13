@@ -1024,13 +1024,86 @@ footer .branding-text {
     font-weight: 600;
 }
 
-/* Printable institutional document (screen-hidden) */
-#ocorrencia-print { display: none; }
+/* ===== Consultar Ocorrências (Relatórios) ===== */
+.relatorio-header { background: linear-gradient(135deg, hsl(255, 58%, 58%), hsl(255, 55%, 44%)) !important; }
+.relatorio-card-icon { background: linear-gradient(135deg, hsl(255, 60%, 60%), hsl(255, 55%, 48%)); }
+.relatorio-card-icon svg { stroke: var(--white); }
+.relatorio-gen-btn { background: linear-gradient(135deg, hsl(255, 58%, 56%), hsl(255, 55%, 44%)) !important; }
+
+.rel-divider { height: 1px; background: #e5e7eb; margin: 22px 0 18px; }
+
+.rel-total {
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+    margin-bottom: 18px;
+}
+.rel-total-num { font-size: 2.2rem; font-weight: 800; color: hsl(255, 55%, 50%); line-height: 1; }
+.rel-total-label { font-size: 0.85rem; color: var(--text-muted); }
+
+.rel-section-title {
+    font-size: 0.72rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 1.2px;
+    color: var(--text-muted);
+    margin: 16px 0 8px;
+}
+
+.rel-bar-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 7px;
+    font-size: 0.85rem;
+}
+.rel-bar-label { flex: 0 0 38%; color: var(--text-dark); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.rel-bar-track { flex: 1; height: 9px; background: #eef0f4; border-radius: 100px; overflow: hidden; }
+.rel-bar-fill { display: block; height: 100%; border-radius: 100px; background: linear-gradient(90deg, hsl(255, 60%, 62%), hsl(255, 55%, 48%)); }
+.rel-bar-val { flex: 0 0 auto; font-weight: 700; color: var(--text-dark); min-width: 18px; text-align: right; }
+
+.rel-empty { font-size: 0.85rem; color: var(--text-muted); padding: 6px 0; }
+
+.rel-student-box {
+    background: hsla(255, 58%, 56%, 0.06);
+    border: 1px solid hsla(255, 58%, 56%, 0.2);
+    border-radius: 12px;
+    padding: 14px;
+    margin: 12px 0 4px;
+}
+.rel-student-head { font-size: 0.95rem; color: var(--text-dark); margin-bottom: 10px; }
+.rel-rec {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 0.82rem;
+    padding: 6px 0;
+    border-top: 1px solid hsla(255, 58%, 56%, 0.15);
+}
+.rel-rec-date { flex: 0 0 auto; color: var(--text-muted); font-variant-numeric: tabular-nums; }
+.rel-rec-tipo { flex: 1; color: var(--text-dark); }
+.rel-rec-cod { flex: 0 0 auto; font-family: 'Courier New', monospace; font-weight: 700; color: hsl(255, 55%, 50%); }
+
+.rel-share-toggle {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    flex-wrap: wrap;
+    margin: 18px 0 12px;
+    font-size: 0.85rem;
+    color: var(--text-dark);
+}
+.rel-share-label { font-weight: 700; color: var(--text-muted); }
+.rel-share-toggle label { display: inline-flex; align-items: center; gap: 5px; cursor: pointer; }
+
+/* Printable institutional documents (screen-hidden) */
+#ocorrencia-print, #relatorio-print { display: none; }
 
 @media print {
     body * { visibility: hidden; }
-    #ocorrencia-print, #ocorrencia-print * { visibility: visible; }
-    #ocorrencia-print {
+    #ocorrencia-print, #ocorrencia-print *,
+    #relatorio-print, #relatorio-print * { visibility: visible; }
+    #ocorrencia-print, #relatorio-print {
         display: block !important;
         position: absolute;
         top: 0;

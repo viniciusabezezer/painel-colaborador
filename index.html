@@ -152,6 +152,23 @@
                         <div class="arrow">&rarr;</div>
                     </div>
                 </button>
+
+                <!-- Consultar Ocorrências (relatórios) -->
+                <button class="form-card glass reveal delay-6" onclick="openRelatorioModal()">
+                    <div class="card-head">
+                        <div class="icon-wrapper relatorio-card-icon">
+                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+                        </div>
+                        <div class="card-text">
+                            <h3>📊 Consultar Ocorrências</h3>
+                            <p>Relatório por aluno, tipo e turma — exclusivo da coordenação (com PIN).</p>
+                        </div>
+                    </div>
+                    <div class="card-footer">
+                        <span>Consultar</span>
+                        <div class="arrow">&rarr;</div>
+                    </div>
+                </button>
             </div>
 
             <section class="restriction-info glass reveal">
@@ -336,6 +353,59 @@
 
     <!-- Documento institucional para impressão/PDF (oculto na tela) -->
     <div id="ocorrencia-print"></div>
+
+    <!-- Consultar Ocorrências (Relatórios) Modal -->
+    <div id="relatorio-overlay" class="chat-overlay" onclick="closeRelatorioFromOverlay(event)">
+        <div class="copies-modal" onclick="event.stopPropagation()">
+            <div class="copies-header relatorio-header">
+                <div class="chat-header-info">
+                    <div class="copies-avatar">📊</div>
+                    <h3>Consultar Ocorrências</h3>
+                </div>
+                <button class="chat-close-btn" onclick="closeRelatorioModal()" aria-label="Fechar">&times;</button>
+            </div>
+            <div class="copies-body">
+                <!-- Etapa PIN -->
+                <div id="rel-pin-step">
+                    <p class="copies-instruction">Área restrita à coordenação. Os relatórios mostram nomes de estudantes, por isso o acesso é protegido. Digite o PIN.</p>
+                    <div class="copies-field">
+                        <label for="rel-pin">PIN de coordenador</label>
+                        <input type="password" id="rel-pin" inputmode="numeric" placeholder="••••••" autocomplete="off" onkeydown="if(event.key==='Enter')unlockRelatorio()">
+                    </div>
+                    <div class="oc-copy-status" id="rel-pin-status"></div>
+                    <button class="generate-btn relatorio-gen-btn" onclick="unlockRelatorio()">Entrar ✓</button>
+                </div>
+                <!-- Etapa Relatório -->
+                <div id="rel-report-step" style="display:none">
+                    <div id="rel-overview"></div>
+
+                    <div class="rel-divider"></div>
+
+                    <div class="copies-field">
+                        <label for="rel-student-query">Consultar por aluno</label>
+                        <input type="text" id="rel-student-query" placeholder="Digite o nome do estudante" autocomplete="off" onkeydown="if(event.key==='Enter')buscarAluno()">
+                    </div>
+                    <button class="generate-btn relatorio-gen-btn" onclick="buscarAluno()">🔎 Buscar aluno</button>
+                    <div id="rel-student-results"></div>
+
+                    <div class="rel-share-toggle">
+                        <span class="rel-share-label">Ao compartilhar:</span>
+                        <label><input type="radio" name="rel-anon" value="completo" checked> Completo</label>
+                        <label><input type="radio" name="rel-anon" value="anon"> Anonimizado</label>
+                    </div>
+                    <button class="whatsapp-btn" onclick="compartilharRelatorio()">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
+                        Enviar relatório (WhatsApp)
+                    </button>
+                    <button class="print-btn" onclick="imprimirRelatorio()">🖨️ Imprimir / Salvar em PDF</button>
+                    <button class="back-btn" onclick="closeRelatorioModal()">Fechar</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Relatório para impressão/PDF (oculto na tela) -->
+    <div id="relatorio-print"></div>
 
     <script>
         /* ========== Frases de Paulo Freire ========== */
@@ -742,6 +812,199 @@
 
         function printOcorrencia() {
             window.print();
+        }
+
+        /* ========== Consultar Ocorrências (Relatórios) ========== */
+        /* (Opcional) Apps Script ligado à PLANILHA DE RESPOSTAS do formulário de
+           ocorrências. Lê as linhas, extrai os campos do texto colado e devolve os
+           números. Protegido por PIN. Ver apps-script-relatorio.gs. */
+        const RELATORIO_SCRIPT_URL = '';
+        let relatorioPin = '';
+        let relatorioOverview = null;
+        let relatorioLastStudent = null;
+
+        function openRelatorioModal() {
+            document.getElementById('relatorio-overlay').classList.add('active');
+            document.body.style.overflow = 'hidden';
+            document.getElementById('rel-pin-step').style.display = 'block';
+            document.getElementById('rel-report-step').style.display = 'none';
+            document.getElementById('rel-pin').value = '';
+            document.getElementById('rel-pin-status').textContent = '';
+            document.getElementById('rel-student-results').innerHTML = '';
+            document.getElementById('rel-student-query').value = '';
+            relatorioLastStudent = null;
+            setTimeout(() => document.getElementById('rel-pin').focus(), 300);
+        }
+
+        function closeRelatorioModal() {
+            document.getElementById('relatorio-overlay').classList.remove('active');
+            document.body.style.overflow = '';
+        }
+
+        function closeRelatorioFromOverlay(event) {
+            if (event.target === event.currentTarget) closeRelatorioModal();
+        }
+
+        async function relatorioFetch(action, params, pin) {
+            const url = new URL(RELATORIO_SCRIPT_URL);
+            url.searchParams.set('action', action);
+            url.searchParams.set('pin', pin || relatorioPin);
+            Object.keys(params || {}).forEach(k => url.searchParams.set(k, params[k]));
+            const r = await fetch(url.toString(), { method: 'GET' });
+            return await r.json();
+        }
+
+        async function unlockRelatorio() {
+            const pin = val('rel-pin');
+            const status = document.getElementById('rel-pin-status');
+            status.style.color = '';
+            if (!pin) { status.style.color = 'var(--orange-deep)'; status.textContent = 'Digite o PIN.'; return; }
+            if (!RELATORIO_SCRIPT_URL) { status.style.color = 'var(--orange-deep)'; status.textContent = '⚠️ Relatório ainda não configurado (falta implantar o script).'; return; }
+            status.textContent = 'Verificando...';
+            try {
+                const d = await relatorioFetch('overview', {}, pin);
+                if (!d.success) {
+                    status.style.color = 'var(--orange-deep)';
+                    status.textContent = (d.error === 'PIN') ? '❌ PIN incorreto.' : ('Erro: ' + (d.error || ''));
+                    return;
+                }
+                relatorioPin = pin;
+                renderOverview(d);
+                document.getElementById('rel-pin-step').style.display = 'none';
+                document.getElementById('rel-report-step').style.display = 'block';
+                document.querySelector('#relatorio-overlay .copies-body').scrollTop = 0;
+            } catch (e) {
+                status.style.color = 'var(--orange-deep)';
+                status.textContent = 'Erro de conexão.';
+            }
+        }
+
+        function relBars(obj) {
+            const entries = Object.entries(obj || {}).sort((a, b) => b[1] - a[1]);
+            if (!entries.length) return '<div class="rel-empty">Sem dados.</div>';
+            const max = Math.max.apply(null, entries.map(e => e[1]));
+            return entries.map(([k, v]) => {
+                const w = max > 0 ? Math.round(v / max * 100) : 0;
+                return `<div class="rel-bar-row"><span class="rel-bar-label">${escapeHtml(k)}</span><span class="rel-bar-track"><span class="rel-bar-fill" style="width:${w}%"></span></span><span class="rel-bar-val">${v}</span></div>`;
+            }).join('');
+        }
+
+        function relMesList(obj) {
+            const entries = Object.entries(obj || {}).sort((a, b) => a[0].localeCompare(b[0]));
+            if (!entries.length) return '<div class="rel-empty">Sem dados.</div>';
+            const meses = ['jan', 'fev', 'mar', 'abr', 'mai', 'jun', 'jul', 'ago', 'set', 'out', 'nov', 'dez'];
+            return entries.map(([k, v]) => {
+                const p = k.split('-'); const label = (meses[parseInt(p[1], 10) - 1] || p[1]) + '/' + p[0];
+                return `<div class="rel-bar-row"><span class="rel-bar-label">${label}</span><span class="rel-bar-val">${v}</span></div>`;
+            }).join('');
+        }
+
+        function renderOverview(d) {
+            relatorioOverview = d;
+            document.getElementById('rel-overview').innerHTML =
+                `<div class="rel-total"><span class="rel-total-num">${d.total || 0}</span><span class="rel-total-label">ocorrências registradas</span></div>
+                 <div class="rel-section-title">Por tipo</div>${relBars(d.porTipo)}
+                 <div class="rel-section-title">Por turma</div>${relBars(d.porTurma)}
+                 <div class="rel-section-title">Por mês</div>${relMesList(d.porMes)}`;
+        }
+
+        async function buscarAluno() {
+            const q = val('rel-student-query');
+            const el = document.getElementById('rel-student-results');
+            if (!q) { el.innerHTML = ''; return; }
+            el.innerHTML = '<div class="rel-empty">Buscando...</div>';
+            try {
+                const d = await relatorioFetch('student', { q: q }, relatorioPin);
+                if (!d.success) { el.innerHTML = `<div class="rel-empty">${escapeHtml(d.error || 'Erro')}</div>`; return; }
+                renderStudent(d);
+            } catch (e) { el.innerHTML = '<div class="rel-empty">Erro de conexão.</div>'; }
+        }
+
+        function renderStudent(d) {
+            relatorioLastStudent = d;
+            const el = document.getElementById('rel-student-results');
+            if (!d.total) {
+                el.innerHTML = `<div class="rel-student-box rel-empty">Nenhuma ocorrência encontrada para "${escapeHtml(d.nome)}".</div>`;
+                return;
+            }
+            const rows = d.registros.map(r =>
+                `<div class="rel-rec"><span class="rel-rec-date">${escapeHtml(r.data || '')}</span><span class="rel-rec-tipo">${escapeHtml(r.tipo || '—')}${r.turma ? ' · ' + escapeHtml(r.turma) : ''}</span><span class="rel-rec-cod">${escapeHtml(r.codigo || '')}</span></div>`
+            ).join('');
+            el.innerHTML = `<div class="rel-student-box"><div class="rel-student-head">${escapeHtml(d.nome)} — <strong>${d.total}</strong> ocorrência(s)</div>${rows}</div>`;
+        }
+
+        function anonimizarNome(nome) {
+            const parts = String(nome).trim().split(/\s+/).filter(Boolean);
+            if (!parts.length) return '—';
+            if (parts.length === 1) return parts[0][0].toUpperCase() + '.';
+            return parts[0][0].toUpperCase() + '. ' + parts[parts.length - 1][0].toUpperCase() + '.';
+        }
+
+        function relAnon() {
+            const el = document.querySelector('input[name="rel-anon"]:checked');
+            return !!(el && el.value === 'anon');
+        }
+
+        function relatorioShareText(anon) {
+            const d = relatorioOverview;
+            if (!d) return '';
+            let t = `📊 *RELATÓRIO DE OCORRÊNCIAS*\n🏫 EEMTI Profa. Maria Luíza Saboia\n\n`;
+            t += `Total: ${d.total || 0}\n\n*Por tipo:*\n`;
+            Object.entries(d.porTipo || {}).sort((a, b) => b[1] - a[1]).forEach(([k, v]) => t += `• ${k}: ${v}\n`);
+            t += `\n*Por turma:*\n`;
+            Object.entries(d.porTurma || {}).sort((a, b) => b[1] - a[1]).forEach(([k, v]) => t += `• ${k}: ${v}\n`);
+            if (relatorioLastStudent && relatorioLastStudent.total) {
+                const nome = anon ? anonimizarNome(relatorioLastStudent.nome) : relatorioLastStudent.nome;
+                t += `\n*Aluno consultado:* ${nome} — ${relatorioLastStudent.total} ocorrência(s)\n`;
+                relatorioLastStudent.registros.forEach(r => t += `• ${r.data || ''} — ${r.tipo || ''}${r.turma ? ' (' + r.turma + ')' : ''}\n`);
+            }
+            t += `\n_Gerado pelo Painel do Colaborador — Malu Serviços._`;
+            return t;
+        }
+
+        function compartilharRelatorio() {
+            const txt = relatorioShareText(relAnon());
+            if (!txt) return;
+            window.open('https://wa.me/?text=' + encodeURIComponent(txt), '_blank');
+        }
+
+        function imprimirRelatorio() {
+            document.getElementById('ocorrencia-print').innerHTML = '';
+            buildRelatorioPrint(relAnon());
+            window.print();
+        }
+
+        function buildRelatorioPrint(anon) {
+            const d = relatorioOverview || { total: 0, porTipo: {}, porTurma: {}, porMes: {} };
+            const now = new Date();
+            const dataStr = now.toLocaleDateString('pt-BR') + ' ' + now.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+            function rows(obj) {
+                return Object.entries(obj || {}).sort((a, b) => b[1] - a[1])
+                    .map(([k, v]) => `<tr><td style="padding:3px 0;">${escapeHtml(k)}</td><td style="text-align:right;padding:3px 0;font-weight:700;">${v}</td></tr>`).join('');
+            }
+            let studentBlock = '';
+            if (relatorioLastStudent && relatorioLastStudent.total) {
+                const nome = anon ? anonimizarNome(relatorioLastStudent.nome) : escapeHtml(relatorioLastStudent.nome);
+                const recs = relatorioLastStudent.registros.map(r =>
+                    `<tr><td style="padding:3px 8px 3px 0;">${escapeHtml(r.data || '')}</td><td style="padding:3px 8px;">${escapeHtml(r.turma || '')}</td><td style="padding:3px 8px;">${escapeHtml(r.tipo || '')}</td><td style="padding:3px 0;">${escapeHtml(r.codigo || '')}</td></tr>`).join('');
+                studentBlock = `<h3 style="font-size:14px;margin:22px 0 8px;color:#16261d;">Aluno consultado: ${nome} — ${relatorioLastStudent.total} ocorrência(s)</h3>
+                    <table style="width:100%;font-size:12px;border-collapse:collapse;"><tr style="border-bottom:1px solid #ccc;"><th style="text-align:left;padding:3px 0;">Data</th><th style="text-align:left;">Turma</th><th style="text-align:left;">Tipo</th><th style="text-align:left;">Código</th></tr>${recs}</table>`;
+            }
+            document.getElementById('relatorio-print').innerHTML =
+                `<div style="text-align:center;border-bottom:3px solid #2b6f3f;padding-bottom:12px;margin-bottom:20px;">
+                    <img src="logo.png" style="height:80px;margin-bottom:6px;" alt="">
+                    <div style="font-size:15px;font-weight:700;color:#16261d;">EEMTI PROF. MARIA LUÍZA SABÓIA RIBEIRO</div>
+                    <div style="font-size:11px;color:#444;">Coordenação Pedagógica · Paracuru — CE</div>
+                 </div>
+                 <h2 style="text-align:center;font-size:16px;margin:0 0 6px;color:#16261d;">RELATÓRIO DE OCORRÊNCIAS</h2>
+                 <div style="text-align:center;font-size:11px;color:#555;margin-bottom:18px;">Gerado em ${dataStr}${anon ? ' · versão anonimizada' : ''}</div>
+                 <div style="font-size:13px;margin-bottom:14px;"><strong>Total de ocorrências:</strong> ${d.total || 0}</div>
+                 <div style="display:flex;gap:24px;">
+                    <div style="flex:1;"><div style="font-weight:700;font-size:12px;border-bottom:1px solid #ccc;margin-bottom:4px;">Por tipo</div><table style="width:100%;font-size:12px;">${rows(d.porTipo)}</table></div>
+                    <div style="flex:1;"><div style="font-weight:700;font-size:12px;border-bottom:1px solid #ccc;margin-bottom:4px;">Por turma</div><table style="width:100%;font-size:12px;">${rows(d.porTurma)}</table></div>
+                 </div>
+                 ${studentBlock}
+                 <div style="margin-top:40px;font-size:10px;color:#777;text-align:center;">Documento gerado pelo Painel do Colaborador — Malu Serviços</div>`;
         }
     </script>
 </body>
