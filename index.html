@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Malu Serviços - EEMTI Prof. Maria Luiza Saboia</title>
-    <meta name="description" content="Portal de serviços institucionais Malu Serviços.">
+    <meta name="description" content="Painel do Colaborador Malu Serviços - EEMTI Prof. Maria Luiza Saboia Ribeiro.">
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -22,25 +22,28 @@
             <div class="logo-container">
                 <img src="logo.png" alt="Logo EEMTI Maria Luiza Saboia" class="school-logo">
             </div>
-            
+
             <span class="badge">
                 <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
                 Acesso Restrito
             </span>
             <h1>Malu Serviços</h1>
-            <p class="subtitle">EEMTI Prof. Maria Luiza Saboia Ribeiro. Gestão ágil e comunicação integrada para o corpo docente e coordenação.</p>
+            <div class="title-underline"></div>
+            <p class="subtitle">Painel do Colaborador da <strong>EEMTI Prof. Maria Luiza Saboia Ribeiro</strong>. Gestão ágil e comunicação integrada para o corpo docente e a coordenação.</p>
         </header>
 
         <main>
             <div class="form-grid">
-                <!-- MaluBot Chat -->
-                <button class="form-card glass reveal delay-1" id="malubot-card" onclick="openChat()">
-                    <div class="icon-wrapper malubot-icon">
-                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 2H4C2.9 2 2 2.9 2 4V22L6 18H20C21.1 18 22 17.1 22 16V4C22 2.9 21.1 2 20 2Z"/></svg>
-                    </div>
-                    <div class="card-text">
-                        <h3>🤖 Malu - Assistente Virtual</h3>
-                        <p>Tire dúvidas com a assistente virtual da escola, direto pelo site.</p>
+                <!-- MaluBot Chat (destaque) -->
+                <button class="form-card featured glass reveal delay-1" id="malubot-card" onclick="openChat()">
+                    <div class="card-head">
+                        <div class="icon-wrapper malubot-icon">
+                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 2H4C2.9 2 2 2.9 2 4V22L6 18H20C21.1 18 22 17.1 22 16V4C22 2.9 21.1 2 20 2Z"/></svg>
+                        </div>
+                        <div class="card-text">
+                            <h3>🤖 Malu - Assistente Virtual</h3>
+                            <p>Tire dúvidas com a assistente virtual da escola, direto pelo site.</p>
+                        </div>
                     </div>
                     <div class="card-footer">
                         <span>Abrir chat</span>
@@ -49,13 +52,15 @@
                 </button>
 
                 <!-- Saída de Sala -->
-                <a href="https://forms.gle/dmjBehzbKXMDoWNw9" class="form-card glass reveal delay-1" target="_blank">
-                    <div class="icon-wrapper">
-                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
-                    </div>
-                    <div class="card-text">
-                        <h3>🚪 Saída de Sala</h3>
-                        <p>Registro rápido para saída de estudantes durante o horário letivo.</p>
+                <a href="https://forms.gle/dmjBehzbKXMDoWNw9" class="form-card glass reveal delay-2" target="_blank">
+                    <div class="card-head">
+                        <div class="icon-wrapper">
+                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+                        </div>
+                        <div class="card-text">
+                            <h3>🚪 Saída de Sala</h3>
+                            <p>Registro rápido para saída de estudantes durante o horário letivo.</p>
+                        </div>
                     </div>
                     <div class="card-footer">
                         <span>Acessar agora</span>
@@ -64,28 +69,15 @@
                 </a>
 
                 <!-- Entrada de estudantes -->
-                <a href="https://forms.gle/4M5usppDTmkGft3r7" class="form-card glass reveal delay-2" target="_blank">
-                    <div class="icon-wrapper">
-                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><line x1="19" y1="8" x2="19" y2="14"/><line x1="22" y1="11" x2="16" y2="11"/></svg>
-                    </div>
-                    <div class="card-text">
-                        <h3>🎒 Entrada</h3>
-                        <p>Controle de recepção e fardamento na entrada da escola.</p>
-                    </div>
-                    <div class="card-footer">
-                        <span>Acessar agora</span>
-                        <div class="arrow">&rarr;</div>
-                    </div>
-                </a>
-
-                <!-- Ginkafest liberação -->
-                <a href="https://forms.gle/A1htqMSXqPzQEoem7" class="form-card glass reveal delay-3" target="_blank">
-                    <div class="icon-wrapper">
-                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"/><path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"/><path d="M4 22h16"/><path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22"/><path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22"/><path d="M18 2H6v7a6 6 0 0 0 12 0V2Z"/></svg>
-                    </div>
-                    <div class="card-text">
-                        <h3>🏆 Ginkafest</h3>
-                        <p>Liberações específicas e pontuação durante as gincanas.</p>
+                <a href="https://forms.gle/4M5usppDTmkGft3r7" class="form-card glass reveal delay-3" target="_blank">
+                    <div class="card-head">
+                        <div class="icon-wrapper">
+                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><line x1="19" y1="8" x2="19" y2="14"/><line x1="22" y1="11" x2="16" y2="11"/></svg>
+                        </div>
+                        <div class="card-text">
+                            <h3>🎒 Entrada</h3>
+                            <p>Controle de recepção e fardamento na entrada da escola.</p>
+                        </div>
                     </div>
                     <div class="card-footer">
                         <span>Acessar agora</span>
@@ -94,13 +86,15 @@
                 </a>
 
                 <!-- Liberação Coordenação -->
-                <a href="https://forms.gle/ieY7upRLTwfVKwtk9" class="form-card glass reveal delay-1" target="_blank">
-                    <div class="icon-wrapper">
-                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="m12 14 4-4"/><path d="M3.34 19a10 10 0 1 1 17.32 0"/><path d="m9.07 14.93 4.14 4.14"/><path d="m14.93 9.07-4.14-4.14"/></svg>
-                    </div>
-                    <div class="card-text">
-                        <h3>📋 Coordenação</h3>
-                        <p>Processos de liberação e autorização da gestão pedagógica.</p>
+                <a href="https://forms.gle/ieY7upRLTwfVKwtk9" class="form-card glass reveal delay-4" target="_blank">
+                    <div class="card-head">
+                        <div class="icon-wrapper">
+                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="m12 14 4-4"/><path d="M3.34 19a10 10 0 1 1 17.32 0"/><path d="m9.07 14.93 4.14 4.14"/><path d="m14.93 9.07-4.14-4.14"/></svg>
+                        </div>
+                        <div class="card-text">
+                            <h3>📋 Coordenação</h3>
+                            <p>Processos de liberação e autorização da gestão pedagógica.</p>
+                        </div>
                     </div>
                     <div class="card-footer">
                         <span>Acessar agora</span>
@@ -108,29 +102,33 @@
                     </div>
                 </a>
 
-                <!-- Registro de ocorrências -->
-                <a href="https://forms.gle/2Rbqkx6xHxqc1zy37" class="form-card glass reveal delay-2" target="_blank">
-                    <div class="icon-wrapper">
-                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
-                    </div>
-                    <div class="card-text">
-                        <h3>⚠️ Ocorrências</h3>
-                        <p>Registro institucional de incidentes e mediação de conflitos.</p>
+                <!-- Registro de ocorrências (modal institucional) -->
+                <button class="form-card glass reveal delay-5" onclick="openOcorrenciaModal()">
+                    <div class="card-head">
+                        <div class="icon-wrapper ocorrencia-card-icon">
+                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+                        </div>
+                        <div class="card-text">
+                            <h3>⚠️ Ocorrências</h3>
+                            <p>Registre a ocorrência, gere o documento institucional e envie para a gestão.</p>
+                        </div>
                     </div>
                     <div class="card-footer">
-                        <span>Acessar agora</span>
+                        <span>Registrar</span>
                         <div class="arrow">&rarr;</div>
                     </div>
-                </a>
+                </button>
 
                 <!-- Verificação de saída Coordenação -->
-                <a href="https://forms.gle/ZjJZGL4UZ2vEixrx6" class="form-card glass reveal delay-3" target="_blank">
-                    <div class="icon-wrapper">
-                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><polyline points="9 12 11 14 15 10"/></svg>
-                    </div>
-                    <div class="card-text">
-                        <h3>✅ Verificação de saída (Coord.)</h3>
-                        <p>Conferência final de segurança para saída de alunos.</p>
+                <a href="https://forms.gle/ZjJZGL4UZ2vEixrx6" class="form-card glass reveal delay-6" target="_blank">
+                    <div class="card-head">
+                        <div class="icon-wrapper">
+                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><polyline points="9 12 11 14 15 10"/></svg>
+                        </div>
+                        <div class="card-text">
+                            <h3>✅ Verificação de saída (Coord.)</h3>
+                            <p>Conferência final de segurança para saída de alunos.</p>
+                        </div>
                     </div>
                     <div class="card-footer">
                         <span>Acessar agora</span>
@@ -139,13 +137,15 @@
                 </a>
 
                 <!-- Autorização de Cópias -->
-                <button class="form-card glass reveal delay-2" onclick="openCopiesModal()">
-                    <div class="icon-wrapper copies-card-icon">
-                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
-                    </div>
-                    <div class="card-text">
-                        <h3>🖨️ Autorização de Cópias</h3>
-                        <p>Exclusivo da coordenação. Gere a mensagem de autorização para a Secretaria via WhatsApp.</p>
+                <button class="form-card glass reveal delay-6" onclick="openCopiesModal()">
+                    <div class="card-head">
+                        <div class="icon-wrapper copies-card-icon">
+                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
+                        </div>
+                        <div class="card-text">
+                            <h3>🖨️ Autorização de Cópias</h3>
+                            <p>Exclusivo da coordenação. Gere a mensagem de autorização para a Secretaria via WhatsApp.</p>
+                        </div>
                     </div>
                     <div class="card-footer">
                         <span>Autorizar</span>
@@ -155,7 +155,7 @@
             </div>
 
             <section class="restriction-info glass reveal">
-                <div class="icon-wrapper" style="margin: 0 auto 2rem; background: var(--primary-orange);">
+                <div class="icon-wrapper">
                     <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
                 </div>
                 <h4>Ecossistema de Segurança</h4>
@@ -169,8 +169,8 @@
 
         <footer>
             <p>&copy; 2026 <span class="branding-text">EEMTI Prof. Maria Luiza Saboia Ribeiro</span>. Todos os direitos reservados.</p>
-            <p style="margin-top: 1rem; font-weight: 700; color: var(--green-vibrant);">Designed for Malu Serviços</p>
-            <p style="margin-top: 0.5rem; font-size: 0.8rem; color: var(--text-muted); opacity: 0.8;">site criado por <span style="color: var(--orange-vibrant); font-weight: 600;">Vinícius Bezerra - Coordenador</span></p>
+            <p style="margin-top: 1rem; font-weight: 700;"><span class="branding-text">Designed for Malu Serviços</span></p>
+            <p style="margin-top: 0.5rem; font-size: 0.8rem; color: var(--text-muted); opacity: 0.8;">site criado por <span style="color: var(--orange-deep); font-weight: 600;">Vinícius Bezerra - Coordenador</span></p>
         </footer>
     </div>
 
@@ -248,6 +248,85 @@
         </div>
     </div>
 
+    <!-- Registro de Ocorrência Modal -->
+    <div id="ocorrencia-overlay" class="chat-overlay" onclick="closeOcorrenciaFromOverlay(event)">
+        <div class="copies-modal" onclick="event.stopPropagation()">
+            <div class="copies-header ocorrencia-header">
+                <div class="chat-header-info">
+                    <div class="copies-avatar">⚠️</div>
+                    <h3>Registro de Ocorrência</h3>
+                </div>
+                <button class="chat-close-btn" onclick="closeOcorrenciaModal()" aria-label="Fechar">&times;</button>
+            </div>
+            <div class="copies-body">
+                <div id="oc-form-step">
+                    <p class="copies-instruction">Preencha a ocorrência. Tudo é processado <strong>localmente no seu aparelho</strong> — nada é enviado a servidores. Ao gerar, você recebe o texto padronizado, o código para a assinatura física e os botões para o formulário do Google e o WhatsApp.</p>
+                    <div class="copies-field">
+                        <label for="oc-coordinator">Responsável pelo registro</label>
+                        <select id="oc-coordinator">
+                            <option value="">Selecione...</option>
+                            <option value="Alverlucy (Diretora)">Alverlucy (Diretora)</option>
+                            <option value="Betim">Betim</option>
+                            <option value="Francisca Luíza">Francisca Luíza</option>
+                            <option value="Rosinele">Rosinele</option>
+                            <option value="Vinícius">Vinícius</option>
+                        </select>
+                    </div>
+                    <div class="copies-field">
+                        <label for="oc-students">Estudante(s) envolvido(s)</label>
+                        <input type="text" id="oc-students" placeholder="Ex: João da Silva, Maria Souza" autocomplete="off">
+                    </div>
+                    <div class="copies-field">
+                        <label for="oc-class">Turma / Série</label>
+                        <input type="text" id="oc-class" placeholder="Ex: 2º ano B" autocomplete="off">
+                    </div>
+                    <div class="copies-field">
+                        <label for="oc-type">Tipo de ocorrência</label>
+                        <select id="oc-type">
+                            <option value="">Selecione...</option>
+                            <option value="Indisciplina em sala">Indisciplina em sala</option>
+                            <option value="Conflito entre estudantes">Conflito entre estudantes</option>
+                            <option value="Bullying">Bullying</option>
+                            <option value="Dano ao patrimônio">Dano ao patrimônio</option>
+                            <option value="Uso indevido de celular">Uso indevido de celular</option>
+                            <option value="Atraso / saída irregular">Atraso / saída irregular</option>
+                            <option value="Outro">Outro</option>
+                        </select>
+                    </div>
+                    <div class="copies-field">
+                        <label for="oc-desc">Descrição do ocorrido</label>
+                        <textarea id="oc-desc" placeholder="Descreva o que aconteceu, com o máximo de detalhes possível."></textarea>
+                    </div>
+                    <div class="copies-field">
+                        <label for="oc-encaminhamento">Encaminhamento / medidas adotadas</label>
+                        <textarea id="oc-encaminhamento" placeholder="Ex: Conversa com o estudante, comunicação à família, advertência..."></textarea>
+                    </div>
+                    <button class="generate-btn ocorrencia-gen-btn" onclick="generateOcorrencia()">Gerar registro ✓</button>
+                </div>
+                <div id="oc-result-step" style="display:none">
+                    <p class="oc-privacy-note">🔒 Gerado localmente — nenhum dado saiu do seu aparelho.</p>
+                    <div class="oc-code-box">
+                        <span class="oc-code-label">Código da ocorrência</span>
+                        <span class="oc-code-value" id="oc-code-value">—</span>
+                        <span class="oc-code-hint">Anote este código na lista de assinaturas da Coordenação e peça a assinatura do(a) estudante no papel.</span>
+                    </div>
+                    <div class="message-preview" id="oc-message-preview"></div>
+                    <div class="oc-copy-status" id="oc-copy-status"></div>
+                    <button class="form-link-btn" onclick="copyAndOpenForm()">📋 Copiar texto e abrir formulário do Google</button>
+                    <button class="whatsapp-btn" onclick="sendOcorrenciaWhatsApp()">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
+                        Enviar para a gestão (WhatsApp)
+                    </button>
+                    <button class="print-btn" onclick="printOcorrencia()">🖨️ Imprimir / Salvar em PDF</button>
+                    <button class="back-btn" onclick="showOcorrenciaForm()">← Nova ocorrência</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Documento institucional para impressão/PDF (oculto na tela) -->
+    <div id="ocorrencia-print"></div>
+
     <script>
         /* ========== Frases de Paulo Freire ========== */
         const quotes = [
@@ -291,6 +370,12 @@
         }
 
         setDailyQuote();
+
+        /* ========== Helpers ========== */
+        function val(id) { return (document.getElementById(id).value || '').trim(); }
+        function escapeHtml(s) {
+            return String(s).replace(/[&<>"']/g, c => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c]));
+        }
 
         /* ========== MaluBot Chat ========== */
         const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxJZdR1Nv2gRxiYNMat55H6gYK28NiOXgdDmqWkNQ9NPk52TCv5muDkYsdL-3YGFdws/exec';
@@ -363,7 +448,7 @@
 
                 const response = await fetch(url.toString(), { method: 'GET' });
                 if (!response.ok) throw new Error('Erro na requisição.');
-                
+
                 const data = await response.json();
                 removeTyping();
 
@@ -380,6 +465,7 @@
                 document.getElementById('chat-send-btn').disabled = false;
             }
         }
+
         /* ========== Copies Authorization Modal ========== */
         let copiesWhatsAppMessage = '';
 
@@ -441,6 +527,211 @@
         function sendWhatsApp() {
             if (!copiesWhatsAppMessage) return;
             window.open('https://wa.me/?text=' + encodeURIComponent(copiesWhatsAppMessage), '_blank');
+        }
+
+        /* ========== Registro de Ocorrência ========== */
+        /* Formulário oficial do Google (alimenta a planilha). Cole o texto copiado lá dentro. */
+        const OCORRENCIAS_FORM_URL = 'https://forms.gle/2Rbqkx6xHxqc1zy37';
+        /* (Opcional) Apps Script que guarda APENAS o código + data/hora, para a numeração
+           ser única entre aparelhos e evitar duplicidade. Nenhum dado de aluno é enviado.
+           Deixe vazio para usar só o contador local deste aparelho. Ver apps-script-codigos.gs. */
+        const CODIGOS_SCRIPT_URL = '';
+        let ocorrenciaWhatsAppMessage = '';
+        let ocorrenciaPlainText = '';
+        let ocorrenciaCode = '';
+
+        /* Contador local (por aparelho), usado quando não há numeração central. */
+        function localNextCode(now) {
+            const p = n => String(n).padStart(2, '0');
+            const ddmmaa = p(now.getDate()) + p(now.getMonth() + 1) + String(now.getFullYear()).slice(-2);
+            const ymd = '' + now.getFullYear() + p(now.getMonth() + 1) + p(now.getDate());
+            let seq = 1;
+            try {
+                seq = parseInt(localStorage.getItem('oc_seq_' + ymd) || '0', 10) + 1;
+                localStorage.setItem('oc_seq_' + ymd, String(seq));
+            } catch (e) { seq = 1; }
+            return ddmmaa + p(seq);
+        }
+
+        /* Código numérico de 8 dígitos: DDMMAA + ordem da ocorrência no dia (ex.: 13062601).
+           Tenta a numeração central (única entre aparelhos); se indisponível, usa o contador local. */
+        async function getNextOcorrenciaCode(now, resp) {
+            const p = n => String(n).padStart(2, '0');
+            const ymd = '' + now.getFullYear() + p(now.getMonth() + 1) + p(now.getDate());
+            if (CODIGOS_SCRIPT_URL) {
+                try {
+                    const url = new URL(CODIGOS_SCRIPT_URL);
+                    url.searchParams.set('date', ymd);
+                    url.searchParams.set('resp', resp || '');
+                    const r = await fetch(url.toString(), { method: 'GET' });
+                    const j = await r.json();
+                    if (j.success && j.code) return { code: String(j.code), source: 'server' };
+                } catch (e) { /* cai para o contador local */ }
+                return { code: localNextCode(now), source: 'local-offline' };
+            }
+            return { code: localNextCode(now), source: 'local' };
+        }
+
+        function openOcorrenciaModal() {
+            document.getElementById('ocorrencia-overlay').classList.add('active');
+            document.body.style.overflow = 'hidden';
+            showOcorrenciaForm();
+            setTimeout(() => document.getElementById('oc-coordinator').focus(), 300);
+        }
+
+        function closeOcorrenciaModal() {
+            document.getElementById('ocorrencia-overlay').classList.remove('active');
+            document.body.style.overflow = '';
+        }
+
+        function closeOcorrenciaFromOverlay(event) {
+            if (event.target === event.currentTarget) closeOcorrenciaModal();
+        }
+
+        function showOcorrenciaForm() {
+            document.getElementById('oc-form-step').style.display = 'block';
+            document.getElementById('oc-result-step').style.display = 'none';
+            ['oc-coordinator', 'oc-students', 'oc-class', 'oc-type', 'oc-desc', 'oc-encaminhamento']
+                .forEach(id => document.getElementById(id).value = '');
+        }
+
+        async function generateOcorrencia() {
+            const resp = val('oc-coordinator');
+            const est = val('oc-students');
+            const turma = val('oc-class');
+            const tipo = val('oc-type');
+            const desc = val('oc-desc');
+            const enc = val('oc-encaminhamento');
+
+            if (!resp || !est || !tipo || !desc) {
+                alert('Preencha pelo menos: responsável, estudante(s), tipo e descrição do ocorrido.');
+                return;
+            }
+
+            const genBtn = document.querySelector('.ocorrencia-gen-btn');
+            if (genBtn) { genBtn.disabled = true; genBtn.dataset.label = genBtn.textContent; genBtn.textContent = 'Gerando código...'; }
+
+            const now = new Date();
+            const dateStr = now.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' });
+            const timeStr = now.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+            const codeInfo = await getNextOcorrenciaCode(now, resp);
+            ocorrenciaCode = codeInfo.code;
+
+            if (genBtn) { genBtn.disabled = false; genBtn.textContent = genBtn.dataset.label || 'Gerar registro ✓'; }
+
+            ocorrenciaWhatsAppMessage =
+                `🏫 *EEMTI PROF. MARIA LUÍZA SABÓIA RIBEIRO*\n` +
+                `*REGISTRO DE OCORRÊNCIA ESCOLAR*\n\n` +
+                `🔖 Código: ${ocorrenciaCode}\n` +
+                `📅 ${dateStr} às ${timeStr}\n` +
+                `👤 Responsável: ${resp}\n\n` +
+                `👨‍🎓 Estudante(s): ${est}\n` +
+                (turma ? `🏷️ Turma/Série: ${turma}\n` : '') +
+                `⚠️ Tipo: ${tipo}\n\n` +
+                `📝 *Descrição do ocorrido:*\n${desc}\n` +
+                (enc ? `\n✅ *Encaminhamento / medidas adotadas:*\n${enc}\n` : '') +
+                `\n✍️ _Assinatura do(a) estudante registrada na lista física da Coordenação sob o código ${ocorrenciaCode}._` +
+                `\n_Registrado localmente via Painel do Colaborador — Malu Serviços._`;
+
+            /* Versão limpa (sem markdown) para colar no formulário do Google. */
+            ocorrenciaPlainText = ocorrenciaWhatsAppMessage.replace(/\*/g, '').replace(/_/g, '');
+
+            document.getElementById('oc-message-preview').textContent = ocorrenciaWhatsAppMessage;
+            document.getElementById('oc-code-value').textContent = ocorrenciaCode;
+            const copyStatus = document.getElementById('oc-copy-status');
+            if (codeInfo.source === 'local-offline') {
+                copyStatus.textContent = '⚠️ Sem conexão com a numeração central — código gerado localmente; confira duplicidade.';
+                copyStatus.style.color = 'var(--orange-deep)';
+            } else {
+                copyStatus.textContent = '';
+                copyStatus.style.color = '';
+            }
+            buildOcorrenciaPrint({ dateStr, timeStr, resp, est, turma, tipo, desc, enc, code: ocorrenciaCode });
+
+            document.getElementById('oc-form-step').style.display = 'none';
+            document.getElementById('oc-result-step').style.display = 'block';
+            document.querySelector('#ocorrencia-overlay .copies-body').scrollTop = 0;
+        }
+
+        function buildOcorrenciaPrint(d) {
+            document.getElementById('ocorrencia-print').innerHTML =
+                `<div style="text-align:center;border-bottom:3px solid #2b6f3f;padding-bottom:12px;margin-bottom:24px;">
+                    <img src="logo.png" style="height:90px;margin-bottom:8px;" alt="">
+                    <div style="font-size:16px;font-weight:700;color:#16261d;">EEMTI PROF. MARIA LUÍZA SABÓIA RIBEIRO</div>
+                    <div style="font-size:12px;color:#444;">Coordenação Pedagógica · Paracuru — CE</div>
+                 </div>
+                 <h2 style="text-align:center;font-size:17px;letter-spacing:1px;margin:0 0 20px;color:#16261d;">REGISTRO DE OCORRÊNCIA ESCOLAR</h2>
+                 <table style="width:100%;font-size:13px;border-collapse:collapse;margin-bottom:18px;">
+                    <tr><td style="padding:6px 0;width:36%;font-weight:700;vertical-align:top;">Código:</td><td style="font-weight:700;letter-spacing:1px;">${escapeHtml(d.code)}</td></tr>
+                    <tr><td style="padding:6px 0;width:36%;font-weight:700;vertical-align:top;">Data / Hora:</td><td>${d.dateStr} — ${d.timeStr}</td></tr>
+                    <tr><td style="padding:6px 0;font-weight:700;vertical-align:top;">Responsável pelo registro:</td><td>${escapeHtml(d.resp)}</td></tr>
+                    <tr><td style="padding:6px 0;font-weight:700;vertical-align:top;">Estudante(s):</td><td>${escapeHtml(d.est)}</td></tr>
+                    ${d.turma ? `<tr><td style="padding:6px 0;font-weight:700;vertical-align:top;">Turma / Série:</td><td>${escapeHtml(d.turma)}</td></tr>` : ''}
+                    <tr><td style="padding:6px 0;font-weight:700;vertical-align:top;">Tipo de ocorrência:</td><td>${escapeHtml(d.tipo)}</td></tr>
+                 </table>
+                 <div style="margin-bottom:16px;">
+                    <div style="font-weight:700;font-size:13px;margin-bottom:6px;border-bottom:1px solid #ccc;padding-bottom:4px;">Descrição do ocorrido</div>
+                    <div style="font-size:13px;line-height:1.7;white-space:pre-wrap;">${escapeHtml(d.desc)}</div>
+                 </div>
+                 ${d.enc ? `<div style="margin-bottom:30px;">
+                    <div style="font-weight:700;font-size:13px;margin-bottom:6px;border-bottom:1px solid #ccc;padding-bottom:4px;">Encaminhamento / medidas adotadas</div>
+                    <div style="font-size:13px;line-height:1.7;white-space:pre-wrap;">${escapeHtml(d.enc)}</div>
+                 </div>` : ''}
+                 <table style="width:100%;margin-top:72px;font-size:13px;text-align:center;border-collapse:collapse;">
+                    <tr>
+                        <td style="width:50%;padding:0 18px;vertical-align:bottom;">
+                            <div style="border-top:1px solid #000;padding-top:6px;">${escapeHtml(d.est)}</div>
+                            <div style="color:#444;font-size:12px;">Assinatura do(a) estudante</div>
+                        </td>
+                        <td style="width:50%;padding:0 18px;vertical-align:bottom;">
+                            <div style="border-top:1px solid #000;padding-top:6px;">${escapeHtml(d.resp)}</div>
+                            <div style="color:#444;font-size:12px;">Responsável pelo registro</div>
+                        </td>
+                    </tr>
+                 </table>
+                 <div style="margin-top:40px;font-size:10px;color:#777;text-align:center;">Documento gerado pelo Painel do Colaborador — Malu Serviços · ${d.dateStr} ${d.timeStr}</div>`;
+        }
+
+        async function copyOcorrenciaToClipboard() {
+            try {
+                await navigator.clipboard.writeText(ocorrenciaPlainText);
+                return true;
+            } catch (err) {
+                /* Fallback para navegadores/contextos sem Clipboard API. */
+                try {
+                    const ta = document.createElement('textarea');
+                    ta.value = ocorrenciaPlainText;
+                    ta.style.position = 'fixed';
+                    ta.style.opacity = '0';
+                    document.body.appendChild(ta);
+                    ta.focus();
+                    ta.select();
+                    const ok = document.execCommand('copy');
+                    document.body.removeChild(ta);
+                    return ok;
+                } catch (e) {
+                    return false;
+                }
+            }
+        }
+
+        async function copyAndOpenForm() {
+            if (!ocorrenciaPlainText) return;
+            const status = document.getElementById('oc-copy-status');
+            const ok = await copyOcorrenciaToClipboard();
+            status.textContent = ok
+                ? '✓ Texto copiado! Cole no formulário (Ctrl+V) e envie.'
+                : 'Copie o texto acima manualmente e cole no formulário.';
+            window.open(OCORRENCIAS_FORM_URL, '_blank');
+        }
+
+        function sendOcorrenciaWhatsApp() {
+            if (!ocorrenciaWhatsAppMessage) return;
+            window.open('https://wa.me/?text=' + encodeURIComponent(ocorrenciaWhatsAppMessage), '_blank');
+        }
+
+        function printOcorrencia() {
+            window.print();
         }
     </script>
 </body>
