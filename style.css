@@ -1096,14 +1096,29 @@ footer .branding-text {
 .rel-share-label { font-weight: 700; color: var(--text-muted); }
 .rel-share-toggle label { display: inline-flex; align-items: center; gap: 5px; cursor: pointer; }
 
+/* ===== Lista de assinaturas (folha em branco) ===== */
+.lista-card-icon { background: linear-gradient(135deg, hsl(140, 55%, 40%), hsl(140, 60%, 26%)); }
+.lista-card-icon svg { stroke: var(--white); }
+
+.sig-head { text-align: center; border-bottom: 3px solid #2b6f3f; padding-bottom: 10px; margin-bottom: 14px; }
+.sig-head img { height: 70px; }
+.sig-head .nm { font-size: 15px; font-weight: 700; color: #16261d; }
+.sig-head .sub { font-size: 11px; color: #444; }
+.sig-instrucoes { font-size: 12px; background: #f4f4f8; border: 1px solid #ddd; border-radius: 8px; padding: 10px 12px; margin-bottom: 14px; line-height: 1.5; }
+.sig-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+.sig-table th { border: 1px solid #888; padding: 9px 12px; text-align: left; background: #eee; }
+.sig-table td { border: 1px solid #888; padding: 16px 12px; }
+.sig-table .sig-cod { width: 40%; }
+
 /* Printable institutional documents (screen-hidden) */
-#ocorrencia-print, #relatorio-print { display: none; }
+#ocorrencia-print, #relatorio-print, #lista-print { display: none; }
 
 @media print {
     body * { visibility: hidden; }
     #ocorrencia-print, #ocorrencia-print *,
-    #relatorio-print, #relatorio-print * { visibility: visible; }
-    #ocorrencia-print, #relatorio-print {
+    #relatorio-print, #relatorio-print *,
+    #lista-print, #lista-print * { visibility: visible; }
+    #ocorrencia-print, #relatorio-print, #lista-print {
         display: block !important;
         position: absolute;
         top: 0;
