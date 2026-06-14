@@ -4,26 +4,18 @@
  *  EEMTI Prof. Maria Luiza Saboia Ribeiro
  * ============================================================
  *
- *  O QUE FAZ:
- *  Serve uma PÁGINA (dentro do Google/SEDUC) com o relatório de ocorrências.
- *  Lê a planilha de respostas do formulário, extrai os campos do texto colado
- *  (código, estudante, tipo, turma, data) e monta os números. Só leitura.
+ *  Serve uma PÁGINA (dentro do Google/SEDUC) com:
+ *   - visão geral (total, por tipo, por turma, por mês, POR ALUNO)
+ *   - busca por aluno
+ *   - envio por WhatsApp e impressão do relatório
+ *   - impressão da LISTA DE ASSINATURAS (com logo, código e espaço para assinar)
  *
- *  SEGURANÇA: como é implantado "Qualquer pessoa dentro da SEDUC", só quem
- *  está logado numa conta SEDUC abre a página. O PIN abaixo é a 2ª camada,
- *  para restringir à coordenação. Os dados nunca saem do ambiente SEDUC.
+ *  Só leitura. Protegido por login SEDUC + PIN. Os dados não saem da SEDUC.
  *
  *  ⚠️ DEFINA SEU PIN na linha  var PIN = '1234';
  *
- *  PASSO A PASSO:
- *  1. Abra a PLANILHA DE RESPOSTAS do formulário de Ocorrências.
- *  2. Extensões > Apps Script. Apague tudo e cole ESTE arquivo.
- *  3. Troque o PIN.
- *  4. Implantar > Gerenciar implantações > (sua implantação) > Editar (lápis)
- *     > Versão: "Nova versão" > Implantar.  (assim a URL continua a mesma)
- *     - Executar como: "Eu"
- *     - Quem tem acesso: "Qualquer pessoa dentro da [SEDUC]"
- *  5. A URL /exec já está ligada no site. Se mudar, me avise.
+ *  Ao atualizar este código: Implantar > Gerenciar implantações > Editar (lápis)
+ *  > Versão: "Nova versão" > Implantar  (mantém a URL).
  */
 
 var PIN = '1234';        // <<< TROQUE pelo seu PIN
@@ -40,26 +32,24 @@ function checkPin_(pin) { return String(pin || '') === String(PIN); }
 function apiOverview(pin) {
   if (!checkPin_(pin)) return { success: false, error: 'PIN' };
   var rows = readRecords_();
-  var porTipo = {}, porTurma = {}, porMes = {}, total = 0;
+  var porTipo = {}, porTurma = {}, porMes = {}, alunoMap = {}, total = 0, registros = [];
   for (var k = 0; k < rows.length; k++) {
     var r = rows[k]; total++;
     if (r.tipo) porTipo[r.tipo] = (porTipo[r.tipo] || 0) + 1;
     if (r.turma) porTurma[r.turma] = (porTurma[r.turma] || 0) + 1;
     if (r.mes) porMes[r.mes] = (porMes[r.mes] || 0) + 1;
-  }
-  return { success: true, total: total, porTipo: porTipo, porTurma: porTurma, porMes: porMes };
-}
-
-function apiStudent(pin, q) {
-  if (!checkPin_(pin)) return { success: false, error: 'PIN' };
-  var nq = norm_(q || ''), regs = [], rows = readRecords_();
-  for (var i = 0; i < rows.length; i++) {
-    if (nq && norm_(rows[i].estudante).indexOf(nq) !== -1) {
-      regs.push({ data: rows[i].data, tipo: rows[i].tipo, codigo: rows[i].codigo, turma: rows[i].turma });
+    var parts = String(r.estudante || '').split(/[,;]/);
+    for (var j = 0; j < parts.length; j++) {
+      var nome = parts[j].trim(); if (!nome) continue;
+      var key = norm_(nome);
+      if (!alunoMap[key]) alunoMap[key] = { nome: nome, count: 0 };
+      alunoMap[key].count++;
     }
+    registros.push({ codigo: r.codigo, data: r.data, aluno: r.estudante, turma: r.turma, tipo: r.tipo });
   }
-  regs.sort(function (a, b) { return _key(a.data).localeCompare(_key(b.data)); });
-  return { success: true, nome: q || '', total: regs.length, registros: regs };
+  var porAluno = Object.keys(alunoMap).map(function (k) { return alunoMap[k]; })
+    .sort(function (a, b) { return b.count - a.count || a.nome.localeCompare(b.nome); });
+  return { success: true, total: total, porTipo: porTipo, porTurma: porTurma, porMes: porMes, porAluno: porAluno, registros: registros };
 }
 
 function readRecords_() {
@@ -139,6 +129,7 @@ function PAGE_HTML_() {
   .btn-primary { background:linear-gradient(135deg,#6a5acd,#4b3fae); color:#fff; }
   .btn-wa { background:linear-gradient(135deg,#25D366,#128C7E); color:#fff; }
   .btn-print { background:#fff; color:#16261d; border:1.5px solid #d8dee4; }
+  .btn-sig { background:linear-gradient(135deg,#2b6f3f,#1e5630); color:#fff; }
   .status { font-size:13px; text-align:center; margin:10px 0; min-height:1em; color:#b3401a; }
   .total { display:flex; align-items:baseline; gap:8px; margin-bottom:16px; }
   .total .n { font-size:34px; font-weight:800; color:#4b3fae; }
@@ -149,6 +140,11 @@ function PAGE_HTML_() {
   .bar .trk { flex:1; height:9px; background:#eef0f4; border-radius:100px; overflow:hidden; }
   .bar .fil { display:block; height:100%; background:linear-gradient(90deg,#7d6ee0,#4b3fae); }
   .bar .v { font-weight:700; min-width:18px; text-align:right; }
+  .alu { display:flex; align-items:center; gap:10px; padding:8px; border-radius:8px; cursor:pointer; font-size:14px; border-bottom:1px solid #f0f0f4; }
+  .alu:hover { background:#f3f1fb; }
+  .alu .lab { flex:1; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .alu .v { font-weight:700; color:#4b3fae; }
+  .alu .go { color:#9aa; font-size:13px; }
   .divider { height:1px; background:#e5e7eb; margin:22px 0; }
   .sbox { background:#f3f1fb; border:1px solid #d9d4f3; border-radius:12px; padding:14px; margin-top:12px; }
   .shead { font-size:15px; margin-bottom:10px; }
@@ -159,7 +155,23 @@ function PAGE_HTML_() {
   .toggle { display:flex; gap:14px; align-items:center; flex-wrap:wrap; margin:18px 0 8px; font-size:14px; }
   .toggle .lab { font-weight:700; color:#56655c; }
   .empty { color:#56655c; font-size:14px; padding:6px 0; }
-  @media print { .noprint { display:none !important; } .hd { color:#000; background:none; } }
+
+  #sigSheet { display:none; padding:24px; }
+  .sig-h { text-align:center; border-bottom:3px solid #2b6f3f; padding-bottom:10px; margin-bottom:14px; }
+  .sig-h img { height:70px; }
+  .sig-instr { font-size:12px; background:#f4f4f8; border:1px solid #ddd; border-radius:8px; padding:10px 12px; margin-bottom:14px; line-height:1.5; }
+  table.sig { width:100%; border-collapse:collapse; font-size:12px; }
+  table.sig th, table.sig td { border:1px solid #888; padding:9px 8px; text-align:left; vertical-align:top; }
+  table.sig th { background:#eee; }
+  table.sig .sg { width:32%; }
+
+  @media print {
+    .noprint { display:none !important; }
+    .hd { color:#000; background:none; }
+    #sigSheet { display:none; }
+    body.sigmode .wrap { display:none !important; }
+    body.sigmode #sigSheet { display:block !important; }
+  }
 </style>
 </head>
 <body>
@@ -178,19 +190,20 @@ function PAGE_HTML_() {
       <div class="divider noprint"></div>
       <div class="noprint">
         <label for="sq">Consultar por aluno</label>
-        <input id="sq" type="text" placeholder="Nome do estudante" onkeydown="if(event.key==='Enter')buscar()">
-        <button class="btn-primary" onclick="buscar()">🔎 Buscar aluno</button>
+        <input id="sq" type="text" placeholder="Nome do estudante" oninput="buscar()" onkeydown="if(event.key==='Enter')buscar()">
       </div>
       <div id="sresults"></div>
       <div class="toggle noprint"><span class="lab">Ao compartilhar:</span><label><input type="radio" name="anon" value="c" checked> Completo</label><label><input type="radio" name="anon" value="a"> Anonimizado</label></div>
       <button class="btn-wa noprint" onclick="enviarWa()">Enviar relatório (WhatsApp)</button>
-      <button class="btn-print noprint" onclick="window.print()">🖨️ Imprimir / Salvar em PDF</button>
+      <button class="btn-print noprint" onclick="window.print()">🖨️ Imprimir relatório / PDF</button>
+      <button class="btn-sig noprint" onclick="imprimirAssinaturas()">🖊️ Imprimir lista de assinaturas</button>
     </div>
   </div>
 </div>
+<div id="sigSheet"></div>
 <script>
   var NL = String.fromCharCode(10);
-  var PINV='', OV=null, LAST=null;
+  var PINV='', OV=null, ALLRECS=[], LASTRECS=null, LASTQ='';
   function unlock(){
     var pin=document.getElementById('pin').value.trim();
     var st=document.getElementById('pinStatus');
@@ -198,7 +211,7 @@ function PAGE_HTML_() {
     st.textContent='Verificando...';
     google.script.run.withSuccessHandler(function(d){
       if(!d.success){ st.textContent = d.error==='PIN' ? 'PIN incorreto.' : ('Erro: '+d.error); return; }
-      PINV=pin; OV=d; renderOv(d);
+      PINV=pin; OV=d; ALLRECS=d.registros||[]; renderOv(d);
       document.getElementById('pinStep').style.display='none';
       document.getElementById('reportStep').style.display='block';
     }).withFailureHandler(function(e){ st.textContent='Erro: '+e.message; }).apiOverview(pin);
@@ -216,25 +229,30 @@ function PAGE_HTML_() {
     ks.forEach(function(k){ var p=k.split('-'); s+='<div class="bar"><span class="lab">'+(M[parseInt(p[1],10)-1]||p[1])+'/'+p[0]+'</span><span class="v">'+o[k]+'</span></div>'; });
     return s;
   }
+  function aluList(arr){
+    if(!arr || !arr.length) return '<div class="empty">Sem dados.</div>';
+    var s=''; arr.forEach(function(a){ s+='<div class="alu" onclick="selAluno(this)" data-n="'+esc(a.nome)+'"><span class="lab">'+esc(a.nome)+'</span><span class="v">'+a.count+'</span><span class="go">›</span></div>'; });
+    return s;
+  }
   function renderOv(d){
     OV=d;
-    document.getElementById('overview').innerHTML='<div class="total"><span class="n">'+(d.total||0)+'</span><span class="l">ocorrências registradas</span></div><div class="sec">Por tipo</div>'+bars(d.porTipo)+'<div class="sec">Por turma</div>'+bars(d.porTurma)+'<div class="sec">Por mês</div>'+mesList(d.porMes);
+    document.getElementById('overview').innerHTML='<div class="total"><span class="n">'+(d.total||0)+'</span><span class="l">ocorrências registradas</span></div><div class="sec">Por tipo</div>'+bars(d.porTipo)+'<div class="sec">Por turma</div>'+bars(d.porTurma)+'<div class="sec">Por mês</div>'+mesList(d.porMes)+'<div class="sec">Por aluno (toque para detalhar)</div>'+aluList(d.porAluno);
   }
+  function selAluno(el){ var n=el.getAttribute('data-n'); document.getElementById('sq').value=n; buscar(); document.getElementById('sresults').scrollIntoView({behavior:'smooth',block:'center'}); }
   function buscar(){
     var q=document.getElementById('sq').value.trim();
     var el=document.getElementById('sresults');
-    if(!q){ el.innerHTML=''; return; }
-    el.innerHTML='<div class="empty">Buscando...</div>';
-    google.script.run.withSuccessHandler(function(d){
-      if(!d.success){ el.innerHTML='<div class="empty">'+esc(d.error||'Erro')+'</div>'; return; }
-      LAST=d; renderSt(d);
-    }).withFailureHandler(function(e){ el.innerHTML='<div class="empty">Erro: '+e.message+'</div>'; }).apiStudent(PINV,q);
+    if(!q){ LASTRECS=null; LASTQ=''; el.innerHTML=''; return; }
+    var nq=normJS(q);
+    LASTRECS=ALLRECS.filter(function(r){ return normJS(r.aluno||'').indexOf(nq)!==-1; });
+    LASTRECS.sort(function(a,b){ return keyJS(a.data)<keyJS(b.data)?-1:1; });
+    LASTQ=q; renderSt(LASTRECS, q);
   }
-  function renderSt(d){
-    LAST=d; var el=document.getElementById('sresults');
-    if(!d.total){ el.innerHTML='<div class="sbox empty">Nenhuma ocorrência encontrada para "'+esc(d.nome)+'".</div>'; return; }
-    var s='<div class="sbox"><div class="shead">'+esc(d.nome)+' — <strong>'+d.total+'</strong> ocorrência(s)</div>';
-    d.registros.forEach(function(r){ s+='<div class="rec"><span class="d">'+esc(r.data||'')+'</span><span class="t">'+esc(r.tipo||'—')+(r.turma?' · '+esc(r.turma):'')+'</span><span class="c">'+esc(r.codigo||'')+'</span></div>'; });
+  function renderSt(recs, q){
+    var el=document.getElementById('sresults');
+    if(!recs.length){ el.innerHTML='<div class="sbox empty">Nenhuma ocorrência encontrada para "'+esc(q)+'".</div>'; return; }
+    var s='<div class="sbox"><div class="shead">'+esc(q)+' — <strong>'+recs.length+'</strong> ocorrência(s)</div>';
+    recs.forEach(function(r){ s+='<div class="rec"><span class="d">'+esc(r.data||'')+'</span><span class="t">'+esc(r.tipo||'—')+(r.turma?' · '+esc(r.turma):'')+'</span><span class="c">'+esc(r.codigo||'')+'</span></div>'; });
     s+='</div>'; el.innerHTML=s;
   }
   function isAnon(){ var e=document.querySelector('input[name=anon]:checked'); return !!(e && e.value==='a'); }
@@ -245,11 +263,28 @@ function PAGE_HTML_() {
     var t='📊 *RELATÓRIO DE OCORRÊNCIAS*'+NL+'🏫 EEMTI Profa. Maria Luíza Saboia'+NL+NL+'Total: '+(OV.total||0)+NL+NL+'*Por tipo:*'+NL;
     var pt=OV.porTipo||{}; Object.keys(pt).sort(function(a,b){return pt[b]-pt[a];}).forEach(function(k){ t+='• '+k+': '+pt[k]+NL; });
     t+=NL+'*Por turma:*'+NL; var pu=OV.porTurma||{}; Object.keys(pu).sort(function(a,b){return pu[b]-pu[a];}).forEach(function(k){ t+='• '+k+': '+pu[k]+NL; });
-    if(LAST && LAST.total){ t+=NL+'*Aluno consultado:* '+(a?anonNome(LAST.nome):LAST.nome)+' — '+LAST.total+' ocorrência(s)'+NL; LAST.registros.forEach(function(r){ t+='• '+(r.data||'')+' — '+(r.tipo||'')+(r.turma?' ('+r.turma+')':'')+NL; }); }
+    if(LASTRECS && LASTRECS.length){ t+=NL+'*Aluno consultado:* '+(a?anonNome(LASTQ):LASTQ)+' — '+LASTRECS.length+' ocorrência(s)'+NL; LASTRECS.forEach(function(r){ t+='• '+(r.data||'')+' — '+(r.tipo||'')+(r.turma?' ('+r.turma+')':'')+NL; }); }
     t+=NL+'_Gerado pelo Painel do Colaborador — Malu Serviços._';
     return t;
   }
   function enviarWa(){ var t=shareText(); if(!t) return; window.open('https://wa.me/?text='+encodeURIComponent(t), '_blank'); }
+  function buildSig(){
+    var recs=(LASTRECS && LASTRECS.length) ? LASTRECS : ALLRECS;
+    var rowsHtml='';
+    recs.forEach(function(r){ rowsHtml+='<tr><td>'+esc(r.codigo||'')+'</td><td>'+esc(r.data||'')+'</td><td>'+esc(r.aluno||'')+'</td><td>'+esc(r.turma||'')+'</td><td>'+esc(r.tipo||'')+'</td><td class="sg"></td></tr>'; });
+    if(!rowsHtml) rowsHtml='<tr><td colspan="6" style="text-align:center;color:#777;">Sem ocorrências.</td></tr>';
+    var titulo=(LASTRECS && LASTRECS.length) ? ('Estudante: '+esc(LASTQ)) : 'Todas as ocorrências registradas';
+    document.getElementById('sigSheet').innerHTML=
+      '<div class="sig-h"><img src="https://viniciusabezezer.github.io/painel-colaborador/logo.png" alt=""><div style="font-size:15px;font-weight:700;">EEMTI PROF. MARIA LUÍZA SABÓIA RIBEIRO</div><div style="font-size:11px;color:#444;">Coordenação Pedagógica · Paracuru — CE</div></div>'+
+      '<h2 style="text-align:center;font-size:16px;margin:0 0 4px;">LISTA DE ASSINATURAS DE OCORRÊNCIAS</h2>'+
+      '<div style="text-align:center;font-size:11px;color:#555;margin-bottom:12px;">'+titulo+'</div>'+
+      '<div class="sig-instr"><strong>Instruções ao coordenador:</strong> confira com cada estudante a ocorrência correspondente, registre/confirme o <strong>código gerado pelo app</strong> na coluna "Código", e solicite a <strong>assinatura</strong> do estudante no espaço indicado. A assinatura confirma a ciência do estudante sobre o registro da ocorrência.</div>'+
+      '<table class="sig"><tr><th>Código</th><th>Data</th><th>Estudante</th><th>Turma</th><th>Tipo</th><th class="sg">Assinatura do(a) estudante</th></tr>'+rowsHtml+'</table>';
+  }
+  function imprimirAssinaturas(){ buildSig(); document.body.classList.add('sigmode'); window.print(); }
+  window.onafterprint=function(){ document.body.classList.remove('sigmode'); };
+  function normJS(s){ return String(s).normalize('NFD').replace(/[\\u0300-\\u036f]/g,'').toLowerCase().trim(); }
+  function keyJS(dataBR){ var d=String(dataBR||'').split('/'); return d.length===3?(d[2]+d[1]+d[0]):''; }
   function esc(s){ return String(s).replace(/[&<>"']/g, function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]; }); }
 </script>
 </body>
