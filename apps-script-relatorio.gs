@@ -160,10 +160,10 @@ function PAGE_HTML_() {
   .sig-h { text-align:center; border-bottom:3px solid #2b6f3f; padding-bottom:10px; margin-bottom:14px; }
   .sig-h img { height:70px; }
   .sig-instr { font-size:12px; background:#f4f4f8; border:1px solid #ddd; border-radius:8px; padding:10px 12px; margin-bottom:14px; line-height:1.5; }
-  table.sig { width:100%; border-collapse:collapse; font-size:12px; }
-  table.sig th, table.sig td { border:1px solid #888; padding:9px 8px; text-align:left; vertical-align:top; }
-  table.sig th { background:#eee; }
-  table.sig .sg { width:32%; }
+  table.sig { width:100%; border-collapse:collapse; font-size:13px; }
+  table.sig th { border:1px solid #888; padding:9px 12px; text-align:left; background:#eee; }
+  table.sig td { border:1px solid #888; padding:16px 12px; }
+  table.sig .cod { width:40%; }
 
   @media print {
     .noprint { display:none !important; }
@@ -269,17 +269,13 @@ function PAGE_HTML_() {
   }
   function enviarWa(){ var t=shareText(); if(!t) return; window.open('https://wa.me/?text='+encodeURIComponent(t), '_blank'); }
   function buildSig(){
-    var recs=(LASTRECS && LASTRECS.length) ? LASTRECS : ALLRECS;
     var rowsHtml='';
-    recs.forEach(function(r){ rowsHtml+='<tr><td>'+esc(r.codigo||'')+'</td><td>'+esc(r.data||'')+'</td><td>'+esc(r.aluno||'')+'</td><td>'+esc(r.turma||'')+'</td><td>'+esc(r.tipo||'')+'</td><td class="sg"></td></tr>'; });
-    if(!rowsHtml) rowsHtml='<tr><td colspan="6" style="text-align:center;color:#777;">Sem ocorrências.</td></tr>';
-    var titulo=(LASTRECS && LASTRECS.length) ? ('Estudante: '+esc(LASTQ)) : 'Todas as ocorrências registradas';
+    for(var i=0;i<25;i++){ rowsHtml+='<tr><td class="cod"></td><td></td></tr>'; }
     document.getElementById('sigSheet').innerHTML=
       '<div class="sig-h"><img src="https://viniciusabezezer.github.io/painel-colaborador/logo.png" alt=""><div style="font-size:15px;font-weight:700;">EEMTI PROF. MARIA LUÍZA SABÓIA RIBEIRO</div><div style="font-size:11px;color:#444;">Coordenação Pedagógica · Paracuru — CE</div></div>'+
-      '<h2 style="text-align:center;font-size:16px;margin:0 0 4px;">LISTA DE ASSINATURAS DE OCORRÊNCIAS</h2>'+
-      '<div style="text-align:center;font-size:11px;color:#555;margin-bottom:12px;">'+titulo+'</div>'+
-      '<div class="sig-instr"><strong>Instruções ao coordenador:</strong> confira com cada estudante a ocorrência correspondente, registre/confirme o <strong>código gerado pelo app</strong> na coluna "Código", e solicite a <strong>assinatura</strong> do estudante no espaço indicado. A assinatura confirma a ciência do estudante sobre o registro da ocorrência.</div>'+
-      '<table class="sig"><tr><th>Código</th><th>Data</th><th>Estudante</th><th>Turma</th><th>Tipo</th><th class="sg">Assinatura do(a) estudante</th></tr>'+rowsHtml+'</table>';
+      '<h2 style="text-align:center;font-size:16px;margin:0 0 10px;">LISTA DE ASSINATURAS DE OCORRÊNCIAS</h2>'+
+      '<div class="sig-instr"><strong>Instruções:</strong> a cada ocorrência registrada no aplicativo, o coordenador anota nesta lista o <strong>código gerado</strong> e o(a) estudante <strong>assina ao lado</strong>, para constar que recebeu a ocorrência.</div>'+
+      '<table class="sig"><tr><th class="cod">Código da ocorrência</th><th>Assinatura do(a) estudante</th></tr>'+rowsHtml+'</table>';
   }
   function imprimirAssinaturas(){ buildSig(); document.body.classList.add('sigmode'); window.print(); }
   window.onafterprint=function(){ document.body.classList.remove('sigmode'); };
