@@ -157,20 +157,21 @@ function PAGE_HTML_() {
   .empty { color:#56655c; font-size:14px; padding:6px 0; }
 
   #sigSheet { display:none; padding:24px; }
-  .sig-h { text-align:center; border-bottom:3px solid #2b6f3f; padding-bottom:10px; margin-bottom:14px; }
-  .sig-h img { height:70px; }
-  .sig-instr { font-size:12px; background:#f4f4f8; border:1px solid #ddd; border-radius:8px; padding:10px 12px; margin-bottom:14px; line-height:1.5; }
+  .sig-h { text-align:center; border-bottom:3px solid #2b6f3f; padding-bottom:6px; margin-bottom:8px; }
+  .sig-h img { height:58px; }
+  .sig-instr { font-size:12px; background:#f4f4f8; border:1px solid #ddd; border-radius:8px; padding:7px 10px; margin-bottom:8px; line-height:1.4; }
   table.sig { width:100%; border-collapse:collapse; font-size:13px; }
-  table.sig th { border:1px solid #888; padding:9px 12px; text-align:left; background:#eee; }
-  table.sig td { border:1px solid #888; padding:16px 12px; }
-  table.sig .cod { width:40%; }
+  table.sig th { border:1px solid #888; padding:7px 10px; text-align:left; background:#eee; }
+  table.sig td { border:1px solid #888; padding:15px 10px; }
+  table.sig .cod { width:26%; }
 
   @media print {
+    @page { margin:0.7cm; }
     .noprint { display:none !important; }
     .hd { color:#000; background:none; }
     #sigSheet { display:none; }
     body.sigmode .wrap { display:none !important; }
-    body.sigmode #sigSheet { display:block !important; }
+    body.sigmode #sigSheet { display:block !important; padding:0.2cm 0.4cm; }
   }
 </style>
 </head>
@@ -270,10 +271,10 @@ function PAGE_HTML_() {
   function enviarWa(){ var t=shareText(); if(!t) return; window.open('https://wa.me/?text='+encodeURIComponent(t), '_blank'); }
   function buildSig(){
     var rowsHtml='';
-    for(var i=0;i<25;i++){ rowsHtml+='<tr><td class="cod"></td><td></td></tr>'; }
+    for(var i=0;i<22;i++){ rowsHtml+='<tr><td class="cod"></td><td></td></tr>'; }
     document.getElementById('sigSheet').innerHTML=
       '<div class="sig-h"><img src="https://viniciusabezezer.github.io/painel-colaborador/logo.png" alt=""><div style="font-size:15px;font-weight:700;">EEMTI PROF. MARIA LUÍZA SABÓIA RIBEIRO</div><div style="font-size:11px;color:#444;">Coordenação Pedagógica · Paracuru — CE</div></div>'+
-      '<h2 style="text-align:center;font-size:16px;margin:0 0 10px;">LISTA DE ASSINATURAS DE OCORRÊNCIAS</h2>'+
+      '<h2 style="text-align:center;font-size:15px;margin:0 0 6px;">LISTA DE ASSINATURAS DE OCORRÊNCIAS</h2>'+
       '<div class="sig-instr"><strong>Instruções:</strong> a cada ocorrência registrada no aplicativo, o coordenador anota nesta lista o <strong>código gerado</strong> e o(a) estudante <strong>assina ao lado</strong>, para constar que recebeu a ocorrência.</div>'+
       '<table class="sig"><tr><th class="cod">Código da ocorrência</th><th>Assinatura do(a) estudante</th></tr>'+rowsHtml+'</table>';
   }

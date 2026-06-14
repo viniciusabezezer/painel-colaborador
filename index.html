@@ -837,12 +837,12 @@
         /* ========== Lista de assinaturas (folha física em branco) ========== */
         function imprimirListaAssinaturas() {
             var rows = '';
-            for (var i = 0; i < 25; i++) { rows += '<tr><td class="sig-cod"></td><td></td></tr>'; }
+            for (var i = 0; i < 22; i++) { rows += '<tr><td class="sig-cod"></td><td></td></tr>'; }
             document.getElementById('ocorrencia-print').innerHTML = '';
             document.getElementById('relatorio-print').innerHTML = '';
             document.getElementById('lista-print').innerHTML =
                 '<div class="sig-head"><img src="logo.png" alt=""><div class="nm">EEMTI PROF. MARIA LUÍZA SABÓIA RIBEIRO</div><div class="sub">Coordenação Pedagógica · Paracuru — CE</div></div>' +
-                '<h2 style="text-align:center;font-size:16px;margin:0 0 10px;color:#16261d;">LISTA DE ASSINATURAS DE OCORRÊNCIAS</h2>' +
+                '<h2 style="text-align:center;font-size:15px;margin:0 0 6px;color:#16261d;">LISTA DE ASSINATURAS DE OCORRÊNCIAS</h2>' +
                 '<div class="sig-instrucoes"><strong>Instruções:</strong> a cada ocorrência registrada no aplicativo, o coordenador anota nesta lista o <strong>código gerado</strong> e o(a) estudante <strong>assina ao lado</strong>, para constar que recebeu a ocorrência.</div>' +
                 '<table class="sig-table"><tr><th class="sig-cod">Código da ocorrência</th><th>Assinatura do(a) estudante</th></tr>' + rows + '</table>';
             window.print();
