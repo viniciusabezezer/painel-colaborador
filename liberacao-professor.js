@@ -77,7 +77,17 @@
       '.lib-fallback{display:none;margin:0 0 12px;font-size:.82rem;line-height:1.6}' +
       '.lib-fallback.on{display:block}' +
       '.lib-fallback a{display:block;padding:10px 12px;margin-top:6px;border:1px solid #cfdcd3;' +
-      'border-radius:10px;text-decoration:none;font-weight:700}';
+      'border-radius:10px;text-decoration:none;font-weight:700}' +
+      '.lib-popup-overlay{position:fixed;inset:0;background:rgba(10,25,15,.65);display:none;' +
+      'align-items:center;justify-content:center;z-index:99999;padding:20px}' +
+      '.lib-popup-overlay.on{display:flex}' +
+      '.lib-popup-box{background:#fff;border-radius:18px;padding:24px 20px;max-width:340px;width:100%;' +
+      'text-align:center;font-size:.92rem;line-height:1.65;color:#16261d;' +
+      'box-shadow:0 18px 50px rgba(0,0,0,.3);animation:libFade .25s ease}' +
+      '.lib-popup-emoji{font-size:2.2rem;margin-bottom:10px}' +
+      '.lib-popup-box p{margin:0 0 18px}' +
+      '.lib-popup-box button{width:100%;padding:13px;border:0;border-radius:12px;font:inherit;' +
+      'font-weight:700;cursor:pointer;background:#2b6f3f;color:#fff}';
     var st = document.createElement('style');
     st.id = 'lib-professor-style';
     st.textContent = css;
@@ -151,7 +161,8 @@
                 'complete o formulário, que já estará aberto esperando por você.</li>' +
               '</ol>' +
               '<p class="lib-passos-foot">O texto da liberação também é copiado automaticamente, ' +
-              'então basta colar no formulário. Tudo é processado <strong>localmente no seu aparelho</strong>.</p>' +
+              'para você poder colá-lo numa mensagem a um dos coordenadores, se precisar. ' +
+              'Tudo é processado <strong>localmente no seu aparelho</strong>.</p>' +
             '</div>' +
 
             '<div class="copies-field">' +
@@ -195,11 +206,12 @@
             '<div class="lib-passos">' +
               '<p class="lib-passos-title">📌 O que vai acontecer ao tocar no botão</p>' +
               '<ol>' +
-                '<li>O texto acima é <strong>copiado</strong> para a área de transferência.</li>' +
-                '<li>O <strong>formulário oficial</strong> abre em outra aba e fica esperando.</li>' +
-                '<li>O <strong>WhatsApp abre por cima</strong>, com a mensagem pronta — ' +
+                '<li>O texto da liberação é <strong>copiado</strong> — se precisar, cole-o numa ' +
+                'mensagem para um dos coordenadores.</li>' +
+                '<li>O <strong>formulário oficial</strong> abre primeiro, em outra aba.</li>' +
+                '<li>O <strong>WhatsApp abre com a mensagem pronta</strong> — ' +
                 '<strong>envie-a para a gestão</strong>.</li>' +
-                '<li>Volte ao navegador e <strong>preencha o formulário</strong> (pode colar o texto).</li>' +
+                '<li>Volte ao navegador e <strong>preencha o formulário</strong>.</li>' +
               '</ol>' +
             '</div>' +
             '<div class="oc-copy-status" id="lib-copy-status"></div>' +
@@ -209,6 +221,16 @@
             '<button class="back-btn" onclick="showLiberacaoForm()">← Nova liberação</button>' +
           '</div>' +
 
+        '</div>' +
+      '</div>' +
+      '<div class="lib-popup-overlay" id="lib-popup">' +
+        '<div class="lib-popup-box" onclick="event.stopPropagation()">' +
+          '<div class="lib-popup-emoji">📋</div>' +
+          '<p><strong>O texto da liberação foi copiado!</strong><br>' +
+          'Cole-o numa mensagem de WhatsApp para um dos <strong>coordenadores</strong>. ' +
+          'O <strong>formulário oficial</strong> já está aberto em outra aba — preencha-o ' +
+          'depois de enviar a mensagem.</p>' +
+          '<button onclick="fecharLibPopup()">Entendi ✓</button>' +
         '</div>' +
       '</div>';
     document.body.appendChild(wrap);
@@ -264,6 +286,7 @@
     CAMPOS.forEach(function (id) { var el = $(id); if (el) el.value = ''; });
     var st = $('lib-copy-status'); if (st) { st.textContent = ''; st.style.color = ''; }
     var fb = $('lib-fallback'); if (fb) { fb.innerHTML = ''; fb.classList.remove('on'); }
+    fecharLibPopup();
     updateLiberacaoResumo();
   }
 
@@ -305,7 +328,7 @@
       '———————————————\n' +
       '\n_Registrado localmente via Painel do Colaborador — Malu Serviços._';
 
-    /* Versão limpa para colar no formulário do Google. */
+    /* Versão limpa (sem markdown), copiada para a área de transferência. */
     libPlainText = libWhatsAppMessage.replace(/\*/g, '').replace(/_/g, '');
 
     $('lib-message-preview').textContent = libWhatsAppMessage;
@@ -339,12 +362,13 @@
     /* 1. cópia (assíncrona, não atrasa a abertura das abas) */
     copyLiberacaoToClipboard().then(function (ok) {
       status.textContent = ok
-        ? '✓ Texto copiado. Envie a mensagem no WhatsApp e depois cole no formulário.'
+        ? '✓ Texto copiado. Envie a mensagem a um coordenador e depois preencha o formulário.'
         : '⚠️ Não consegui copiar sozinho — selecione o texto acima e copie à mão.';
       status.style.color = ok ? '' : 'var(--orange-deep)';
+      if (ok) abrirLibPopup();
     });
 
-    /* 2. formulário abre atrás; 3. WhatsApp abre por cima */
+    /* 2. formulário abre primeiro; 3. WhatsApp abre em seguida, com a mensagem pronta */
     var abaForm = window.open(FORM_LIBERACAO_URL, '_blank');
     var abaZap = window.open(whatsAppUrl(), '_blank');
 
@@ -382,6 +406,16 @@
       document.body.removeChild(ta);
       return ok;
     } catch (e) { return false; }
+  }
+
+  function abrirLibPopup() {
+    var p = $('lib-popup');
+    if (p) p.classList.add('on');
+  }
+
+  function fecharLibPopup() {
+    var p = $('lib-popup');
+    if (p) p.classList.remove('on');
   }
 
   function printLiberacao() { window.print(); }
@@ -436,6 +470,7 @@
   window.showLiberacaoForm = showLiberacaoForm;
   window.generateLiberacao = generateLiberacao;
   window.enviarLiberacaoCompleta = enviarLiberacaoCompleta;
+  window.fecharLibPopup = fecharLibPopup;
   window.printLiberacao = printLiberacao;
   window.updateLiberacaoResumo = updateLiberacaoResumo;
 
