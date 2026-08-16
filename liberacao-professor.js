@@ -66,7 +66,18 @@
       'font-size:.76rem;line-height:1.5;opacity:.85}' +
       '.lib-aprov-box{border:1px dashed rgba(43,111,63,.45);border-radius:12px;padding:12px 14px;' +
       'margin:14px 0;font-size:.8rem;line-height:1.55;opacity:.9}' +
-      '.lib-aprov-box strong{display:block;margin-bottom:4px}';
+      '.lib-aprov-box strong{display:block;margin-bottom:4px}' +
+      '.lib-passos{border:1px solid rgba(194,89,13,.35);background:rgba(194,89,13,.07);' +
+      'border-radius:14px;padding:14px 16px;margin:0 0 18px}' +
+      '.lib-passos-title{font-size:.78rem;font-weight:800;letter-spacing:.06em;text-transform:uppercase;' +
+      'margin:0 0 10px}' +
+      '.lib-passos ol{margin:0;padding-left:20px;font-size:.84rem;line-height:1.7}' +
+      '.lib-passos li{margin-bottom:4px}' +
+      '.lib-passos-foot{margin:10px 0 0;font-size:.76rem;line-height:1.5;opacity:.85}' +
+      '.lib-fallback{display:none;margin:0 0 12px;font-size:.82rem;line-height:1.6}' +
+      '.lib-fallback.on{display:block}' +
+      '.lib-fallback a{display:block;padding:10px 12px;margin-top:6px;border:1px solid #cfdcd3;' +
+      'border-radius:10px;text-decoration:none;font-weight:700}';
     var st = document.createElement('style');
     st.id = 'lib-professor-style';
     st.textContent = css;
@@ -130,8 +141,18 @@
         '<div class="copies-body">' +
 
           '<div id="lib-form-step">' +
-            '<p class="copies-instruction">Só três campos aqui — o detalhamento é feito depois, ' +
-            'no formulário oficial. Tudo é processado <strong>localmente no seu aparelho</strong>.</p>' +
+            '<div class="lib-passos">' +
+              '<p class="lib-passos-title">📌 Leia antes de começar</p>' +
+              '<ol>' +
+                '<li>Preencha os <strong>três campos</strong> abaixo e toque em <strong>Gerar liberação</strong>.</li>' +
+                '<li>No passo seguinte, um único botão vai <strong>abrir o WhatsApp com a mensagem pronta</strong> ' +
+                'e, ao mesmo tempo, <strong>abrir o formulário oficial em outra aba</strong>.</li>' +
+                '<li><strong>Envie a mensagem no WhatsApp primeiro.</strong> Depois volte ao navegador e ' +
+                'complete o formulário, que já estará aberto esperando por você.</li>' +
+              '</ol>' +
+              '<p class="lib-passos-foot">O texto da liberação também é copiado automaticamente, ' +
+              'então basta colar no formulário. Tudo é processado <strong>localmente no seu aparelho</strong>.</p>' +
+            '</div>' +
 
             '<div class="copies-field">' +
               '<label for="lib-teacher">Nome do(a) professor(a) que está liberando</label>' +
@@ -171,9 +192,19 @@
               'A mensagem já vai com um link no final. A gestão só toca nesse link e o WhatsApp abre com a resposta ' +
               '<em>“Liberação recebida e aprovada”</em> pronta — basta enviar de volta ao professor.' +
             '</div>' +
+            '<div class="lib-passos">' +
+              '<p class="lib-passos-title">📌 O que vai acontecer ao tocar no botão</p>' +
+              '<ol>' +
+                '<li>O texto acima é <strong>copiado</strong> para a área de transferência.</li>' +
+                '<li>O <strong>formulário oficial</strong> abre em outra aba e fica esperando.</li>' +
+                '<li>O <strong>WhatsApp abre por cima</strong>, com a mensagem pronta — ' +
+                '<strong>envie-a para a gestão</strong>.</li>' +
+                '<li>Volte ao navegador e <strong>preencha o formulário</strong> (pode colar o texto).</li>' +
+              '</ol>' +
+            '</div>' +
             '<div class="oc-copy-status" id="lib-copy-status"></div>' +
-            '<button class="whatsapp-btn" onclick="sendLiberacaoWhatsApp()">Enviar para a gestão (WhatsApp)</button>' +
-            '<button class="form-link-btn" onclick="copyAndOpenLiberacaoForm()">📋 Copiar texto e abrir formulário do Google</button>' +
+            '<div class="lib-fallback" id="lib-fallback"></div>' +
+            '<button class="whatsapp-btn" onclick="enviarLiberacaoCompleta()">📲 Enviar à gestão e abrir o formulário</button>' +
             '<button class="print-btn" onclick="printLiberacao()">🖨️ Imprimir / Salvar em PDF</button>' +
             '<button class="back-btn" onclick="showLiberacaoForm()">← Nova liberação</button>' +
           '</div>' +
@@ -231,7 +262,8 @@
     $('lib-form-step').style.display = 'block';
     $('lib-result-step').style.display = 'none';
     CAMPOS.forEach(function (id) { var el = $(id); if (el) el.value = ''; });
-    var st = $('lib-copy-status'); if (st) st.textContent = '';
+    var st = $('lib-copy-status'); if (st) { st.textContent = ''; st.style.color = ''; }
+    var fb = $('lib-fallback'); if (fb) { fb.innerHTML = ''; fb.classList.remove('on'); }
     updateLiberacaoResumo();
   }
 
@@ -291,9 +323,43 @@
   }
 
   /* ---------------- Ações do resultado ---------------- */
-  function sendLiberacaoWhatsApp() {
+  function whatsAppUrl() {
+    return 'https://wa.me/?text=' + encodeURIComponent(libWhatsAppMessage);
+  }
+
+  /* Botão único: copia o texto, abre o formulário atrás e o WhatsApp na frente.
+     Se o navegador bloquear alguma aba, mostra os links para abrir na mão. */
+  function enviarLiberacaoCompleta() {
     if (!libWhatsAppMessage) return;
-    window.open('https://wa.me/?text=' + encodeURIComponent(libWhatsAppMessage), '_blank');
+    var status = $('lib-copy-status');
+    var fb = $('lib-fallback');
+    fb.classList.remove('on');
+    fb.innerHTML = '';
+
+    /* 1. cópia (assíncrona, não atrasa a abertura das abas) */
+    copyLiberacaoToClipboard().then(function (ok) {
+      status.textContent = ok
+        ? '✓ Texto copiado. Envie a mensagem no WhatsApp e depois cole no formulário.'
+        : '⚠️ Não consegui copiar sozinho — selecione o texto acima e copie à mão.';
+      status.style.color = ok ? '' : 'var(--orange-deep)';
+    });
+
+    /* 2. formulário abre atrás; 3. WhatsApp abre por cima */
+    var abaForm = window.open(FORM_LIBERACAO_URL, '_blank');
+    var abaZap = window.open(whatsAppUrl(), '_blank');
+
+    var bloqueados = [];
+    if (!abaForm) bloqueados.push(['📝 Abrir o formulário oficial', FORM_LIBERACAO_URL]);
+    if (!abaZap) bloqueados.push(['📲 Abrir o WhatsApp com a mensagem', whatsAppUrl()]);
+
+    if (bloqueados.length) {
+      fb.innerHTML = '<strong>O navegador bloqueou a abertura automática.</strong> ' +
+        'Toque nos links abaixo para continuar:' +
+        bloqueados.map(function (b) {
+          return '<a href="' + b[1] + '" target="_blank" rel="noopener">' + b[0] + '</a>';
+        }).join('');
+      fb.classList.add('on');
+    }
   }
 
   function copyLiberacaoToClipboard() {
@@ -316,17 +382,6 @@
       document.body.removeChild(ta);
       return ok;
     } catch (e) { return false; }
-  }
-
-  function copyAndOpenLiberacaoForm() {
-    if (!libPlainText) return;
-    var status = $('lib-copy-status');
-    copyLiberacaoToClipboard().then(function (ok) {
-      status.textContent = ok
-        ? '✓ Texto copiado! Cole no formulário (Ctrl+V ou toque longo → Colar) e envie.'
-        : 'Copie o texto acima manualmente e cole no formulário.';
-    });
-    window.open(FORM_LIBERACAO_URL, '_blank');
   }
 
   function printLiberacao() { window.print(); }
@@ -380,8 +435,7 @@
   window.closeLiberacaoFromOverlay = closeLiberacaoFromOverlay;
   window.showLiberacaoForm = showLiberacaoForm;
   window.generateLiberacao = generateLiberacao;
-  window.sendLiberacaoWhatsApp = sendLiberacaoWhatsApp;
-  window.copyAndOpenLiberacaoForm = copyAndOpenLiberacaoForm;
+  window.enviarLiberacaoCompleta = enviarLiberacaoCompleta;
   window.printLiberacao = printLiberacao;
   window.updateLiberacaoResumo = updateLiberacaoResumo;
 
