@@ -62,25 +62,41 @@ function doGet(e) {
       sh.getRange(1, 1, 1, 3).setFontWeight('bold');
       sh.setFrozenRows(1);
     }
+    // Força a coluna do código a ser sempre texto. Sem isso, o Sheets converte
+    // valores como "06082601" em número e apaga o zero à esquerda do dia,
+    // fazendo a contagem abaixo nunca reconhecer os códigos já usados no dia
+    // (bug: todo código gerado em dias 01-09 saía sempre com sequência 01).
+    sh.getRange('A2:A').setNumberFormat('@');
 
-    // Conta quantos códigos já existem para este dia (mesmo prefixo DDMMAA)
+    // Usa a maior sequência existente: contar linhas pode reutilizar códigos
+    // quando há lacunas ou registros antigos duplicados.
     var values = sh.getDataRange().getValues();
     var seq = 0;
     for (var i = 1; i < values.length; i++) {
       var code = String(values[i][0]);
-      if (code.substring(0, 6) === ddmmaa) seq++;
+      // Recupera o zero à esquerda perdido em linhas antigas já corrompidas
+      // pela conversão automática do Sheets (número com 7 dígitos em vez de 8).
+      if (/^\d{7}$/.test(code)) code = '0' + code;
+      if (/^\d{8}$/.test(code) && code.substring(0, 6) === ddmmaa) {
+        seq = Math.max(seq, Number(code.substring(6)));
+      }
     }
     seq = seq + 1;
 
+    if (seq > 99) {
+      return _json({ success: false, error: 'Limite de 99 códigos do dia atingido.' });
+    }
     var fullCode = ddmmaa + ('0' + seq).slice(-2);
     sh.appendRow([fullCode, new Date(), resp]);
+    // Confirma a escrita antes de liberar a exclusão entre solicitações.
+    SpreadsheetApp.flush();
 
     return _json({ success: true, code: fullCode });
 
   } catch (err) {
     return _json({ success: false, error: String(err) });
   } finally {
-    lock.releaseLock();
+    if (lock.hasLock()) lock.releaseLock();
   }
 }
 

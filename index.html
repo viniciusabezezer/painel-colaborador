@@ -613,14 +613,19 @@
             const ymd = '' + now.getFullYear() + p(now.getMonth() + 1) + p(now.getDate());
             let seq = 1;
             try {
-                seq = parseInt(localStorage.getItem('oc_seq_' + ymd) || '0', 10) + 1;
+                seq = Number(localStorage.getItem('oc_seq_' + ymd) || '0') + 1;
+            } catch (e) { throw new Error('Não foi possível salvar a numeração neste aparelho.'); }
+            if (!Number.isInteger(seq) || seq < 1 || seq > 99) {
+                throw new Error('Numeração local inválida ou limite de 99 códigos do dia atingido.');
+            }
+            try {
                 localStorage.setItem('oc_seq_' + ymd, String(seq));
-            } catch (e) { seq = 1; }
+            } catch (e) { throw new Error('Não foi possível salvar a numeração neste aparelho.'); }
             return ddmmaa + p(seq);
         }
 
         /* Código numérico de 8 dígitos: DDMMAA + ordem da ocorrência no dia (ex.: 13062601).
-           Tenta a numeração central (única entre aparelhos); se indisponível, usa o contador local. */
+           Usa a numeração central quando configurada; falhas não geram códigos locais duplicados. */
         async function getNextOcorrenciaCode(now, resp) {
             const p = n => String(n).padStart(2, '0');
             const ymd = '' + now.getFullYear() + p(now.getMonth() + 1) + p(now.getDate());
@@ -629,11 +634,18 @@
                     const url = new URL(CODIGOS_SCRIPT_URL);
                     url.searchParams.set('date', ymd);
                     url.searchParams.set('resp', resp || '');
-                    const r = await fetch(url.toString(), { method: 'GET' });
+                    url.searchParams.set('_request', crypto.randomUUID());
+                    const r = await fetch(url.toString(), { method: 'GET', cache: 'no-store' });
+                    if (!r.ok) throw new Error('Falha ao consultar a numeração central.');
                     const j = await r.json();
-                    if (j.success && j.code) return { code: String(j.code), source: 'server' };
-                } catch (e) { /* cai para o contador local */ }
-                return { code: localNextCode(now), source: 'local-offline' };
+                    const prefix = p(now.getDate()) + p(now.getMonth() + 1) + String(now.getFullYear()).slice(-2);
+                    if (j.success && /^\d{8}$/.test(String(j.code)) && String(j.code).startsWith(prefix) && Number(String(j.code).slice(-2)) > 0) {
+                        return { code: String(j.code), source: 'server' };
+                    }
+                    throw new Error(j.error || 'A numeração central retornou um código inválido.');
+                } catch (e) {
+                    throw new Error('Não foi possível reservar um código único. ' + e.message + ' Tente novamente; os campos foram preservados.');
+                }
             }
             return { code: localNextCode(now), source: 'local' };
         }
@@ -680,10 +692,16 @@
             const now = new Date();
             const dateStr = now.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' });
             const timeStr = now.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
-            const codeInfo = await getNextOcorrenciaCode(now, resp);
-            ocorrenciaCode = codeInfo.code;
-
-            if (genBtn) { genBtn.disabled = false; genBtn.textContent = genBtn.dataset.label || 'Gerar registro ✓'; }
+            let codeInfo;
+            try {
+                codeInfo = await getNextOcorrenciaCode(now, resp);
+                ocorrenciaCode = codeInfo.code;
+            } catch (error) {
+                alert(error.message);
+                return;
+            } finally {
+                if (genBtn) { genBtn.disabled = false; genBtn.textContent = genBtn.dataset.label || 'Gerar registro ✓'; }
+            }
 
             ocorrenciaWhatsAppMessage =
                 `🏫 *EEMTI PROF. MARIA LUÍZA SABÓIA RIBEIRO*\n` +
