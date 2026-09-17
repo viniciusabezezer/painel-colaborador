@@ -136,15 +136,15 @@
                     </div>
                 </button>
 
-                <!-- Consultar Ocorrências (relatório interno SEDUC) -->
-                <a href="https://script.google.com/a/macros/prof.ce.gov.br/s/AKfycby1I8itsAwosAo8fjf1SAfvpDFRcxj6JoKN3cj4S4Sk-brbwJjinJdpfqVa8-Jckvd4/exec" class="form-card glass reveal delay-6" target="_blank">
+                <!-- Consultar Ocorrências (criador de relatórios) -->
+                <a href="https://malu-ocorrencias.vercel.app/" class="form-card glass reveal delay-6" target="_blank" rel="noopener noreferrer">
                     <div class="card-head">
                         <div class="icon-wrapper relatorio-card-icon">
                             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
                         </div>
                         <div class="card-text">
                             <h3>📊 Consultar Ocorrências</h3>
-                            <p>Relatório por aluno, tipo e turma — exclusivo da coordenação (login SEDUC + PIN).</p>
+                            <p>Acesse o criador de relatórios de ocorrências por aluno, tipo e turma.</p>
                         </div>
                     </div>
                     <div class="card-footer">
@@ -161,7 +161,7 @@
                         </div>
                         <div class="card-text">
                             <h3>🖊️ Lista de Assinaturas</h3>
-                            <p>Imprima a folha em branco para o aluno assinar a ocorrência (código + assinatura).</p>
+                            <p>Imprima a folha em branco para o aluno assinar a ocorrência (código + horário + assinatura).</p>
                         </div>
                     </div>
                     <div class="card-footer">
@@ -881,14 +881,14 @@
         /* ========== Lista de assinaturas (folha física em branco) ========== */
         function imprimirListaAssinaturas() {
             var rows = '';
-            for (var i = 0; i < 22; i++) { rows += '<tr><td class="sig-cod"></td><td></td></tr>'; }
+            for (var i = 0; i < 22; i++) { rows += '<tr><td class="sig-cod"></td><td class="sig-horario">____h____</td><td></td></tr>'; }
             document.getElementById('ocorrencia-print').innerHTML = '';
             document.getElementById('relatorio-print').innerHTML = '';
             document.getElementById('lista-print').innerHTML =
                 '<div class="sig-head"><img src="logo.png" alt=""><div class="nm">EEMTI PROF. MARIA LUÍZA SABÓIA RIBEIRO</div><div class="sub">Coordenação Pedagógica · Paracuru — CE</div></div>' +
                 '<h2 style="text-align:center;font-size:15px;margin:0 0 6px;color:#16261d;">LISTA DE ASSINATURAS DE OCORRÊNCIAS</h2>' +
-                '<div class="sig-instrucoes"><strong>Instruções:</strong> a cada ocorrência registrada no aplicativo, o coordenador anota nesta lista o <strong>código gerado</strong> e o(a) estudante <strong>assina ao lado</strong>, para constar que recebeu a ocorrência.</div>' +
-                '<table class="sig-table"><tr><th class="sig-cod">Código da ocorrência</th><th>Assinatura do(a) estudante</th></tr>' + rows + '</table>';
+                '<div class="sig-instrucoes"><strong>Instruções:</strong> a cada ocorrência registrada no aplicativo, o coordenador anota nesta lista o <strong>código gerado</strong> e o <strong>horário da ocorrência</strong> (formato <strong>00h11</strong>), e o(a) estudante <strong>assina ao lado</strong>, para constar que recebeu a ocorrência.</div>' +
+                '<table class="sig-table"><tr><th class="sig-cod">Código da ocorrência</th><th class="sig-horario">Horário</th><th>Assinatura do(a) estudante</th></tr>' + rows + '</table>';
             window.print();
         }
 

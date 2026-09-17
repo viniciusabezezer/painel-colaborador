@@ -1109,6 +1109,7 @@ footer .branding-text {
 .sig-table th { border: 1px solid #888; padding: 7px 10px; text-align: left; background: #eee; }
 .sig-table td { border: 1px solid #888; padding: 15px 10px; }
 .sig-table .sig-cod { width: 26%; }
+.sig-table .sig-horario { width: 18%; text-align: center; white-space: nowrap; }
 
 /* Printable institutional documents (screen-hidden) */
 #ocorrencia-print, #relatorio-print, #lista-print { display: none; }
