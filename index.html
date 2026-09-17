@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Malu Serviços - EEMTI Prof. Maria Luiza Saboia</title>
     <meta name="description" content="Painel do Colaborador Malu Serviços - EEMTI Prof. Maria Luiza Saboia Ribeiro.">
-    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="style.css?v=2">
 </head>
 <body>
 
@@ -69,14 +69,14 @@
                 </a>
 
                 <!-- Registro de ocorrências (modal institucional) -->
-                <button class="form-card glass reveal delay-3" onclick="openOcorrenciaModal()">
+                <button class="form-card glass reveal delay-3" onclick="openOcorrenciaAviso()">
                     <div class="card-head">
                         <div class="icon-wrapper ocorrencia-card-icon">
                             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
                         </div>
                         <div class="card-text">
                             <h3>⚠️ Ocorrências</h3>
-                            <p>Registre a ocorrência, gere o documento institucional e envie para a gestão.</p>
+                            <p>Registre a ocorrência no formulário oficial. Antes, confira os lembretes: assinatura do aluno na lista e horário do registro.</p>
                         </div>
                     </div>
                     <div class="card-footer">
@@ -261,6 +261,34 @@
                     </button>
                     <button class="back-btn" onclick="showCopiesForm()">← Nova autorização</button>
                 </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Aviso antes do formulário de Ocorrências -->
+    <div id="ocorrencia-aviso-overlay" class="chat-overlay" onclick="closeOcorrenciaAvisoFromOverlay(event)">
+        <div class="copies-modal" onclick="event.stopPropagation()">
+            <div class="copies-header ocorrencia-header">
+                <div class="chat-header-info">
+                    <div class="copies-avatar">⚠️</div>
+                    <h3>Antes de registrar a ocorrência</h3>
+                </div>
+                <button class="chat-close-btn" onclick="closeOcorrenciaAviso()" aria-label="Fechar">&times;</button>
+            </div>
+            <div class="copies-body">
+                <p class="copies-instruction">Você vai ser levado ao formulário oficial. Antes de preencher, não esqueça:</p>
+                <ol class="oc-aviso-lista">
+                    <li>
+                        <span class="oc-aviso-emoji">✍️</span>
+                        <div><strong>Assinatura do aluno.</strong> Peça que o(a) estudante assine na <strong>lista de ocorrências</strong> da Coordenação.</div>
+                    </li>
+                    <li>
+                        <span class="oc-aviso-emoji">🕒</span>
+                        <div><strong>Horário do registro.</strong> Anote o <strong>horário</strong> em que a ocorrência está sendo registrada.</div>
+                    </li>
+                </ol>
+                <a class="generate-btn ocorrencia-gen-btn oc-aviso-btn" href="https://forms.gle/2Rbqkx6xHxqc1zy37" target="_blank" rel="noopener" onclick="closeOcorrenciaAviso()">Entendi, abrir o formulário →</a>
+                <button class="back-btn" onclick="closeOcorrenciaAviso()">Cancelar</button>
             </div>
         </div>
     </div>
@@ -665,6 +693,21 @@
                 }
             }
             return { code: localNextCode(now), source: 'local' };
+        }
+
+        /* Aviso rápido antes do formulário oficial: assinatura do aluno na lista + horário do registro. */
+        function openOcorrenciaAviso() {
+            document.getElementById('ocorrencia-aviso-overlay').classList.add('active');
+            document.body.style.overflow = 'hidden';
+        }
+
+        function closeOcorrenciaAviso() {
+            document.getElementById('ocorrencia-aviso-overlay').classList.remove('active');
+            document.body.style.overflow = '';
+        }
+
+        function closeOcorrenciaAvisoFromOverlay(event) {
+            if (event.target === event.currentTarget) closeOcorrenciaAviso();
         }
 
         function openOcorrenciaModal() {
