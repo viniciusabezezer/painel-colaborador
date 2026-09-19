@@ -1,10 +1,10 @@
-# Feed da Aula
+# InstaPensa
 
 Ferramenta para o professor montar um **feed fictício de rede social** (com a
 cara do Instagram), projetar em sala e conduzir a leitura das publicações com
 texto de apoio e perguntas amarrados a cada post.
 
-Abre pelo Painel do Colaborador (card **📱 Feed da Aula**) ou direto em
+Abre pelo Painel do Colaborador (card **📱 InstaPensa**) ou direto em
 `/feed-aula/`.
 
 ## A dinâmica
@@ -73,3 +73,22 @@ não há login, não há conexão com o Instagram e nada é publicado em rede so
 O nome exibido no topo do app é um campo editável do feed (**Perfil e
 aparência → Nome no topo do app**), então dá para trocar por outro rótulo,
 inclusive um nome inventado para a aula.
+
+## Publicação na Vercel
+
+O projeto Vercel se chama `instapensa` e publica a raiz deste repositório como
+site estático, sem build, servidor de aplicação ou variáveis de ambiente.
+O `vercel.json` direciona a página inicial para `/feed-aula/`; o painel continua
+acessível em `/index.html`. As aulas e mídias permanecem no navegador.
+
+O nome do banco local e o formato `feed-aula/v1` foram preservados para manter
+compatibilidade com arquivos exportados pela primeira versão.
+
+## Verificação
+
+Sirva a raiz do repositório com `python3 -m http.server 8765` e abra
+`http://localhost:8765/feed-aula/` em uma sessão de navegador de teste.
+O arquivo `test/instapensa-browser.js` pode ser executado com
+`agent-browser eval --stdin < test/instapensa-browser.js` nessa sessão.
+Ele cria aulas de teste e verifica saída imediata do editor, persistência,
+imagem local, exportação/importação e apresentação com perguntas e teclado.

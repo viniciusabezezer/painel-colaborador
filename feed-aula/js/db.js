@@ -1,4 +1,4 @@
-/* Feed da Aula — armazenamento local (IndexedDB).
+/* InstaPensa — armazenamento local (IndexedDB).
    Guarda os feeds montados pelo professor e as mídias (imagens/vídeos) que ele
    sobe do computador. Nada sai do navegador: não há servidor nem login. */
 (function (global) {
@@ -15,7 +15,7 @@
         if (dbPromise) return dbPromise;
         dbPromise = new Promise(function (resolve, reject) {
             if (!global.indexedDB) {
-                reject(new Error('Este navegador não tem IndexedDB. Abra o Feed da Aula pelo endereço do site (https), não por um arquivo local.'));
+                reject(new Error('Este navegador não tem IndexedDB. Abra o InstaPensa pelo endereço do site (https), não por um arquivo local.'));
                 return;
             }
             const req = global.indexedDB.open(DB_NAME, DB_VERSION);

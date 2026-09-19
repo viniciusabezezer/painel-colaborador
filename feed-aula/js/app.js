@@ -1,4 +1,4 @@
-/* Feed da Aula — biblioteca de feeds, navegação e importação/exportação. */
+/* InstaPensa — biblioteca de feeds, navegação e importação/exportação. */
 (function (global) {
     'use strict';
 
@@ -11,6 +11,7 @@
     const toastBox = document.getElementById('toast');
     const fileInput = document.getElementById('file-import');
     let toastTimer = null;
+    let routeVersion = 0;
 
     function toast(message, isError) {
         toastBox.textContent = message;
@@ -34,15 +35,25 @@
         else global.location.hash = hash;
     }
 
-    function route() {
+    async function route() {
+        const version = ++routeVersion;
+        try {
+            await global.FeedAula.editor.flush();
+        } catch (err) {
+            fail(err);
+            return;
+        }
+        if (version !== routeVersion) return;
         const hash = global.location.hash || '#/';
         const editMatch = /^#\/editar\/(.+)$/.exec(hash);
         const presentMatch = /^#\/apresentar\/(.+)$/.exec(hash);
 
         global.FeedAula.present.stop();
+        global.FeedAula.editor.close();
 
         if (editMatch) {
             db.getFeed(editMatch[1]).then(function (raw) {
+                if (version !== routeVersion) return;
                 if (!raw) { toast('Este feed não existe mais.', true); go('#/'); return; }
                 body.dataset.view = 'editor';
                 global.FeedAula.editor.open(model.migrate(raw));
@@ -52,6 +63,7 @@
 
         if (presentMatch) {
             db.getFeed(presentMatch[1]).then(function (raw) {
+                if (version !== routeVersion) return;
                 if (!raw) { toast('Este feed não existe mais.', true); go('#/'); return; }
                 body.dataset.view = 'present';
                 global.FeedAula.present.start(model.migrate(raw));
@@ -190,7 +202,7 @@
             const url = URL.createObjectURL(blob);
             const link = document.createElement('a');
             link.href = url;
-            link.download = 'feed-da-aula-' + model.slug(feed.name) + '.json';
+            link.download = 'instapensa-' + model.slug(feed.name) + '.json';
             document.body.appendChild(link);
             link.click();
             link.remove();

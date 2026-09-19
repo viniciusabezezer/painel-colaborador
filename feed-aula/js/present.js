@@ -1,4 +1,4 @@
-/* Feed da Aula — modo aula: o feed projetado dentro de um celular, com o
+/* InstaPensa — modo aula: o feed projetado dentro de um celular, com o
    material didático do post ao lado. Tudo pelo teclado, para o professor não
    precisar caçar botões no meio da explicação. */
 (function (global) {
@@ -33,6 +33,7 @@
     let sizeIndex = 1;
     let idleTimer = null;
     let keyHandler = null;
+    let wakeHandler = null;
 
     function start(loaded) {
         feed = loaded;
@@ -43,6 +44,7 @@
         setPanel(global.localStorage.getItem(STORE_PANEL) !== 'off');
 
         return media.warm(feed).then(function () {
+            if (feed !== loaded) return;
             const phone = document.createElement('div');
             phone.className = 'ig-phone';
             phone.style.setProperty('--phone-width', SIZES[sizeIndex] + 'px');
@@ -77,6 +79,11 @@
             keyHandler = null;
         }
         global.clearTimeout(idleTimer);
+        if (wakeHandler) {
+            root.removeEventListener('mousemove', wakeHandler);
+            root.removeEventListener('click', wakeHandler);
+            wakeHandler = null;
+        }
         root.classList.remove('is-idle', 'is-zoom', 'is-help');
         phoneBox.innerHTML = '';
         rendered = null;
@@ -231,6 +238,7 @@
         };
         root.addEventListener('mousemove', wake);
         root.addEventListener('click', wake);
+        wakeHandler = wake;
         wake();
     }
 

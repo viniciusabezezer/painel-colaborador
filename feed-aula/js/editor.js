@@ -1,4 +1,4 @@
-/* Feed da Aula — editor: monta os posts e amarra o material didático a cada um. */
+/* InstaPensa — editor: monta os posts e amarra o material didático a cada um. */
 (function (global) {
     'use strict';
 
@@ -11,6 +11,9 @@
     let selected = 0;
     let saveTimer = null;
     let previewTimer = null;
+    let dirty = false;
+    let revision = 0;
+    let saving = Promise.resolve();
 
     const listBox = document.getElementById('post-list');
     const formBox = document.getElementById('post-form');
@@ -39,23 +42,43 @@
     }
 
     function close() {
+        global.clearTimeout(saveTimer);
+        global.clearTimeout(previewTimer);
+        saveTimer = null;
+        dirty = false;
         feed = null;
         previewBox.innerHTML = '';
     }
 
     /* ===== Gravação ===== */
 
+    function flush() {
+        global.clearTimeout(saveTimer);
+        saveTimer = null;
+        if (!feed || !dirty) return saving;
+        const current = feed;
+        const version = revision;
+        const snapshot = JSON.parse(JSON.stringify(current));
+        saving = db.saveFeed(snapshot).then(function () {
+            if (feed === current && revision === version) {
+                dirty = false;
+                stateBox.textContent = 'Salvo ' + new Date().toLocaleTimeString('pt-BR', {
+                    hour: '2-digit', minute: '2-digit'
+                });
+            }
+        });
+        return saving;
+    }
+
     function touch(options) {
         if (!feed) return;
+        dirty = true;
+        revision += 1;
         const opts = options || {};
         stateBox.textContent = 'Salvando…';
         global.clearTimeout(saveTimer);
         saveTimer = global.setTimeout(function () {
-            db.saveFeed(feed).then(function () {
-                stateBox.textContent = 'Salvo ' + new Date().toLocaleTimeString('pt-BR', {
-                    hour: '2-digit', minute: '2-digit'
-                });
-            }).catch(global.FeedAula.app.fail);
+            flush().catch(global.FeedAula.app.fail);
         }, 500);
 
         if (opts.list !== false) renderList();
@@ -626,9 +649,7 @@
 
     document.getElementById('editor-present').addEventListener('click', function () {
         if (!feed) return;
-        db.saveFeed(feed).then(function () {
-            global.FeedAula.app.go('#/apresentar/' + feed.id);
-        }).catch(global.FeedAula.app.fail);
+        global.FeedAula.app.go('#/apresentar/' + feed.id);
     });
 
     document.getElementById('editor-export').addEventListener('click', function () {
@@ -648,17 +669,28 @@
         if (!feed) return;
         if (!global.confirm('Excluir "' + feed.name + '"? Isso não volta atrás.')) return;
         const id = feed.id;
-        feed = null;
+        close();
         db.deleteFeed(id).then(function () {
             global.FeedAula.app.toast('Feed excluído.');
             global.FeedAula.app.go('#/');
         }).catch(global.FeedAula.app.fail);
     });
 
+    document.addEventListener('visibilitychange', function () {
+        if (document.visibilityState === 'hidden') flush().catch(global.FeedAula.app.fail);
+    });
+    global.addEventListener('beforeunload', function (event) {
+        if (!dirty) return;
+        flush().catch(global.FeedAula.app.fail);
+        event.preventDefault();
+        event.returnValue = '';
+    });
+
     global.FeedAula = global.FeedAula || {};
     global.FeedAula.editor = {
         open: open,
         close: close,
+        flush: flush,
         current: function () { return feed; }
     };
 }(window));

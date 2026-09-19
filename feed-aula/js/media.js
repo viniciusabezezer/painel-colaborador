@@ -1,4 +1,4 @@
-/* Feed da Aula — entrada e leitura de mídias.
+/* InstaPensa — entrada e leitura de mídias.
    Imagens grandes são reduzidas antes de guardar (aula projetada não precisa de
    4000px e o navegador tem limite de espaço). Vídeos são guardados como vieram. */
 (function (global) {
@@ -159,14 +159,18 @@
         if (!rawFeed) {
             return Promise.reject(new Error('Este arquivo não parece ser um feed exportado aqui.'));
         }
+        const feed = global.FeedAula.model.migrate(rawFeed);
+        const ids = new Map();
         const media = Array.isArray(bundle.media) ? bundle.media : [];
         return media.reduce(function (chain, item) {
             return chain.then(function () {
                 if (!item || !item.id || !item.dataUrl) return null;
                 const blob = dataUrlToBlob(item.dataUrl, item.type);
                 if (!blob) return null;
+                const id = global.FeedAula.model.uid('media');
+                ids.set(item.id, id);
                 return global.FeedAula.db.putMedia({
-                    id: item.id,
+                    id: id,
                     kind: item.kind === 'video' ? 'video' : 'image',
                     type: item.type || blob.type,
                     name: item.name || '',
@@ -178,7 +182,17 @@
                 });
             });
         }, Promise.resolve()).then(function () {
-            return global.FeedAula.model.migrate(rawFeed);
+            feed.stories.forEach(function (story) {
+                if (ids.has(story.mediaId)) story.mediaId = ids.get(story.mediaId);
+            });
+            feed.posts.forEach(function (post) {
+                const avatar = post.author.avatarMediaId;
+                if (ids.has(avatar)) post.author.avatarMediaId = ids.get(avatar);
+                post.media.forEach(function (item) {
+                    if (ids.has(item.mediaId)) item.mediaId = ids.get(item.mediaId);
+                });
+            });
+            return feed;
         });
     }
 

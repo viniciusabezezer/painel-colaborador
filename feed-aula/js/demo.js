@@ -1,4 +1,4 @@
-/* Feed da Aula — feed de exemplo.
+/* InstaPensa — feed de exemplo.
    Serve para o professor ver a dinâmica funcionando antes de montar a dele.
    As imagens são desenhadas aqui mesmo (SVG), então o exemplo não depende de
    internet nem de arquivo nenhum. */
@@ -7,6 +7,7 @@
 
     /* Imagem de espaço reservado: gradiente + emoji + rótulo. */
     function art(emoji, label, hue, ratio) {
+        label = label.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
         const width = 1080;
         const height = Math.round(width / (ratio || 1));
         const svg = '<svg xmlns="http://www.w3.org/2000/svg" width="' + width + '" height="' + height + '" viewBox="0 0 ' + width + ' ' + height + '">' +
@@ -198,7 +199,7 @@
     function build() {
         const model = global.FeedAula.model;
         const feed = model.newFeed('Exemplo — Leitura de imagens: o que o feed quer de nós');
-        feed.profile.brand = 'Instagram';
+        feed.profile.brand = 'InstaPensa';
         feed.profile.showStories = true;
         feed.stories = [
             { id: model.uid('s'), label: 'Seu story', url: '', mediaId: '', seen: false },

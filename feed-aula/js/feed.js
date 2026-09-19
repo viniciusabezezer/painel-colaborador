@@ -1,4 +1,4 @@
-/* Feed da Aula — desenho do feed imitando a interface do Instagram.
+/* InstaPensa — desenho do feed imitando a interface do Instagram.
    Usado nos dois lugares: na pré-visualização do editor e na projeção em sala.
    É só interface: não há login, nem envio de dados, nem conexão com a rede
    social de verdade. */

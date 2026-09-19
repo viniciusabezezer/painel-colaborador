@@ -1,4 +1,4 @@
-/* Feed da Aula — formato dos dados.
+/* InstaPensa — formato dos dados.
    Um "feed" é a aula inteira: identidade do perfil + os posts na ordem em que
    serão rolados + o material didático que o professor amarra em cada post. */
 (function (global) {
@@ -44,7 +44,7 @@
             createdAt: Date.now(),
             updatedAt: Date.now(),
             profile: {
-                brand: 'Instagram',
+                brand: 'InstaPensa',
                 showStories: true,
                 showBottomNav: true,
                 theme: 'light'
