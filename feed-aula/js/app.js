@@ -36,6 +36,7 @@
     }
 
     async function route() {
+        global.FeedAula.reflection.close();
         const version = ++routeVersion;
         try {
             await global.FeedAula.editor.flush();

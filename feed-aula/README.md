@@ -20,6 +20,11 @@ Abre pelo Painel do Colaborador (card **📱 InstaPensa**) ou direto em
 
 ## Atalhos do modo aula
 
+Cada postagem tem um botão de cérebro que abre sua janela de reflexão, tanto
+na prévia do editor quanto na apresentação. A janela mostra o texto e os links
+do post e permite revelar as perguntas uma a uma (`N`), mostrar todas (`T`) ou
+escondê-las. **Fechar** ou `Esc` retorna à postagem, sem sair da apresentação.
+
 | Tecla | O que faz |
 | --- | --- |
 | `↓` `→` `Espaço` | próximo post |

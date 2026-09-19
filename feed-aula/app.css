@@ -805,3 +805,41 @@ input:focus, textarea:focus, select:focus {
     .present.is-idle .present__bar { opacity: 1; }
     .present.is-idle { cursor: auto; }
 }
+
+/* Reflexão do post: janela acessível com conteúdo rolável e controles fixos. */
+.reflection {
+    margin: auto;
+    width: min(680px, calc(100vw - 24px));
+    max-height: calc(100vh - 24px);
+    max-height: calc(100dvh - 24px);
+    padding: 0;
+    border: 0;
+    border-radius: 20px;
+    background: #fff;
+    color: var(--ink);
+    box-shadow: 0 24px 80px rgba(0, 0, 0, .35);
+    font-family: 'Outfit', system-ui, sans-serif;
+    cursor: auto;
+}
+.reflection[open] { display: flex; flex-direction: column; }
+.reflection::backdrop { background: rgba(8, 20, 18, .65); backdrop-filter: blur(3px); }
+.reflection__head { display: flex; align-items: flex-start; gap: 16px; padding: 20px; background: linear-gradient(120deg, #e3f5ee, #eee9ff); }
+.reflection__head > div { flex: 1; min-width: 0; }
+.reflection__label { color: #356d62; font-size: 12px; font-weight: 700; text-transform: uppercase; }
+.reflection h2 { font-size: clamp(20px, 3vw, 28px); line-height: 1.25; margin-top: 5px; overflow-wrap: anywhere; }
+.reflection__body { padding: 22px; overflow-y: auto; min-height: 0; overscroll-behavior: contain; font-size: 18px; line-height: 1.6; overflow-wrap: anywhere; }
+.reflection__text { white-space: pre-wrap; }
+.reflection__questions { margin-top: 18px; padding-left: 26px; }
+.reflection__questions li { margin: 12px 0; padding-left: 6px; }
+.reflection__questions li::marker { color: #6b4da8; font-weight: 700; }
+.reflection__links { display: grid; gap: 8px; margin-top: 14px; }
+.reflection__empty { color: var(--ink-soft); }
+.reflection__foot { padding: 16px 20px; border-top: 1px solid var(--line); background: #fbfaf6; }
+.reflection__progress { display: block; font-size: 13px; color: var(--ink-soft); margin-bottom: 10px; }
+.reflection__controls { display: flex; gap: 8px; flex-wrap: wrap; }
+@media (max-width: 480px) {
+    .reflection__head, .reflection__body, .reflection__foot { padding: 14px; }
+    .reflection__body { font-size: 16px; }
+    .reflection__head { gap: 8px; }
+    .reflection__controls .btn { padding: 8px 12px; font-size: 13px; }
+}

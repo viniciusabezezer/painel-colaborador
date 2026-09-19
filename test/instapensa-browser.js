@@ -65,6 +65,16 @@
     click('#editor-present');
     await until(() => document.querySelector('#present-phone .ig'));
     assert(document.querySelectorAll('#present-phone .ig-post').length === 2, 'Apresenta os dois posts, incluindo a última edição');
+    click('#present-phone .ig-post:last-child .ig-reflect');
+    assert(app.reflection.isOpen() && document.querySelector('#reflection-title').textContent === 'Segundo post', 'Cérebro abre o material da postagem clicada');
+    click('[data-reflection="next"]');
+    assert(document.querySelectorAll('.reflection__questions li:not([hidden])').length === 1, 'Janela revela uma pergunta por vez');
+    click('[data-reflection="all"]');
+    assert(document.querySelectorAll('.reflection__questions li:not([hidden])').length === 2, 'Janela mostra todas as perguntas');
+    click('[data-reflection="reset"]');
+    assert(document.querySelectorAll('.reflection__questions li:not([hidden])').length === 0, 'Janela esconde as perguntas novamente');
+    click('[data-reflection="close"]');
+    assert(!app.reflection.isOpen() && document.body.dataset.view === 'present', 'Fechar reflexão mantém a apresentação');
     click('#reveal-next');
     assert(document.querySelectorAll('#material-questions li:not(.is-hidden)').length === 1, 'Revela uma pergunta por vez');
     window.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown' }));

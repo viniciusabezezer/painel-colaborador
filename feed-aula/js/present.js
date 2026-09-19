@@ -193,6 +193,7 @@
 
     function wireKeys() {
         keyHandler = function (event) {
+            if (global.FeedAula.reflection.isOpen()) return;
             if (event.target && /^(INPUT|TEXTAREA|SELECT)$/.test(event.target.tagName)) return;
             const key = event.key;
 

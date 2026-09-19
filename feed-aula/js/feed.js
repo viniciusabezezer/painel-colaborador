@@ -162,7 +162,9 @@
                 return '<i class="ig-dot' + (i === 0 ? ' is-on' : '') + '"></i>';
             }).join('') + '</span><span class="ig-actions__gap"></span>';
         }
-        html += '<button class="ig-icon-btn ig-save" type="button" aria-label="Salvar">' + ICON.bookmark + '</button>' +
+        html += '<button class="ig-icon-btn ig-reflect" type="button" aria-label="Abrir reflexão do post ' + (index + 1) + '" title="Refletir sobre esta postagem" aria-haspopup="dialog">' +
+            '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 5a3 3 0 0 0-5.8-1A4 4 0 0 0 3 10a4 4 0 0 0 1 7 4 4 0 0 0 8 2V5Zm0 0a3 3 0 0 1 5.8-1A4 4 0 0 1 21 10a4 4 0 0 1-1 7 4 4 0 0 1-8 2"/><path d="M7 4v3m-4 3h3l2 2m-4 5h3l1-2m9-11v3m4 3h-3l-2 2m4 5h-3l-1-2"/></svg></button>' +
+            '<button class="ig-icon-btn ig-save" type="button" aria-label="Salvar">' + ICON.bookmark + '</button>' +
             '</div>';
 
         html += '<div class="ig-body">';
@@ -249,7 +251,7 @@
         const scroll = root.querySelector('.ig-scroll');
         wireMedia(root);
         setupCaptions(root);
-        if (opts.interactive) wireInteractions(root);
+        if (opts.interactive) wireInteractions(root, feed);
         wireVideos(root, scroll);
         if (opts.onPostChange) watchCurrentPost(root, scroll, opts.onPostChange);
 
@@ -347,8 +349,14 @@
         }
     }
 
-    function wireInteractions(root) {
+    function wireInteractions(root, feed) {
         root.addEventListener('click', function (event) {
+            const reflect = event.target.closest('.ig-reflect');
+            if (reflect) {
+                const index = Number(reflect.closest('.ig-post').dataset.index);
+                global.FeedAula.reflection.open(feed.posts[index], index, reflect);
+                return;
+            }
             const likeBtn = event.target.closest('.ig-like');
             if (likeBtn) { toggleLike(likeBtn.closest('.ig-post'), likeBtn.classList.contains('is-on') ? -1 : 1); return; }
 
