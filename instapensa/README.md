@@ -5,7 +5,7 @@ cara do Instagram), projetar em sala e conduzir a leitura das publicações com
 texto de apoio e perguntas amarrados a cada post.
 
 Abre pelo Painel do Colaborador (card **📱 InstaPensa**) ou direto em
-`/feed-aula/`.
+`/instapensa/`.
 
 ## A dinâmica
 
@@ -83,16 +83,18 @@ inclusive um nome inventado para a aula.
 
 O projeto Vercel se chama `instapensa` e publica a raiz deste repositório como
 site estático, sem build, servidor de aplicação ou variáveis de ambiente.
-O `vercel.json` direciona a página inicial para `/feed-aula/`; o painel continua
+O `vercel.json` direciona a página inicial para `/instapensa/`; o painel continua
 acessível em `/index.html`. As aulas e mídias permanecem no navegador.
 
-O nome do banco local e o formato `feed-aula/v1` foram preservados para manter
-compatibilidade com arquivos exportados pela primeira versão.
+A pasta se chama `instapensa/`, mas o nome do banco local (`feed-aula`), as
+chaves de preferência e o formato `feed-aula/v1` foram preservados de propósito:
+assim as aulas já salvas no navegador e os arquivos exportados pela primeira
+versão continuam valendo.
 
 ## Verificação
 
 Sirva a raiz do repositório com `python3 -m http.server 8765` e abra
-`http://localhost:8765/feed-aula/` em uma sessão de navegador de teste.
+`http://localhost:8765/instapensa/` em uma sessão de navegador de teste.
 O arquivo `test/instapensa-browser.js` pode ser executado com
 `agent-browser eval --stdin < test/instapensa-browser.js` nessa sessão.
 Ele cria aulas de teste e verifica saída imediata do editor, persistência,

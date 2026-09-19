@@ -4,6 +4,6 @@
   "buildCommand": null,
   "outputDirectory": ".",
   "redirects": [
-    { "source": "/", "destination": "/feed-aula/", "permanent": false }
+    { "source": "/", "destination": "/instapensa/", "permanent": false }
   ]
 }
