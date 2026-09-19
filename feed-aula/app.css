@@ -595,7 +595,7 @@ input:focus, textarea:focus, select:focus {
     min-height: 0;
     display: flex;
     flex-direction: column;
-    background: rgba(255, 255, 255, .96);
+    background: #fff;
     color: var(--ink);
     border-radius: 22px;
     box-shadow: 0 30px 60px -30px rgba(0, 0, 0, .7);
@@ -608,6 +608,8 @@ input:focus, textarea:focus, select:focus {
     padding: 18px 22px 12px;
     border-bottom: 1px solid var(--line);
 }
+
+#material-close { display: block; margin-bottom: 10px; }
 
 .material__eyebrow {
     font-size: 12px;
@@ -778,12 +780,28 @@ input:focus, textarea:focus, select:focus {
 @media (max-width: 820px) {
     .editor-grid { grid-template-columns: minmax(0, 1fr); padding: 14px; }
     .present.has-panel .present__stage { grid-template-columns: minmax(0, 1fr); }
-    /* Tela estreita: o painel vira sobreposição, o celular continua atrás. */
+    .present__bar { gap: 6px; padding: 8px; }
+    .present__title { display: none; }
+    .present__bar .toolbar__gap { display: none; }
+    .present__bar .btn { padding: 7px 10px; }
+    .present__stage { padding: 8px; gap: 0; }
+    .present__phone { width: 100%; max-width: 100%; min-width: 0; }
+    .present__phone .ig-phone { max-width: 100%; }
+    .present.has-panel .present__phone { display: none; }
+    /* O material ocupa a área do post, sem sobreposição ou transparência. */
     .present.has-panel .material {
-        position: fixed;
-        inset: 7vh 4vw;
-        height: auto;
-        z-index: 40;
+        position: static;
+        height: 100%;
+        width: 100%;
+        z-index: auto;
     }
+    .present.is-zoom .present__stage::after { display: none; }
+    .present.is-idle .present__bar { opacity: 1; }
+    .present.is-idle { cursor: auto; }
     .wrap { padding: 20px 14px 60px; }
+}
+
+@media (hover: none) {
+    .present.is-idle .present__bar { opacity: 1; }
+    .present.is-idle { cursor: auto; }
 }

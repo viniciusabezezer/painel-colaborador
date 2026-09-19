@@ -41,7 +41,8 @@
         revealAll = false;
         titleBox.textContent = feed.name;
         sizeIndex = readSize();
-        setPanel(global.localStorage.getItem(STORE_PANEL) !== 'off');
+        setPanel(!global.matchMedia('(max-width: 820px)').matches &&
+            global.localStorage.getItem(STORE_PANEL) !== 'off');
 
         return media.warm(feed).then(function () {
             if (feed !== loaded) return;
@@ -154,7 +155,11 @@
     function setPanel(on) {
         root.classList.toggle('has-panel', !!on);
         panelBtn.classList.toggle('is-on', !!on);
-        global.localStorage.setItem(STORE_PANEL, on ? 'on' : 'off');
+        panelBtn.setAttribute('aria-expanded', String(!!on));
+        if (!on) root.classList.remove('is-zoom');
+        if (!global.matchMedia('(max-width: 820px)').matches) {
+            global.localStorage.setItem(STORE_PANEL, on ? 'on' : 'off');
+        }
     }
 
     function readSize() {
@@ -273,6 +278,10 @@
     });
     document.getElementById('material-zoom').addEventListener('click', function () {
         root.classList.toggle('is-zoom');
+    });
+    document.getElementById('material-close').addEventListener('click', function () {
+        setPanel(false);
+        panelBtn.focus();
     });
 
     global.FeedAula = global.FeedAula || {};
