@@ -4,11 +4,11 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>InstaPensa — EEMTI Prof. Maria Luiza Saboia</title>
-    <meta name="description" content="Monte um feed de rede social fictício com os posts da sua aula e projete em sala, com as perguntas e o texto de apoio ao lado de cada publicação.">
+    <meta name="description" content="InstaPensa: junte os prints das publicações da sua aula num feed fictício de rede social, projete em sala e abra no botão de cérebro a reflexão de cada post.">
     <meta name="robots" content="noindex">
     <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='24' fill='%23166534'/%3E%3Crect x='26' y='26' width='48' height='48' rx='14' fill='none' stroke='white' stroke-width='7'/%3E%3Ccircle cx='50' cy='50' r='12' fill='none' stroke='white' stroke-width='7'/%3E%3Ccircle cx='65' cy='35' r='4' fill='white'/%3E%3C/svg%3E">
-    <link rel="stylesheet" href="feed.css?v=5">
-    <link rel="stylesheet" href="app.css?v=5">
+    <link rel="stylesheet" href="feed.css?v=6">
+    <link rel="stylesheet" href="app.css?v=6">
 </head>
 <body data-view="library">
 
@@ -21,7 +21,7 @@
             <img src="../logo.png" alt="Logo EEMTI Maria Luiza Saboia">
             <div>
                 <h1>InstaPensa</h1>
-                <p>Monte um feed fictício de rede social com as publicações da sua aula, projete em sala e traga o texto e as perguntas junto de cada post.</p>
+                <p>Junte os prints das publicações da sua aula num feed que rola como o do Instagram, projete em sala e deixe em cada post um botão de cérebro com a reflexão e as perguntas.</p>
             </div>
         </div>
 
@@ -38,10 +38,10 @@
         <div class="howto">
             <h2>Como funciona a dinâmica</h2>
             <ol>
-                <li><strong>Monte o feed</strong> — crie um feed novo e adicione de 8 a 10 posts. Cada post aceita várias imagens e vídeos (carrossel), legenda, curtidas, comentários e o nome do perfil que publicou.</li>
-                <li><strong>Amarre o material didático</strong> — em cada post, preencha o bloco <em>Material da aula</em>: um texto de apoio, as perguntas para a turma e links de leitura.</li>
-                <li><strong>Projete</strong> — clique em <em>Apresentar</em>. O feed aparece dentro de um celular, do jeito que os alunos conhecem, e você rola post por post com as setas do teclado.</li>
-                <li><strong>Conduza</strong> — toque no botão de cérebro de cada post para abrir a janela de reflexão com o texto e as perguntas. Revele uma pergunta por vez e feche a janela para voltar à postagem. Você também pode usar o painel de material (tecla <kbd>M</kbd>).</li>
+                <li><strong>Junte os prints</strong> — crie um feed novo e suba de 8 a 10 prints das publicações (ou vídeos). Só isso: o perfil, as curtidas, a legenda e os comentários já estão dentro da própria imagem que você capturou.</li>
+                <li><strong>Escreva a reflexão</strong> — em cada post, preencha o bloco <em>Reflexão do post</em>: um texto de apoio, as perguntas para a turma e links de leitura.</li>
+                <li><strong>Projete</strong> — clique em <em>Apresentar</em>. Os prints aparecem num feed dentro de um celular, do jeito que os alunos conhecem, e você rola post por post com as setas do teclado.</li>
+                <li><strong>Curta e reflita</strong> — a turma aprecia e "curte" em voz alta; o coração que você marcar fica marcado. Aí você toca no botão de cérebro do post para abrir a reflexão, revelando uma pergunta por vez. O painel lateral (tecla <kbd>M</kbd>) mostra o mesmo conteúdo, para quem preferir deixá-lo à vista.</li>
             </ol>
             <p><strong>Onde os feeds ficam guardados:</strong> neste navegador, neste computador — não há servidor nem login. Para levar o feed para a máquina da sala de aula (ou passar para outro professor), use <em>Exportar</em> e depois <em>Importar arquivo</em> na outra máquina.</p>
             <p><strong>Nada é publicado em rede social.</strong> É só uma imitação da interface, feita para a aula: nenhum dado sai deste computador e nada é enviado ao Instagram.</p>
@@ -68,11 +68,11 @@
             </div>
 
             <div class="panel">
-                <h2>Perfil e aparência</h2>
+                <h2>Aparência do app</h2>
                 <label class="field">
-                    <span>Nome no topo do app</span>
+                    <span>Nome no topo da tela</span>
                     <input type="text" id="brand" placeholder="InstaPensa">
-                    <span class="hint">Aparece em letra cursiva no alto da tela.</span>
+                    <span class="hint">Aparece em letra cursiva no alto do celular.</span>
                 </label>
                 <label class="field">
                     <span>Tema</span>
@@ -81,13 +81,6 @@
                         <option value="dark">Escuro</option>
                     </select>
                 </label>
-                <label class="check" style="margin-bottom:8px">
-                    <input type="checkbox" id="show-stories"> Mostrar a fileira de stories
-                </label>
-                <label class="check">
-                    <input type="checkbox" id="show-bottomnav"> Mostrar a barra de baixo
-                </label>
-                <div id="stories-editor" style="margin-top:14px"></div>
             </div>
 
             <div class="panel">
@@ -105,7 +98,7 @@
 
         <div class="preview">
             <div class="preview__stage" id="preview-stage"></div>
-            <p class="preview__note">Pré-visualização — pode rolar e curtir aqui do mesmo jeito que na projeção.</p>
+            <p class="preview__note">Pré-visualização — pode rolar, curtir e abrir o cérebro aqui do mesmo jeito que na projeção. A curtida fica salva.</p>
         </div>
     </div>
 </section>
@@ -120,7 +113,7 @@
             <span class="toolbar__gap"></span>
             <button class="btn btn--sm" id="present-prev" title="Post anterior (seta para cima)">&uarr; Anterior</button>
             <button class="btn btn--sm" id="present-next" title="Próximo post (seta para baixo)">&darr; Próximo</button>
-            <button class="btn btn--sm" id="present-panel" aria-controls="material" aria-expanded="false" title="Mostrar/esconder o material da aula (M)">Material (M)</button>
+            <button class="btn btn--sm" id="present-panel" aria-controls="material" aria-expanded="false" title="Mostrar/esconder a reflexão ao lado do feed (M)">Reflexão (M)</button>
             <button class="btn btn--sm" id="present-size" title="Tamanho do celular (+ e -)">Tamanho</button>
             <button class="btn btn--sm" id="present-full" title="Tela cheia (F)">Tela cheia</button>
             <button class="btn btn--sm" id="present-help" title="Atalhos do teclado (?)">Atalhos</button>
@@ -132,14 +125,14 @@
             <aside class="material" id="material">
                 <div class="material__head">
                     <button class="btn btn--sm" id="material-close">&larr; Ver postagem</button>
-                    <span class="material__eyebrow" id="material-eyebrow">Material da aula</span>
+                    <span class="material__eyebrow" id="material-eyebrow">Reflexão do post</span>
                     <h2 id="material-title"></h2>
                 </div>
                 <div class="material__body">
                     <p class="material__text" id="material-text"></p>
                     <ol class="material__questions" id="material-questions"></ol>
                     <div class="material__links" id="material-links"></div>
-                    <p class="material__empty" id="material-empty" hidden>Este post ainda não tem material da aula. Volte ao editor para escrever o texto e as perguntas.</p>
+                    <p class="material__empty" id="material-empty" hidden>Este post ainda não tem reflexão. Volte ao editor para escrever o texto e as perguntas.</p>
                 </div>
                 <div class="material__foot">
                     <button class="btn btn--sm btn--primary" id="reveal-next">Revelar pergunta (N)</button>
@@ -157,10 +150,10 @@
                     <dt>&darr; &nbsp;&rarr; &nbsp;Espaço</dt><dd>Próximo post</dd>
                     <dt>&uarr; &nbsp;&larr;</dt><dd>Post anterior</dd>
                     <dt>1 … 9</dt><dd>Ir direto para um post</dd>
-                    <dt>M</dt><dd>Mostrar/esconder o painel da aula</dd>
+                    <dt>M</dt><dd>Mostrar/esconder a reflexão ao lado do feed</dd>
                     <dt>N</dt><dd>Revelar a próxima pergunta</dd>
                     <dt>T</dt><dd>Mostrar todas as perguntas</dd>
-                    <dt>A</dt><dd>Ampliar o material em cima do feed</dd>
+                    <dt>A</dt><dd>Ampliar a reflexão em cima do feed</dd>
                     <dt>+ &nbsp;-</dt><dd>Aumentar/diminuir o celular</dd>
                     <dt>F</dt><dd>Tela cheia</dd>
                     <dt>Esc</dt><dd>Fechar ampliação / sair da apresentação</dd>
@@ -174,14 +167,14 @@
 <div id="toast" role="status" aria-live="polite"></div>
 <input type="file" id="file-import" accept="application/json,.json" hidden>
 
-<script src="js/db.js?v=5"></script>
-<script src="js/model.js?v=5"></script>
-<script src="js/media.js?v=5"></script>
-<script src="js/reflection.js?v=5"></script>
-<script src="js/feed.js?v=5"></script>
-<script src="js/demo.js?v=5"></script>
-<script src="js/editor.js?v=5"></script>
-<script src="js/present.js?v=5"></script>
-<script src="js/app.js?v=5"></script>
+<script src="js/db.js?v=6"></script>
+<script src="js/model.js?v=6"></script>
+<script src="js/media.js?v=6"></script>
+<script src="js/reflection.js?v=6"></script>
+<script src="js/feed.js?v=6"></script>
+<script src="js/demo.js?v=6"></script>
+<script src="js/editor.js?v=6"></script>
+<script src="js/present.js?v=6"></script>
+<script src="js/app.js?v=6"></script>
 </body>
 </html>

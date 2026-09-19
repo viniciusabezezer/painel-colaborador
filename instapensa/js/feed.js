@@ -1,5 +1,7 @@
 /* InstaPensa — desenho do feed imitando a interface do Instagram.
-   Usado nos dois lugares: na pré-visualização do editor e na projeção em sala.
+   Cada post é o print que o professor subiu (o print já traz perfil, curtidas
+   e legenda da publicação original), com uma barra de curtir e o botão de
+   cérebro embaixo. Usado na pré-visualização do editor e na projeção em sala.
    É só interface: não há login, nem envio de dados, nem conexão com a rede
    social de verdade. */
 (function (global) {
@@ -11,22 +13,6 @@
             .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
     }
 
-    /* Selo de verificado: círculo "serrilhado" como o do Instagram. */
-    function badgePath() {
-        const points = [];
-        const teeth = 11;
-        for (let i = 0; i < teeth * 2; i += 1) {
-            const angle = (Math.PI * i) / teeth - Math.PI / 2;
-            const radius = i % 2 === 0 ? 12 : 9.6;
-            points.push([
-                (12 + radius * Math.cos(angle)).toFixed(2),
-                (12 + radius * Math.sin(angle)).toFixed(2)
-            ].join(','));
-        }
-        return 'M' + points.join('L') + 'Z';
-    }
-    const BADGE_PATH = badgePath();
-
     const ICON = {
         heart: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 20.7C10.4 19.6 3 14.7 3 9.9 3 7 5.2 4.8 8 4.8c1.7 0 3.2.9 4 2.2.8-1.3 2.3-2.2 4-2.2 2.8 0 5 2.2 5 5.1 0 4.8-7.4 9.7-9 10.8z"/></svg>',
         comment: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3.3c-5 0-9 3.5-9 7.9 0 2.4 1.2 4.6 3.2 6.1l-1.1 4 4.3-2.1c.8.2 1.7.3 2.6.3 5 0 9-3.5 9-7.9s-4-8.3-9-8.3z"/></svg>',
@@ -37,7 +23,6 @@
         search: '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="10.6" cy="10.6" r="7"/><path d="M15.8 15.8 21 21"/></svg>',
         reels: '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="5"/><path d="M3.5 8.5h17M9 3.3 12.4 8.5M15.4 3.3 18.8 8.5"/><path d="M10.4 12.2 15 14.8l-4.6 2.6z" class="ig-ico-fill"/></svg>',
         shop: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 8h16l-1.3 12.5H5.3z"/><path d="M8.5 8V6.6a3.5 3.5 0 0 1 7 0V8"/></svg>',
-        verified: '<svg viewBox="0 0 24 24" class="ig-verified" aria-label="Verificado"><path d="' + BADGE_PATH + '" fill="#0095F6"/><path d="M10.6 15.4 7.4 12.2l1.3-1.3 1.9 1.9 4.7-4.7 1.3 1.3z" fill="#fff"/></svg>',
         camera: '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3.2" y="3.2" width="17.6" height="17.6" rx="5"/><circle cx="12" cy="12" r="4"/><circle cx="17.2" cy="6.8" r="1.1" class="ig-ico-fill"/></svg>'
     };
 
@@ -62,40 +47,6 @@
         return hash;
     }
 
-    function avatarHtml(author, size) {
-        const url = global.FeedAula.media.refUrl({ mediaId: author.avatarMediaId, url: author.avatarUrl });
-        const name = author.username || author.displayName || '';
-        if (url) {
-            return '<span class="ig-avatar" style="--s:' + size + 'px">' +
-                '<img src="' + esc(url) + '" alt="" loading="lazy"></span>';
-        }
-        return '<span class="ig-avatar ig-avatar--letters" style="--s:' + size + 'px;--hue:' +
-            hueOf(name) + '">' + esc(initials(name)) + '</span>';
-    }
-
-    function username(author) {
-        return author.username || 'perfil.sem.nome';
-    }
-
-    /* Legenda: escapa tudo e só depois destaca #hashtags e @perfis. */
-    function captionHtml(text) {
-        return esc(text)
-            .replace(/(^|\s)(#[\p{L}\p{N}_]+)/gu, '$1<span class="ig-tag">$2</span>')
-            .replace(/(^|\s)(@[\p{L}\p{N}_.]+)/gu, '$1<span class="ig-tag">$2</span>')
-            .replace(/\n/g, '<br>');
-    }
-
-    function likesHtml(post) {
-        const count = (post.likesCount || '').trim();
-        const by = (post.likedBy || '').trim();
-        if (!count && !by) return '';
-        if (by && count) {
-            return 'Curtido por <b>' + esc(by) + '</b> e outras <b>' + esc(count) + ' pessoas</b>';
-        }
-        if (by) return 'Curtido por <b>' + esc(by) + '</b>';
-        return '<b>' + esc(count) + '</b>';
-    }
-
     function mediaSlideHtml(item, index, interactive) {
         const url = global.FeedAula.media.refUrl(item);
         if (!url) {
@@ -115,28 +66,14 @@
             '</div>';
     }
 
+    /* Um post é o print que o professor subiu. O print já traz o perfil, as
+       curtidas e a legenda da publicação original, então aqui embaixo ficam só
+       as duas coisas que são da aula: curtir e abrir a reflexão. */
     function postHtml(post, index, opts) {
-        const author = post.author || {};
         const media = post.media || [];
-        const comments = post.comments || [];
         const hasCarousel = media.length > 1;
-        const caption = (post.caption || '').trim();
-        const likes = likesHtml(post);
-        const total = (post.commentsTotal || '').trim();
 
         let html = '<article class="ig-post" data-post-id="' + esc(post.id) + '" data-index="' + index + '">';
-
-        html += '<header class="ig-post__head">' +
-            avatarHtml(author, 32) +
-            '<div class="ig-post__who">' +
-            '<span class="ig-post__user">' + esc(username(author)) +
-            (author.verified ? ICON.verified : '') + '</span>' +
-            (post.sponsored
-                ? '<span class="ig-post__meta">Patrocinado</span>'
-                : (post.location ? '<span class="ig-post__meta">' + esc(post.location) + '</span>' : '')) +
-            '</div>' +
-            '<button class="ig-icon-btn ig-post__more" type="button" aria-label="Mais">' + ICON.more + '</button>' +
-            '</header>';
 
         html += '<div class="ig-media' + (hasCarousel ? ' ig-media--carousel' : '') + '">' +
             '<div class="ig-track">' +
@@ -153,9 +90,9 @@
         html += '</div>';
 
         html += '<div class="ig-actions">' +
-            '<button class="ig-icon-btn ig-like" type="button" aria-label="Curtir">' + ICON.heart + '</button>' +
-            '<button class="ig-icon-btn" type="button" aria-label="Comentar">' + ICON.comment + '</button>' +
-            '<button class="ig-icon-btn" type="button" aria-label="Compartilhar">' + ICON.send + '</button>' +
+            '<button class="ig-icon-btn ig-like' + (post.liked ? ' is-on' : '') +
+            '" type="button" aria-pressed="' + (post.liked ? 'true' : 'false') +
+            '" aria-label="Curtir o post ' + (index + 1) + '">' + ICON.heart + '</button>' +
             '<span class="ig-actions__gap"></span>';
         if (hasCarousel) {
             html += '<span class="ig-dots">' + media.map(function (_, i) {
@@ -164,27 +101,9 @@
         }
         html += '<button class="ig-icon-btn ig-reflect" type="button" aria-label="Abrir reflexão do post ' + (index + 1) + '" title="Refletir sobre esta postagem" aria-haspopup="dialog">' +
             '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 5a3 3 0 0 0-5.8-1A4 4 0 0 0 3 10a4 4 0 0 0 1 7 4 4 0 0 0 8 2V5Zm0 0a3 3 0 0 1 5.8-1A4 4 0 0 1 21 10a4 4 0 0 1-1 7 4 4 0 0 1-8 2"/><path d="M7 4v3m-4 3h3l2 2m-4 5h3l1-2m9-11v3m4 3h-3l-2 2m4 5h-3l-1-2"/></svg></button>' +
-            '<button class="ig-icon-btn ig-save" type="button" aria-label="Salvar">' + ICON.bookmark + '</button>' +
             '</div>';
 
-        html += '<div class="ig-body">';
-        if (likes) html += '<p class="ig-likes">' + likes + '</p>';
-        if (caption) {
-            html += '<p class="ig-caption is-clamped"><b>' + esc(username(author)) + '</b> ' +
-                captionHtml(caption) + '</p>';
-        }
-        if (total) {
-            html += '<button class="ig-comments-all" type="button">Ver todos os ' + esc(total) + ' comentários</button>';
-        }
-        comments.forEach(function (comment) {
-            if (!comment.text && !comment.user) return;
-            html += '<p class="ig-comment"><b>' + esc(comment.user || 'alguem') + '</b> ' +
-                captionHtml(comment.text) +
-                (comment.likes ? '<span class="ig-comment__likes">' + esc(comment.likes) + ' curtidas</span>' : '') +
-                '</p>';
-        });
-        if (post.time) html += '<p class="ig-time">' + esc(post.time) + '</p>';
-        html += '</div></article>';
+        html += '</article>';
 
         return html;
     }
@@ -217,14 +136,15 @@
             '</span></header>';
     }
 
-    function bottomNavHtml(feed) {
-        const first = (feed.posts || [])[0] || global.FeedAula.model.newPost();
+    function bottomNavHtml() {
         return '<nav class="ig-bottomnav">' +
             '<button class="ig-icon-btn is-on" type="button" aria-label="Início">' + ICON.home + '</button>' +
             '<button class="ig-icon-btn" type="button" aria-label="Buscar">' + ICON.search + '</button>' +
             '<button class="ig-icon-btn" type="button" aria-label="Reels">' + ICON.reels + '</button>' +
             '<button class="ig-icon-btn" type="button" aria-label="Loja">' + ICON.shop + '</button>' +
-            '<span class="ig-bottomnav__me">' + avatarHtml(first.author || {}, 26) + '</span>' +
+            '<span class="ig-bottomnav__me">' +
+            '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8.4" r="3.6"/>' +
+            '<path d="M4.8 20.4a7.2 7.2 0 0 1 14.4 0"/></svg></span>' +
             '</nav>';
     }
 
@@ -233,7 +153,11 @@
     /* Devolve o elemento do feed pronto. Chame FeedAula.media.warm(feed) antes,
        para as mídias locais já estarem em cache. */
     function render(feed, options) {
-        const opts = Object.assign({ interactive: true, onPostChange: null }, options || {});
+        const opts = Object.assign({
+            interactive: true,
+            onPostChange: null,
+            onLike: null
+        }, options || {});
         const profile = feed.profile || {};
         const root = el('<div class="ig ig--' + (profile.theme === 'dark' ? 'dark' : 'light') + '"></div>');
 
@@ -246,12 +170,11 @@
             '</div>' +
             '<div class="ig-end">Você viu todas as publicações</div>' +
             '</div>' +
-            (profile.showBottomNav === false ? '' : bottomNavHtml(feed));
+            (profile.showBottomNav === false ? '' : bottomNavHtml());
 
         const scroll = root.querySelector('.ig-scroll');
         wireMedia(root);
-        setupCaptions(root);
-        if (opts.interactive) wireInteractions(root, feed);
+        if (opts.interactive) wireInteractions(root, feed, opts);
         wireVideos(root, scroll);
         if (opts.onPostChange) watchCurrentPost(root, scroll, opts.onPostChange);
 
@@ -268,7 +191,9 @@
     /* Proporção da mídia como no Instagram: entre retrato 4:5 e paisagem 1.91:1. */
     function fitSlide(slide, width, height) {
         if (!width || !height) return;
-        const ratio = Math.min(1.91, Math.max(0.8, width / height));
+        /* O print manda na altura: nada de recortar a publicação do professor.
+           O limite largo só evita uma imagem degenerada esticar o feed. */
+        const ratio = Math.min(3, Math.max(0.34, width / height));
         slide.style.setProperty('--ratio', ratio.toFixed(4));
         const media = slide.closest('.ig-media');
         if (media && !media.style.getPropertyValue('--ratio')) {
@@ -295,61 +220,7 @@
         });
     }
 
-    /* Legenda longa: o Instagram corta em duas linhas e encosta "… mais" no fim
-       do texto. Para isso é preciso medir com a legenda já na tela e ir tirando
-       palavras até o conjunto (texto + botão) caber nas duas linhas. */
-    const FULL_CAPTIONS = new WeakMap();
-
-    function setupCaptions(root) {
-        const check = function () {
-            if (!root.isConnected) {
-                global.requestAnimationFrame(check);
-                return;
-            }
-            root.querySelectorAll('.ig-caption.is-clamped').forEach(prepareCaption);
-        };
-        global.requestAnimationFrame(check);
-    }
-
-    function prepareCaption(caption) {
-        if (FULL_CAPTIONS.has(caption)) return;
-        if (!overflows(caption)) {
-            caption.classList.remove('is-clamped');
-            return;
-        }
-        FULL_CAPTIONS.set(caption, caption.innerHTML);
-        const button = document.createElement('button');
-        button.type = 'button';
-        button.className = 'ig-more-link';
-        button.textContent = '… mais';
-        caption.appendChild(button);
-        trimToFit(caption);
-    }
-
-    function overflows(node) {
-        return node.scrollHeight > node.clientHeight + 1;
-    }
-
-    function trimToFit(caption) {
-        const walker = document.createTreeWalker(caption, NodeFilter.SHOW_TEXT, null);
-        const nodes = [];
-        while (walker.nextNode()) {
-            const node = walker.currentNode;
-            if (!node.parentElement.closest('.ig-more-link')) nodes.push(node);
-        }
-        for (let i = nodes.length - 1; i >= 0; i -= 1) {
-            const node = nodes[i];
-            const parts = node.nodeValue.split(/(\s+)/);
-            while (parts.length && overflows(caption)) {
-                parts.pop();
-                node.nodeValue = parts.join('');
-            }
-            if (!overflows(caption)) return;
-            node.nodeValue = '';
-        }
-    }
-
-    function wireInteractions(root, feed) {
+    function wireInteractions(root, feed, opts) {
         root.addEventListener('click', function (event) {
             const reflect = event.target.closest('.ig-reflect');
             if (reflect) {
@@ -358,21 +229,10 @@
                 return;
             }
             const likeBtn = event.target.closest('.ig-like');
-            if (likeBtn) { toggleLike(likeBtn.closest('.ig-post'), likeBtn.classList.contains('is-on') ? -1 : 1); return; }
-
-            const saveBtn = event.target.closest('.ig-save');
-            if (saveBtn) { saveBtn.classList.toggle('is-on'); return; }
-
-            const moreLink = event.target.closest('.ig-more-link');
-            if (moreLink) {
-                const caption = moreLink.parentElement;
-                if (FULL_CAPTIONS.has(caption)) caption.innerHTML = FULL_CAPTIONS.get(caption);
-                caption.classList.remove('is-clamped');
+            if (likeBtn) {
+                toggleLike(likeBtn.closest('.ig-post'), !likeBtn.classList.contains('is-on'), opts);
                 return;
             }
-
-            const commentsAll = event.target.closest('.ig-comments-all');
-            if (commentsAll) { commentsAll.closest('.ig-post').classList.add('is-comments-open'); return; }
 
             const mute = event.target.closest('.ig-mute');
             if (mute) {
@@ -399,9 +259,9 @@
         /* Duplo clique/toque curte, como no app. */
         root.querySelectorAll('.ig-media').forEach(function (media) {
             media.addEventListener('dblclick', function () {
-                const post = media.closest('.ig-post');
-                const btn = post.querySelector('.ig-like');
-                if (!btn.classList.contains('is-on')) toggleLike(post, 1);
+                const postEl = media.closest('.ig-post');
+                const btn = postEl.querySelector('.ig-like');
+                if (!btn.classList.contains('is-on')) toggleLike(postEl, true, opts);
                 popHeart(media);
             });
         });
@@ -411,18 +271,11 @@
         });
     }
 
-    function toggleLike(post, direction) {
-        const btn = post.querySelector('.ig-like');
-        btn.classList.toggle('is-on', direction > 0);
-        /* O número de curtidas é o último <b> da linha ("Curtido por X e outras N"). */
-        const bolds = post.querySelectorAll('.ig-likes b');
-        const likes = bolds[bolds.length - 1];
-        if (!likes) return;
-        const raw = likes.textContent.replace(/\./g, '').replace(/\s/g, '');
-        const number = parseInt(raw, 10);
-        if (!isNaN(number)) {
-            likes.textContent = (number + direction).toLocaleString('pt-BR');
-        }
+    function toggleLike(postEl, liked, opts) {
+        const btn = postEl.querySelector('.ig-like');
+        btn.classList.toggle('is-on', liked);
+        btn.setAttribute('aria-pressed', liked ? 'true' : 'false');
+        if (opts && opts.onLike) opts.onLike(Number(postEl.dataset.index), liked);
     }
 
     function popHeart(media) {

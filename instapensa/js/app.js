@@ -110,7 +110,7 @@
             posts.length + (posts.length === 1 ? ' post' : ' posts') + '</span></div>' +
             '<div class="feed-card__body">' +
             '<h3>' + esc(feed.name) + '</h3>' +
-            '<p>' + withMaterial + ' de ' + posts.length + ' com material da aula · ' +
+            '<p>' + withMaterial + ' de ' + posts.length + ' com reflexão · ' +
             'editado ' + when(feed.updatedAt) + '</p>' +
             '</div>' +
             '<div class="feed-card__actions">' +

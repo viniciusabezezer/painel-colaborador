@@ -22,9 +22,6 @@
     const nameInput = document.getElementById('feed-name');
     const brandInput = document.getElementById('brand');
     const themeInput = document.getElementById('theme');
-    const storiesInput = document.getElementById('show-stories');
-    const bottomNavInput = document.getElementById('show-bottomnav');
-    const storiesBox = document.getElementById('stories-editor');
 
     function open(loaded) {
         feed = loaded;
@@ -32,11 +29,8 @@
         nameInput.value = feed.name;
         brandInput.value = feed.profile.brand;
         themeInput.value = feed.profile.theme;
-        storiesInput.checked = feed.profile.showStories !== false;
-        bottomNavInput.checked = feed.profile.showBottomNav !== false;
         stateBox.textContent = '';
         renderList();
-        renderStories();
         renderForm();
         renderPreview();
     }
@@ -100,12 +94,13 @@
             item.className = 'post-item' + (index === selected ? ' is-on' : '');
             const label = model.postLabel(post, index);
             const hasMaterial = (post.material.text && post.material.text.trim()) ||
-                post.material.questions.length;
+                post.material.questions.length ||
+                (post.material.title && post.material.title.trim());
             item.innerHTML =
                 '<span class="post-item__thumb"></span>' +
                 '<span class="post-item__text"><strong>' + (index + 1) + '. ' + esc(label) + '</strong>' +
-                '<span>' + (post.media.length || 0) + ' mídia(s)' +
-                (hasMaterial ? ' · material ok' : ' · sem material') + '</span></span>' +
+                '<span>' + (post.media.length || 0) + (post.media.length === 1 ? ' print' : ' prints') +
+                (hasMaterial ? ' · com reflexão' : ' · sem reflexão') + '</span></span>' +
                 '<span class="post-move">' +
                 '<button type="button" data-move="-1" title="Subir">▲</button>' +
                 '<button type="button" data-move="1" title="Descer">▼</button>' +
@@ -149,46 +144,6 @@
         renderForm();
     }
 
-    /* ===== Stories ===== */
-
-    function renderStories() {
-        if (!feed) return;
-        storiesBox.innerHTML = '<span style="display:block;font-size:12px;font-weight:600;' +
-            'text-transform:uppercase;letter-spacing:.3px;color:var(--ink-soft);margin-bottom:6px">' +
-            'Stories (opcional)</span>' +
-            feed.stories.map(function (story, index) {
-                return '<div class="repeat-row"><div class="row">' +
-                    '<input type="text" data-story="label" data-index="' + index + '" value="' +
-                    esc(story.label) + '" placeholder="Nome do story">' +
-                    '<input type="url" data-story="url" data-index="' + index + '" value="' +
-                    esc(story.url) + '" placeholder="Link da imagem (opcional)">' +
-                    '</div><div class="repeat-row__tools">' +
-                    '<button type="button" class="btn btn--sm btn--danger" data-story-remove="' + index + '">Remover</button>' +
-                    '</div></div>';
-            }).join('') +
-            '<button type="button" class="btn btn--sm" id="add-story">+ Story</button>';
-
-        storiesBox.querySelectorAll('[data-story]').forEach(function (input) {
-            input.addEventListener('input', function () {
-                feed.stories[parseInt(input.dataset.index, 10)][input.dataset.story] = input.value;
-                touch({ list: false });
-            });
-        });
-        storiesBox.querySelectorAll('[data-story-remove]').forEach(function (btn) {
-            btn.addEventListener('click', function () {
-                feed.stories.splice(parseInt(btn.dataset.storyRemove, 10), 1);
-                touch({ list: false });
-                renderStories();
-            });
-        });
-        const addStory = storiesBox.querySelector('#add-story');
-        addStory.addEventListener('click', function () {
-            feed.stories.push({ id: model.uid('s'), label: '', mediaId: '', url: '', seen: false });
-            touch({ list: false });
-            renderStories();
-        });
-    }
-
     /* ===== Formulário do post ===== */
 
     function renderForm() {
@@ -207,46 +162,18 @@
             '<button class="btn btn--sm btn--danger" data-post-act="delete">Excluir post</button>' +
             '</div>' +
 
-            '<div class="form-section"><h3>Quem publicou</h3>' +
-            '<div class="row">' +
-            field('Perfil (arroba)', input('text', 'author.username', post.author.username, 'ex.: museu.paracuru')) +
-            field('Local', input('text', 'location', post.location, 'ex.: Paracuru, Ceará')) +
-            '</div>' +
-            '<div class="row">' +
-            field('Quando publicou', input('text', 'time', post.time, 'ex.: há 3 horas')) +
-            field('Foto do perfil (link)', input('url', 'author.avatarUrl', post.author.avatarUrl, 'https://…')) +
-            '</div>' +
-            '<label class="check" style="margin-right:18px"><input type="checkbox" data-bind="author.verified"' +
-            (post.author.verified ? ' checked' : '') + '> Perfil verificado (selo azul)</label>' +
-            '<label class="check"><input type="checkbox" data-bind="sponsored"' +
-            (post.sponsored ? ' checked' : '') + '> Post patrocinado (anúncio)</label>' +
-            '<div style="margin-top:10px">' + avatarPicker(post) + '</div>' +
-            '</div>' +
-
-            '<div class="form-section"><h3>Mídias do post <span class="tag">imagem ou vídeo</span></h3>' +
+            '<div class="form-section"><h3>Print da publicação <span class="tag">imagem ou vídeo</span></h3>' +
+            '<p class="panel__hint">Suba o print da publicação como ela é: o perfil, as curtidas, a legenda e os comentários já aparecem na própria imagem, então não há nada disso para preencher aqui.</p>' +
             '<div class="media-list" id="media-list"></div>' +
-            '<div class="dropzone" id="media-drop"><strong>Clique para escolher</strong> ou arraste imagens e vídeos aqui.' +
-            '<br><span style="font-size:12px">Várias mídias no mesmo post viram carrossel, como no Instagram.</span></div>' +
+            '<div class="dropzone" id="media-drop"><strong>Clique para escolher</strong> ou arraste os prints aqui.' +
+            '<br><span style="font-size:12px">Vários prints no mesmo post viram carrossel, como no Instagram.</span></div>' +
             '<div class="row" style="margin-top:10px">' +
             '<input type="url" id="media-url" placeholder="…ou cole o endereço de uma imagem/vídeo da internet">' +
             '<button class="btn btn--sm" id="media-url-add" style="flex:0 0 auto">Adicionar link</button>' +
             '</div></div>' +
 
-            '<div class="form-section"><h3>Legenda e números</h3>' +
-            field('Legenda', '<textarea data-bind="caption" placeholder="O texto que aparece embaixo do post. Pode usar #hashtags e @perfis.">' +
-                esc(post.caption) + '</textarea>') +
-            '<div class="row">' +
-            field('Curtido por', input('text', 'likedBy', post.likedBy, 'ex.: maria.souza')) +
-            field('Número de curtidas', input('text', 'likesCount', post.likesCount, 'ex.: 1.248')) +
-            field('Total de comentários', input('text', 'commentsTotal', post.commentsTotal, 'ex.: 87')) +
-            '</div></div>' +
-
-            '<div class="form-section"><h3>Comentários que aparecem</h3>' +
-            '<div id="comment-list"></div>' +
-            '<button class="btn btn--sm" id="add-comment">+ Comentário</button></div>' +
-
-            '<div class="form-section"><h3>Material da aula <span class="tag">aparece no painel</span></h3>' +
-            '<p class="panel__hint">É isto que você projeta ao lado do post para conduzir a conversa com a turma.</p>' +
+            '<div class="form-section"><h3>🧠 Reflexão do post <span class="tag">abre no botão de cérebro</span></h3>' +
+            '<p class="panel__hint">É o que a turma vê quando você clica no cérebro deste post, na projeção.</p>' +
             field('Título', input('text', 'material.title', post.material.title, 'ex.: Quem fala nesse post?')) +
             field('Texto de apoio', '<textarea data-bind="material.text" rows="5" placeholder="Um parágrafo, um trecho de texto, uma explicação, a fonte da imagem…">' +
                 esc(post.material.text) + '</textarea>') +
@@ -259,15 +186,8 @@
 
         bindFields(post);
         renderMediaList(post);
-        renderComments(post);
         renderLinks(post);
         wireMediaIntake(post);
-
-        formBox.querySelector('#add-comment').addEventListener('click', function () {
-            post.comments.push(model.newComment());
-            touch({ list: false });
-            renderComments(post);
-        });
 
         formBox.querySelector('#add-link').addEventListener('click', function () {
             post.material.links.push({ label: '', url: '' });
@@ -340,25 +260,12 @@
 
     /* ===== Mídias ===== */
 
-    function avatarPicker(post) {
-        const url = media.refUrl({ mediaId: post.author.avatarMediaId, url: post.author.avatarUrl });
-        return '<div class="media-row">' +
-            '<span class="media-row__thumb">' +
-            (url ? '<img src="' + esc(url) + '" alt="">' : 'sem foto') + '</span>' +
-            '<span class="media-row__meta"><strong>Foto do perfil</strong>' +
-            'Sem foto, entra um círculo colorido com as iniciais.</span>' +
-            '<span class="media-row__tools">' +
-            '<button class="btn btn--sm" id="avatar-pick">Escolher arquivo</button>' +
-            (post.author.avatarMediaId ? '<button class="btn btn--sm btn--danger" id="avatar-clear">Remover</button>' : '') +
-            '</span></div>';
-    }
-
     /* Descrição curta da origem: URLs longas (e data:) estouravam a coluna. */
     function mediaOrigin(item) {
         if (item.mediaId) return 'arquivo deste computador';
         const url = (item.url || '').trim();
         if (!url) return 'sem origem';
-        if (/^data:/i.test(url)) return 'imagem embutida no exemplo';
+        if (/^data:/i.test(url)) return 'print embutido no exemplo';
         try {
             return 'link · ' + new URL(url).hostname;
         } catch (err) {
@@ -455,24 +362,6 @@
             if (event.key === 'Enter') { event.preventDefault(); addUrl(); }
         });
 
-        formBox.querySelector('#avatar-pick').addEventListener('click', function () {
-            pickFiles('image/*', false).then(function (files) {
-                if (!files.length) return null;
-                return media.addFile(files[0]).then(function (item) {
-                    post.author.avatarMediaId = item.mediaId;
-                    touch();
-                    renderForm();
-                });
-            }).catch(global.FeedAula.app.fail);
-        });
-        const clear = formBox.querySelector('#avatar-clear');
-        if (clear) {
-            clear.addEventListener('click', function () {
-                post.author.avatarMediaId = '';
-                touch();
-                renderForm();
-            });
-        }
     }
 
     function addFiles(post, files) {
@@ -509,38 +398,6 @@
     }
 
     /* ===== Comentários e links ===== */
-
-    function renderComments(post) {
-        const box = formBox.querySelector('#comment-list');
-        box.innerHTML = post.comments.map(function (comment, index) {
-            return '<div class="repeat-row">' +
-                '<div class="row">' +
-                '<input type="text" data-comment="user" data-index="' + index + '" value="' +
-                esc(comment.user) + '" placeholder="Perfil" style="flex:0 0 160px">' +
-                '<input type="text" data-comment="text" data-index="' + index + '" value="' +
-                esc(comment.text) + '" placeholder="O que essa pessoa comentou">' +
-                '<input type="text" data-comment="likes" data-index="' + index + '" value="' +
-                esc(comment.likes) + '" placeholder="Curtidas" style="flex:0 0 100px">' +
-                '</div>' +
-                '<div class="repeat-row__tools">' +
-                '<button class="btn btn--sm btn--danger" data-comment-remove="' + index + '">Remover</button>' +
-                '</div></div>';
-        }).join('');
-
-        box.querySelectorAll('[data-comment]').forEach(function (el) {
-            el.addEventListener('input', function () {
-                post.comments[parseInt(el.dataset.index, 10)][el.dataset.comment] = el.value;
-                touch({ list: false });
-            });
-        });
-        box.querySelectorAll('[data-comment-remove]').forEach(function (btn) {
-            btn.addEventListener('click', function () {
-                post.comments.splice(parseInt(btn.dataset.commentRemove, 10), 1);
-                touch({ list: false });
-                renderComments(post);
-            });
-        });
-    }
 
     function renderLinks(post) {
         const box = formBox.querySelector('#link-list');
@@ -583,7 +440,14 @@
             const notch = document.createElement('div');
             notch.className = 'ig-phone__notch';
             screen.appendChild(notch);
-            screen.appendChild(global.FeedAula.feed.render(feed, { interactive: true }));
+            screen.appendChild(global.FeedAula.feed.render(feed, {
+                interactive: true,
+                onLike: function (index, liked) {
+                    if (!feed || !feed.posts[index]) return;
+                    feed.posts[index].liked = liked;
+                    touch({ list: false, preview: false });
+                }
+            }));
             phone.appendChild(screen);
             previewBox.innerHTML = '';
             previewBox.appendChild(phone);
@@ -616,27 +480,9 @@
         touch({ list: false });
     });
 
-    storiesInput.addEventListener('change', function () {
-        if (!feed) return;
-        feed.profile.showStories = storiesInput.checked;
-        touch({ list: false });
-    });
-
-    bottomNavInput.addEventListener('change', function () {
-        if (!feed) return;
-        feed.profile.showBottomNav = bottomNavInput.checked;
-        touch({ list: false });
-    });
-
     document.getElementById('add-post').addEventListener('click', function () {
         if (!feed) return;
-        const previous = feed.posts[feed.posts.length - 1];
         const post = model.newPost();
-        /* Herda o perfil do último post: normalmente é o mesmo autor fictício. */
-        if (previous) {
-            post.author = Object.assign({}, previous.author);
-            post.location = previous.location;
-        }
         feed.posts.push(post);
         selected = feed.posts.length - 1;
         touch();

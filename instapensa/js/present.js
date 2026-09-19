@@ -34,6 +34,7 @@
     let idleTimer = null;
     let keyHandler = null;
     let wakeHandler = null;
+    let likeTimer = null;
 
     function start(loaded) {
         feed = loaded;
@@ -60,6 +61,11 @@
                 onPostChange: function (index) {
                     current = index;
                     showMaterial(index);
+                },
+                onLike: function (index, liked) {
+                    if (!feed || !feed.posts[index]) return;
+                    feed.posts[index].liked = liked;
+                    saveLikes();
                 }
             });
             screen.appendChild(rendered);
@@ -73,6 +79,16 @@
         }).catch(global.FeedAula.app.fail);
     }
 
+    /* A curtida dada em aula fica gravada: ao rolar de volta para o post — e na
+       próxima vez que o feed abrir — o coração continua vermelho. */
+    function saveLikes() {
+        global.clearTimeout(likeTimer);
+        likeTimer = global.setTimeout(function () {
+            if (!feed) return;
+            global.FeedAula.db.saveFeed(feed).catch(global.FeedAula.app.fail);
+        }, 400);
+    }
+
     function stop() {
         if (rendered && rendered.feedApi) rendered.feedApi.pauseVideos();
         if (keyHandler) {
@@ -80,6 +96,8 @@
             keyHandler = null;
         }
         global.clearTimeout(idleTimer);
+        global.clearTimeout(likeTimer);
+        if (feed) global.FeedAula.db.saveFeed(feed).catch(function () {});
         if (wakeHandler) {
             root.removeEventListener('mousemove', wakeHandler);
             root.removeEventListener('click', wakeHandler);
@@ -103,7 +121,7 @@
         const hasAny = (material.text && material.text.trim()) || questions.length || links.length;
 
         progressBox.textContent = 'Post ' + (index + 1) + ' de ' + feed.posts.length;
-        materialEyebrow.textContent = 'Post ' + (index + 1) + ' · material da aula';
+        materialEyebrow.textContent = '🧠 Post ' + (index + 1) + ' · reflexão';
         materialTitle.textContent = material.title && material.title.trim()
             ? material.title
             : model.postLabel(post, index);

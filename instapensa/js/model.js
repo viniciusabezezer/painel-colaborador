@@ -32,6 +32,7 @@
             comments: [],
             commentsTotal: '',
             sponsored: false,
+            liked: false,
             material: { title: '', text: '', questions: [], links: [] }
         };
     }
@@ -97,6 +98,7 @@
         post.time = str(post.time);
         post.commentsTotal = str(post.commentsTotal);
         post.sponsored = !!post.sponsored;
+        post.liked = !!post.liked;
         post.media = (Array.isArray(post.media) ? post.media : []).map(function (m) {
             return {
                 id: m && m.id ? m.id : uid('m'),

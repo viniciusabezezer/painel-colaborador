@@ -1,22 +1,38 @@
 # InstaPensa
 
-Ferramenta para o professor montar um **feed fictício de rede social** (com a
-cara do Instagram), projetar em sala e conduzir a leitura das publicações com
-texto de apoio e perguntas amarrados a cada post.
+Ferramenta para o professor juntar os **prints das publicações** da sua aula num
+**feed fictício de rede social** (com a cara do Instagram), projetar em sala e
+abrir em cada post a reflexão que ele escreveu.
 
 Abre pelo Painel do Colaborador (card **📱 InstaPensa**) ou direto em
 `/instapensa/`.
 
 ## A dinâmica
 
-1. O professor separa de 8 a 10 publicações (imagens e/ou vídeos) e monta o feed.
-2. Em cada post ele escreve o **material da aula**: um texto de apoio, as
-   perguntas para a turma e links de leitura.
-3. Em sala, no modo **Apresentar**, o feed aparece dentro de uma moldura de
-   celular e rola post por post pelas setas do teclado. A turma observa, comenta
-   e "curte" em voz alta.
-4. O professor abre o painel lateral (tecla `M`) e revela as perguntas uma a uma
-   (tecla `N`) — ou amplia o material sobre o feed (tecla `A`) para a turma ler.
+1. O professor sobe de 8 a 10 **prints** das publicações (ou vídeos). Só isso:
+   o perfil, as curtidas, a legenda e os comentários já estão dentro da imagem
+   que ele capturou, então não há nada disso para preencher no site.
+2. Em cada post ele escreve a **reflexão**: um texto de apoio, as perguntas para
+   a turma e links de leitura.
+3. Em sala, no modo **Apresentar**, os prints aparecem num feed dentro de uma
+   moldura de celular e rolam post por post pelas setas do teclado. A turma
+   observa, comenta e "curte" em voz alta — **o coração marcado fica marcado**,
+   inclusive na próxima vez que o feed for aberto.
+4. O professor toca no **botão de cérebro** do post (ou aperta `A`) e revela as
+   perguntas uma a uma (`N`). O painel lateral (`M`) mostra o mesmo conteúdo,
+   para quem preferir deixá-lo à vista.
+
+## O que o professor preenche
+
+Por post, duas coisas:
+
+- **Print da publicação** — um ou mais arquivos (vários viram carrossel), ou o
+  endereço de uma imagem/vídeo da internet.
+- **Reflexão do post** — título, texto de apoio, perguntas (uma por linha) e
+  links.
+
+Do feed inteiro: o nome dele, o nome que aparece em letra cursiva no topo do
+celular e o tema (claro ou escuro). Nada além disso.
 
 ## Atalhos do modo aula
 
@@ -30,10 +46,10 @@ escondê-las. **Fechar** ou `Esc` retorna à postagem, sem sair da apresentaçã
 | `↓` `→` `Espaço` | próximo post |
 | `↑` `←` | post anterior |
 | `1`…`9` | vai direto para um post |
-| `M` | mostra/esconde o painel da aula |
+| `M` | mostra/esconde o painel lateral |
 | `N` | revela a próxima pergunta |
 | `T` | mostra todas as perguntas |
-| `A` | amplia o material em cima do feed |
+| `A` | abre a reflexão do post (o botão de cérebro) |
 | `+` `-` | aumenta/diminui o celular (5 tamanhos) |
 | `F` | tela cheia |
 | `Esc` | fecha a ampliação ou sai da apresentação |
@@ -62,7 +78,7 @@ Ao excluir um feed, as mídias que nenhum outro feed usa são apagadas junto.
 | `js/model.js` | formato dos dados e migração de feeds importados |
 | `js/media.js` | entrada de arquivos, redução de imagens, exportar/importar |
 | `js/feed.js` | desenho do feed (usado no editor e na projeção) |
-| `js/editor.js` | edição dos posts e do material da aula |
+| `js/editor.js` | edição dos posts: print e reflexão |
 | `js/present.js` | modo aula: teclado, painel e navegação |
 | `js/demo.js` | feed de exemplo, com imagens desenhadas em SVG |
 
