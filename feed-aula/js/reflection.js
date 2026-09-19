@@ -78,6 +78,7 @@
     });
     dialog.addEventListener('keydown', function (event) {
         event.stopPropagation();
+        if (event.key === 'Escape') { event.preventDefault(); close(); return; }
         if (event.key.toLowerCase() === 'n') { event.preventDefault(); action('next'); }
         if (event.key.toLowerCase() === 't') { event.preventDefault(); action('all'); }
     });
