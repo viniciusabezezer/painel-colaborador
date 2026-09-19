@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Feed da Aula — EEMTI Prof. Maria Luiza Saboia</title>
+    <meta name="description" content="Monte um feed de rede social fictício com os posts da sua aula e projete em sala, com as perguntas e o texto de apoio ao lado de cada publicação.">
+    <meta name="robots" content="noindex">
+    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='24' fill='%23166534'/%3E%3Crect x='26' y='26' width='48' height='48' rx='14' fill='none' stroke='white' stroke-width='7'/%3E%3Ccircle cx='50' cy='50' r='12' fill='none' stroke='white' stroke-width='7'/%3E%3Ccircle cx='65' cy='35' r='4' fill='white'/%3E%3C/svg%3E">
+    <link rel="stylesheet" href="feed.css?v=1">
+    <link rel="stylesheet" href="app.css?v=1">
+</head>
+<body data-view="library">
+
+<!-- ============ BIBLIOTECA ============ -->
+<section id="view-library" class="view">
+    <div class="wrap">
+        <a class="back-link" href="../index.html">&larr; Voltar ao Painel do Colaborador</a>
+
+        <div class="masthead">
+            <img src="../logo.png" alt="Logo EEMTI Maria Luiza Saboia">
+            <div>
+                <h1>Feed da Aula</h1>
+                <p>Monte um feed fictício de rede social com as publicações da sua aula, projete em sala e traga o texto e as perguntas junto de cada post.</p>
+            </div>
+        </div>
+
+        <div class="toolbar">
+            <button class="btn btn--primary" id="new-feed">+ Novo feed</button>
+            <button class="btn" id="import-feed">Importar arquivo…</button>
+            <button class="btn" id="load-demo">Carregar exemplo pronto</button>
+            <span class="toolbar__gap"></span>
+            <span class="save-state" id="usage"></span>
+        </div>
+
+        <div class="cards" id="feed-cards"></div>
+
+        <div class="howto">
+            <h2>Como funciona a dinâmica</h2>
+            <ol>
+                <li><strong>Monte o feed</strong> — crie um feed novo e adicione de 8 a 10 posts. Cada post aceita várias imagens e vídeos (carrossel), legenda, curtidas, comentários e o nome do perfil que publicou.</li>
+                <li><strong>Amarre o material didático</strong> — em cada post, preencha o bloco <em>Material da aula</em>: um texto de apoio, as perguntas para a turma e links de leitura.</li>
+                <li><strong>Projete</strong> — clique em <em>Apresentar</em>. O feed aparece dentro de um celular, do jeito que os alunos conhecem, e você rola post por post com as setas do teclado.</li>
+                <li><strong>Conduza</strong> — a turma observa, comenta e "curte" em voz alta; então você abre o painel lateral (tecla <kbd>M</kbd>) e revela as perguntas uma a uma (tecla <kbd>N</kbd>).</li>
+            </ol>
+            <p><strong>Onde os feeds ficam guardados:</strong> neste navegador, neste computador — não há servidor nem login. Para levar o feed para a máquina da sala de aula (ou passar para outro professor), use <em>Exportar</em> e depois <em>Importar arquivo</em> na outra máquina.</p>
+            <p><strong>Nada é publicado em rede social.</strong> É só uma imitação da interface, feita para a aula: nenhum dado sai deste computador e nada é enviado ao Instagram.</p>
+        </div>
+    </div>
+</section>
+
+<!-- ============ EDITOR ============ -->
+<section id="view-editor" class="view">
+    <div class="editor-bar">
+        <button class="btn btn--ghost" id="editor-back">&larr; Biblioteca</button>
+        <input type="text" id="feed-name" class="editor-bar__name" placeholder="Nome do feed (ex.: Consumo e publicidade — 2º ano)" aria-label="Nome do feed">
+        <span class="save-state" id="save-state"></span>
+        <button class="btn" id="editor-export">Exportar</button>
+        <button class="btn btn--accent" id="editor-present">Apresentar &rarr;</button>
+    </div>
+
+    <div class="editor-grid">
+        <div>
+            <div class="panel">
+                <h2>Posts do feed</h2>
+                <div class="post-list" id="post-list"></div>
+                <button class="btn btn--primary btn--sm" id="add-post" style="margin-top:12px;width:100%;justify-content:center">+ Adicionar post</button>
+            </div>
+
+            <div class="panel">
+                <h2>Perfil e aparência</h2>
+                <label class="field">
+                    <span>Nome no topo do app</span>
+                    <input type="text" id="brand" placeholder="Instagram">
+                    <span class="hint">Aparece em letra cursiva no alto da tela.</span>
+                </label>
+                <label class="field">
+                    <span>Tema</span>
+                    <select id="theme">
+                        <option value="light">Claro</option>
+                        <option value="dark">Escuro</option>
+                    </select>
+                </label>
+                <label class="check" style="margin-bottom:8px">
+                    <input type="checkbox" id="show-stories"> Mostrar a fileira de stories
+                </label>
+                <label class="check">
+                    <input type="checkbox" id="show-bottomnav"> Mostrar a barra de baixo
+                </label>
+                <div id="stories-editor" style="margin-top:14px"></div>
+            </div>
+
+            <div class="panel">
+                <h2>Este feed</h2>
+                <div class="post-list">
+                    <button class="btn btn--sm" id="editor-duplicate">Duplicar feed</button>
+                    <button class="btn btn--sm btn--danger" id="editor-delete">Excluir feed</button>
+                </div>
+            </div>
+        </div>
+
+        <div class="panel" id="post-form">
+            <p class="panel__hint">Selecione um post na lista ao lado.</p>
+        </div>
+
+        <div class="preview">
+            <div class="preview__stage" id="preview-stage"></div>
+            <p class="preview__note">Pré-visualização — pode rolar e curtir aqui do mesmo jeito que na projeção.</p>
+        </div>
+    </div>
+</section>
+
+<!-- ============ MODO AULA ============ -->
+<section id="view-present" class="view">
+    <div class="present" id="present">
+        <div class="present__bar">
+            <button class="btn btn--sm" id="present-exit">&larr; Sair</button>
+            <span class="present__title" id="present-title"></span>
+            <span class="present__progress" id="present-progress">—</span>
+            <span class="toolbar__gap"></span>
+            <button class="btn btn--sm" id="present-prev" title="Post anterior (seta para cima)">&uarr; Anterior</button>
+            <button class="btn btn--sm" id="present-next" title="Próximo post (seta para baixo)">&darr; Próximo</button>
+            <button class="btn btn--sm" id="present-panel" title="Mostrar/esconder o material da aula (M)">Painel (M)</button>
+            <button class="btn btn--sm" id="present-size" title="Tamanho do celular (+ e -)">Tamanho</button>
+            <button class="btn btn--sm" id="present-full" title="Tela cheia (F)">Tela cheia</button>
+            <button class="btn btn--sm" id="present-help" title="Atalhos do teclado (?)">Atalhos</button>
+        </div>
+
+        <div class="present__stage">
+            <div class="present__phone" id="present-phone"></div>
+
+            <aside class="material" id="material">
+                <div class="material__head">
+                    <span class="material__eyebrow" id="material-eyebrow">Material da aula</span>
+                    <h2 id="material-title"></h2>
+                </div>
+                <div class="material__body">
+                    <p class="material__text" id="material-text"></p>
+                    <ol class="material__questions" id="material-questions"></ol>
+                    <div class="material__links" id="material-links"></div>
+                    <p class="material__empty" id="material-empty" hidden>Este post ainda não tem material da aula. Volte ao editor para escrever o texto e as perguntas.</p>
+                </div>
+                <div class="material__foot">
+                    <button class="btn btn--sm btn--primary" id="reveal-next">Revelar pergunta (N)</button>
+                    <button class="btn btn--sm" id="reveal-all">Mostrar todas</button>
+                    <button class="btn btn--sm" id="reveal-reset">Esconder</button>
+                    <button class="btn btn--sm" id="material-zoom">Ampliar (A)</button>
+                </div>
+            </aside>
+        </div>
+
+        <div class="shortcuts" id="shortcuts">
+            <div class="shortcuts__box">
+                <h2>Atalhos do modo aula</h2>
+                <dl>
+                    <dt>&darr; &nbsp;&rarr; &nbsp;Espaço</dt><dd>Próximo post</dd>
+                    <dt>&uarr; &nbsp;&larr;</dt><dd>Post anterior</dd>
+                    <dt>1 … 9</dt><dd>Ir direto para um post</dd>
+                    <dt>M</dt><dd>Mostrar/esconder o painel da aula</dd>
+                    <dt>N</dt><dd>Revelar a próxima pergunta</dd>
+                    <dt>T</dt><dd>Mostrar todas as perguntas</dd>
+                    <dt>A</dt><dd>Ampliar o material em cima do feed</dd>
+                    <dt>+ &nbsp;-</dt><dd>Aumentar/diminuir o celular</dd>
+                    <dt>F</dt><dd>Tela cheia</dd>
+                    <dt>Esc</dt><dd>Fechar ampliação / sair da apresentação</dd>
+                </dl>
+                <button class="btn btn--sm" id="shortcuts-close" style="margin-top:16px">Fechar</button>
+            </div>
+        </div>
+    </div>
+</section>
+
+<div id="toast" role="status" aria-live="polite"></div>
+<input type="file" id="file-import" accept="application/json,.json" hidden>
+
+<script src="js/db.js?v=1"></script>
+<script src="js/model.js?v=1"></script>
+<script src="js/media.js?v=1"></script>
+<script src="js/feed.js?v=1"></script>
+<script src="js/demo.js?v=1"></script>
+<script src="js/editor.js?v=1"></script>
+<script src="js/present.js?v=1"></script>
+<script src="js/app.js?v=1"></script>
+</body>
+</html>
