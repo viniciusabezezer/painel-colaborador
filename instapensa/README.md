@@ -31,10 +31,6 @@ Por post, duas coisas:
 - **Reflexão do post** — título, texto de apoio, perguntas (uma por linha) e
   links.
 
-Como capturar esses prints — apagar a identificação de quem postou, o tamanho
-que sobrevive à projeção e o OCR da legenda — está em
-[`CAPTURAS.md`](CAPTURAS.md).
-
 Do feed inteiro: o nome dele, o nome que aparece em letra cursiva no topo do
 celular e o tema (claro ou escuro). Nada além disso.
 
@@ -76,7 +72,6 @@ Ao excluir um feed, as mídias que nenhum outro feed usa são apagadas junto.
 | Arquivo | Papel |
 | --- | --- |
 | `index.html` | as três telas: biblioteca, editor e modo aula |
-| `CAPTURAS.md` | guia de captura dos prints (identificação, tamanho, OCR) |
 | `app.css` | casca do aplicativo (identidade da escola) |
 | `feed.css` | aparência do feed imitando o Instagram + moldura de celular |
 | `js/db.js` | IndexedDB: feeds, mídias e limpeza de mídias órfãs |
