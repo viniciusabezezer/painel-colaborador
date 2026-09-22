@@ -26,6 +26,11 @@
 
 * { margin: 0; padding: 0; box-sizing: border-box; }
 
+/* Vários blocos daqui são flex ou grid, e `display` declarado vence o
+   `[hidden] { display: none }` do navegador. Sem esta regra, esconder um
+   elemento pelo atributo hidden não faria efeito. */
+[hidden] { display: none !important; }
+
 body {
     font-family: 'Outfit', system-ui, sans-serif;
     background: var(--bg);
@@ -184,7 +189,6 @@ label small { font-weight: 400; font-size: 12px; color: var(--ink-soft); line-he
 
 .opcoes { display: flex; flex-wrap: wrap; align-items: flex-start; gap: 16px; padding: 12px 0; border-top: 1px solid var(--line); }
 .opcoes > label { display: flex; flex-direction: column; gap: 5px; }
-.opcoes[hidden], .sub-opcoes[hidden] { display: none; }
 
 .caixa-check { display: flex !important; flex-direction: row !important; align-items: baseline; gap: 7px; font-size: 13.5px; color: var(--ink); font-weight: 600; flex: 1 1 100%; }
 .caixa-check input { width: auto; }
@@ -211,12 +215,6 @@ label small { font-weight: 400; font-size: 12px; color: var(--ink-soft); line-he
 .previa-lado { display: flex; flex-direction: column; gap: 10px; align-items: flex-start; }
 .previa-lado .previa-dica { margin: 0; font-size: 13px; }
 
-.legenda { list-style: none; margin: 0; display: flex; flex-direction: column; gap: 6px; }
-.legenda li { display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--ink-soft); }
-.legenda .amostra { width: 22px; height: 12px; border-radius: 3px; flex: 0 0 auto; }
-.amostra--linha { border: 1.5px solid var(--blue); background: hsla(205, 78%, 46%, .18); }
-.amostra--quadrado { border: 1.5px dashed var(--orange); background: hsla(30, 100%, 50%, .14); }
-
 .previa-palco {
     position: relative; display: inline-block; max-width: 100%;
     background: #fff; border: 1px solid var(--line); border-radius: 6px; overflow: hidden;
@@ -232,14 +230,15 @@ label small { font-weight: 400; font-size: 12px; color: var(--ink-soft); line-he
     display: flex; align-items: flex-end;
 }
 .previa-faixa span { font-size: 10px; color: var(--ink-soft); padding: 0 0 3px 6px; }
-.marca-quadrado-faixa {
-    position: absolute; border: 1.5px dashed var(--orange);
-    background: hsla(30, 100%, 50%, .12); border-radius: 3px;
+.marca-cabecalho {
+    position: absolute; pointer-events: none;
+    border: 1.5px solid var(--blue); background: hsla(205, 78%, 46%, .14);
+    border-radius: 3px; display: flex; align-items: flex-start; justify-content: flex-end;
 }
-
-.marca-linha, .marca-quadrado { position: absolute; pointer-events: none; }
-.marca-linha { border: 1.5px solid var(--blue); background: hsla(205, 78%, 46%, .12); border-radius: 3px; }
-.marca-quadrado { border: 1.5px dashed var(--orange); background: hsla(30, 100%, 50%, .1); border-radius: 3px; }
+.marca-cabecalho span {
+    font-size: 9px; font-weight: 700; color: #fff; background: var(--blue);
+    padding: 1px 5px; border-radius: 0 2px 0 4px;
+}
 
 /* ===== Resultados ===== */
 

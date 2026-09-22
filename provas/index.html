@@ -71,69 +71,49 @@
         </fieldset>
 
         <fieldset class="passo">
-            <legend><span class="num">4</span> Onde entra a identificação</legend>
+            <legend><span class="num">4</span> O cabeçalho de identificação</legend>
+            <p class="dica">O cabeçalho é a <strong>única identificação da prova</strong>: leva o nome do aluno, a série, a turma, o número da lista, o código único e o QR Code encaixado nele. Não repete escola, componente nem bimestre — isso a prova já diz.</p>
 
             <div class="modelos" id="modelos">
                 <label class="modelo">
-                    <input type="radio" name="modelo" value="quadrado-espaco" checked>
-                    <span class="modelo-titulo">Quadrado no topo, abrindo espaço</span>
-                    <span class="modelo-texto">Um quadradinho com QR e código entra no alto da folha. A prova desce e encolhe o necessário, então nada do que o professor escreveu fica coberto.</span>
+                    <input type="radio" name="modelo" value="espaco-deixado" checked>
+                    <span class="modelo-titulo">No espaço em branco da prova</span>
+                    <span class="modelo-texto">Você deixa a faixa em branco no alto da prova e marca aqui onde o cabeçalho entra. A prova sai em tamanho original, sem nada redimensionado.</span>
                 </label>
                 <label class="modelo">
-                    <input type="radio" name="modelo" value="quadrado-sobreposto">
-                    <span class="modelo-titulo">Quadrado sobreposto, sem mexer na prova</span>
-                    <span class="modelo-texto">A prova sai em tamanho original e o quadrado é colado onde você marcar. Use quando a página tem folha de respostas com marcas de alinhamento.</span>
-                </label>
-                <label class="modelo">
-                    <input type="radio" name="modelo" value="faixa">
-                    <span class="modelo-titulo">Faixa larga no topo</span>
-                    <span class="modelo-texto">Faixa de ponta a ponta com nome, turma, código e QR. Boa para prova sem cabeçalho apertado, como a de redação.</span>
+                    <input type="radio" name="modelo" value="abrir-espaco">
+                    <span class="modelo-titulo">Abrir o espaço eu mesmo</span>
+                    <span class="modelo-texto">Para prova que ainda não tem a faixa em branco: a prova desce e encolhe o necessário, e o cabeçalho entra na faixa nova.</span>
                 </label>
                 <label class="modelo">
                     <input type="radio" name="modelo" value="etiquetas">
                     <span class="modelo-titulo">Só a folha de etiquetas</span>
-                    <span class="modelo-texto">Não mexe na prova: gera uma folha de etiquetas para recortar e colar. É a saída para quem imprime direto do Word.</span>
+                    <span class="modelo-texto">Não mexe na prova: o mesmo cabeçalho em grade, para recortar e colar. É a saída para quem imprime direto do Word.</span>
                 </label>
             </div>
 
-            <div class="opcoes" id="opcoes-quadrado">
-                <label>Lado do quadrado
-                    <span class="com-unidade"><input type="number" id="quadrado-lado" min="2" max="6" step="0.1" value="3.4"><span>cm</span></span>
+            <div class="opcoes" id="opcoes-cabecalho">
+                <label>Largura
+                    <span class="com-unidade"><input type="number" id="cab-largura" min="6" max="21" step="0.1" value="19"><span>cm</span></span>
                 </label>
-                <label>Canto
-                    <select id="quadrado-ancora">
-                        <option value="topo-direita" selected>Alto, à direita</option>
-                        <option value="topo-centro">Alto, no centro</option>
-                        <option value="topo-esquerda">Alto, à esquerda</option>
-                        <option value="livre">Onde eu marcar na prévia</option>
+                <label>Altura
+                    <span class="com-unidade"><input type="number" id="cab-altura" min="1.6" max="6" step="0.1" value="2.5"><span>cm</span></span>
+                </label>
+                <label>Canto de cima, a
+                    <span class="com-unidade"><input type="number" id="cab-x" min="0" max="20" step="0.1" value="1"><span>cm da esquerda</span></span>
+                </label>
+                <label>e a
+                    <span class="com-unidade"><input type="number" id="cab-y" min="0" max="28" step="0.1" value="0.6"><span>cm do topo</span></span>
+                </label>
+                <label>QR Code
+                    <select id="cab-qr">
+                        <option value="direita" selected>encaixado à direita</option>
+                        <option value="esquerda">encaixado à esquerda</option>
+                        <option value="sem">sem QR, só o código</option>
                     </select>
                 </label>
-                <label class="caixa-check"><input type="checkbox" id="quadrado-nome"> Escrever o nome também dentro do quadrado <small>(sai miúdo; melhor usar o campo ALUNO (A) abaixo)</small></label>
-            </div>
-
-            <div class="opcoes" id="opcoes-nome">
-                <label class="caixa-check"><input type="checkbox" id="usar-linha" checked> Escrever o nome do aluno dentro da prova, no campo <code>ALUNO (A):</code></label>
-                <div class="sub-opcoes" id="sub-linha">
-                    <label>Começa a
-                        <span class="com-unidade"><input type="number" id="linha-x" min="0" max="20" step="0.1" value="5.2"><span>cm da esquerda</span></span>
-                    </label>
-                    <label>e a
-                        <span class="com-unidade"><input type="number" id="linha-y" min="0" max="29" step="0.1" value="3.05"><span>cm do topo</span></span>
-                    </label>
-                    <label>Largura
-                        <span class="com-unidade"><input type="number" id="linha-largura" min="2" max="20" step="0.1" value="7.5"><span>cm</span></span>
-                    </label>
-                    <label>Corpo
-                        <span class="com-unidade"><input type="number" id="linha-tamanho" min="5" max="14" step="0.5" value="9"><span>pt</span></span>
-                    </label>
-                    <div class="campos-linha">
-                        <span>Escrever:</span>
-                        <label><input type="checkbox" class="campo-linha" value="nome" checked> nome</label>
-                        <label><input type="checkbox" class="campo-linha" value="numero" checked> nº</label>
-                        <label><input type="checkbox" class="campo-linha" value="turma" checked> turma</label>
-                        <label><input type="checkbox" class="campo-linha" value="id"> código</label>
-                    </div>
-                </div>
+                <label class="caixa-check"><input type="checkbox" id="cab-codigo" checked> Escrever o código também em letra legível <small>(o QR já o leva; o código escrito serve para digitar na conferência)</small></label>
+                <label class="caixa-check"><input type="checkbox" id="cab-moldura" checked> Desenhar a moldura em volta do cabeçalho</label>
             </div>
 
             <div class="previa">
@@ -145,18 +125,13 @@
                 </div>
                 <div class="previa-corpo">
                     <div class="previa-palco" id="previa-palco">
-                        <div class="previa-faixa" id="previa-faixa" hidden><span id="previa-faixa-texto"></span><div class="marca-quadrado-faixa" id="marca-quadrado-faixa"></div></div>
+                        <div class="previa-faixa" id="previa-faixa" hidden><span id="previa-faixa-texto"></span></div>
                         <canvas id="previa-canvas"></canvas>
-                        <div class="marca-linha" id="marca-linha" hidden></div>
-                        <div class="marca-quadrado" id="marca-quadrado" hidden></div>
+                        <div class="marca-cabecalho" id="marca-cabecalho" hidden><span>cabeçalho</span></div>
                         <p class="previa-vazia" id="previa-vazia">Envie uma prova no passo 3 para ver a prévia.</p>
                     </div>
                     <div class="previa-lado">
-                        <p class="previa-dica" id="previa-dica"><strong>Clique na prova</strong> para marcar onde a identificação entra. O ponto clicado é onde o texto começa.</p>
-                        <ul class="legenda">
-                            <li><span class="amostra amostra--linha"></span> o nome do aluno, no campo da prova</li>
-                            <li><span class="amostra amostra--quadrado"></span> o quadrado com o QR e o código</li>
-                        </ul>
+                        <p class="previa-dica"><strong>Clique na prova</strong> para encostar ali o canto de cima do cabeçalho. Ajuste a largura e a altura nos campos acima até o retângulo cobrir a faixa que você deixou em branco.</p>
                         <p class="previa-dica">Antes de gerar a turma toda, vale abrir o PDF de um aluno e olhar de perto.</p>
                         <button type="button" class="btn" id="ver-amostra">Ver o PDF de um aluno</button>
                         <span class="contagem" id="aviso-amostra"></span>
@@ -215,7 +190,10 @@
             <p>O app precisa da página desenhada, e um <code>.docx</code> só ganha desenho quando o Word o pagina — não há como fazer isso aqui dentro sem estragar o cabeçalho. Duas saídas: abrir no Word e usar <em>Salvar como → PDF</em> (é um clique e mantém o layout igual), ou gerar a folha de etiquetas e colar nas provas impressas.</p>
 
             <h3>Folha de respostas na mesma página</h3>
-            <p>Se a primeira página traz o gabarito com os quadrados de alinhamento, prefira o modelo <strong>sobreposto</strong>: a prova sai em tamanho original e as marcas ficam exatamente onde estavam. O modelo que abre espaço reduz a folha a cerca de 88%, e leitor de gabarito que trabalhe com template fixo pode reclamar.</p>
+            <p>Se a primeira página traz o gabarito com os quadrados de alinhamento, deixe a faixa em branco na prova e use o modelo <strong>no espaço em branco</strong>: nada é redimensionado, então as marcas ficam exatamente onde estavam. O modelo que abre espaço reduz a folha a cerca de 90%, e leitor de gabarito que trabalhe com template fixo pode reclamar.</p>
+
+            <h3>O que tirar da prova</h3>
+            <p>Como o cabeçalho traz nome, série, turma e número, o campo <code>ALUNO (A):</code> e o <code>SÉRIE / TURMA</code> do cabeçalho do professor podem sair — no lugar deles, deixe a faixa em branco de uns 3 cm no alto da folha.</p>
 
             <h3>Onde ficam os dados</h3>
             <p>Em nenhum servidor. O PDF que você envia, os nomes que você cola e os arquivos gerados existem só na memória desta aba: ao fechar, tudo desaparece. Por isso baixe a folha de conferência antes de sair.</p>

@@ -1,8 +1,13 @@
 # Provas Identificadas
 
 Ferramenta para a coordenação **identificar cada prova bimestral com o aluno**:
-a primeira página sai com o nome, a turma, o número da lista e um **código único
-com QR Code**, de modo que a prova de um não sirva para outro.
+o app cola na faixa em branco do alto da primeira página um **cabeçalho de
+identificação** com o nome do aluno, a série, a turma, o número da lista e um
+**código único com QR Code**, de modo que a prova de um não sirva para outro.
+
+O cabeçalho é a única identificação da prova. O campo `ALUNO (A):` e o
+`SÉRIE / TURMA` do cabeçalho do professor **saem da prova**; no lugar deles fica
+uma faixa em branco de uns 3 cm no alto da folha, que é onde o app escreve.
 
 Abre direto em `/provas/`.
 
@@ -22,7 +27,9 @@ sair.
    manda — e aí a mesma turma gera sempre os mesmos códigos.
 3. **As provas** — a **primeira página** de cada prova, uma por série e
    componente, em PDF, JPG ou PNG.
-4. **Onde entra a identificação** — clicando na prévia da própria prova.
+4. **O cabeçalho de identificação** — clica-se na prévia da própria prova para
+   encostar ali o canto de cima do cabeçalho, e ajusta-se largura e altura até
+   o retângulo cobrir a faixa deixada em branco.
 5. **Gerar** — sai um conjunto por turma e componente.
 
 ## O que sai no fim
@@ -32,8 +39,9 @@ sair.
 - **Folha de conferência** (PDF e CSV): a lista que liga cada código ao aluno,
   com espaço para assinatura. É o único lugar em que nome e código aparecem
   juntos fora da prova.
-- **Etiquetas**: a mesma identificação em grade (14 por folha), para recortar e
-  colar quando a prova é impressa direto do Word.
+- **Etiquetas**: o mesmo cabeçalho em grade (14 por folha), para recortar e
+  colar quando a prova é impressa direto do Word. Aqui o componente aparece,
+  porque a etiqueta anda solta antes de ser colada.
 
 ## O código
 
@@ -59,24 +67,34 @@ os mesmos códigos numa segunda rodada.
 Componentes: `RED` redação, `LIN` linguagens e códigos, `NAT` ciências da
 natureza, `HUM` ciências humanas, `MAT` matemática.
 
-## Onde a identificação entra
+## O cabeçalho
 
-Cada prova deixa um espaço livre diferente, então há quatro modelos:
+```
+┌────────────────────────────────────────────────────┬────────┐
+│ ALUNO(A)                                           │ ▓▓▓▓▓▓ │
+│ JOSÉ ÍTALO GONÇALVES DA CONCEIÇÃO                  │ ▓ QR ▓ │
+│ 1ª SÉRIE · TURMA 1A · Nº 03    MLS-2026-B3-1A-003… │ ▓▓▓▓▓▓ │
+└────────────────────────────────────────────────────┴────────┘
+```
 
-- **Quadrado no topo, abrindo espaço** — a prova desce e encolhe (cerca de 88%)
-  e o quadradinho com QR e código entra no alto. Nada do que o professor
-  escreveu fica coberto.
-- **Quadrado sobreposto** — a prova sai em tamanho original e o quadrado é
-  colado onde se marcar. É o modelo para página que traz a **folha de respostas
-  com as marcas quadradas de alinhamento**: nada é redimensionado, então as
-  marcas ficam onde estavam.
-- **Faixa larga no topo** — faixa de ponta a ponta com nome, turma, código e QR.
+O nome é o maior elemento, porque é ele que impede a prova de rodar de carteira
+em carteira, e nunca sai cortado: a fonte diminui até o nome inteiro caber. O QR
+fica encaixado na altura do bloco, à direita ou à esquerda. Escola, componente e
+bimestre **não** aparecem — isso a prova já diz, e repetir só polui a folha.
+
+Três modelos:
+
+- **No espaço em branco da prova** (padrão) — a prova sai em tamanho original e o
+  cabeçalho é colado na faixa que o professor deixou. Nada é redimensionado, o
+  que importa quando a primeira página traz a **folha de respostas com as marcas
+  quadradas de alinhamento**: elas ficam exatamente onde estavam.
+- **Abrir o espaço** — para prova que ainda não tem a faixa: a prova desce e
+  encolhe o necessário, e o cabeçalho entra na faixa nova.
 - **Só etiquetas** — não mexe na prova.
 
-Em qualquer um deles dá para **escrever o nome dentro do campo `ALUNO (A):`** que
-a prova já tem: clica-se na prévia e o app marca em centímetros. Quando o modelo
-abre espaço no topo, essa marca acompanha a redução da folha sozinha, então ela
-cai no campo mesmo com a prova reduzida.
+Medidas em centímetros, contadas da borda superior esquerda, como se mede numa
+folha impressa. Se a prova tiver sido reduzida para abrir espaço, uma marca
+colada sobre ela passa pela mesma redução sozinha.
 
 ## Prova no Word
 
@@ -113,6 +131,7 @@ node provas/test/provas-browser.mjs       # a tela inteira, com Chromium
 ```
 
 O teste de navegador precisa do `playwright` instalado (global serve), sobe um
-servidor local, cola uma lista, envia `test/prova-exemplo.pdf`, clica na prévia,
-gera os arquivos e confere o CSV e a aba de conferência. Os arquivos ficam em
-`test/saida/` para inspeção.
+servidor local, cola uma lista, envia `test/prova-exemplo.pdf` — uma prova de
+mentirinha no formato da escola, com a faixa em branco no alto e sem o campo
+`ALUNO (A):` —, clica na prévia, gera os arquivos e confere o CSV e a aba de
+conferência. Os arquivos ficam em `test/saida/` para inspeção.

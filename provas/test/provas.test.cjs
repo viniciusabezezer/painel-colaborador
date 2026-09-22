@@ -151,24 +151,47 @@ test('o QR cobre exatamente os módulos escuros e grava acento', () => {
 
 /* ===== posição das marcas ===== */
 
-test('a marca colada na prova acompanha a redução do conteúdo', () => {
+test('o cabeçalho marcado na prova fica exatamente onde foi marcado', () => {
     const altura = 29.7 * pdf.CM;
-    const semReducao = pdf.resolverCaixa({ tipo: 'linha', xCm: 5.2, yCm: 3, larguraCm: 8 }, 21 * pdf.CM, altura, { escala: 1, dx: 0, dy: 0 });
-    assert.ok(Math.abs(semReducao.x / pdf.CM - 5.2) < 0.01);
-    assert.ok(Math.abs((altura - semReducao.y) / pdf.CM - 3) < 0.01);
-
-    /* Faixa de 3,7 cm aberta no topo: a folha encolhe e desce. */
-    const escala = (29.7 - 3.7) / 29.7;
-    const comReducao = pdf.resolverCaixa({ tipo: 'linha', xCm: 5.2, yCm: 3, larguraCm: 8 }, 21 * pdf.CM, altura, { escala: escala, dx: (21 * pdf.CM * (1 - escala)) / 2, dy: 0 });
-    const topoFinal = (altura - comReducao.y) / pdf.CM;
-    assert.ok(Math.abs(topoFinal - (3.7 + 3 * escala)) < 0.02, 'cai em ' + topoFinal.toFixed(2) + ' cm');
-    assert.ok(Math.abs(comReducao.largura / pdf.CM - 8 * escala) < 0.01, 'a largura encolhe junto');
+    const caixa = pdf.resolverCaixa(
+        { xCm: 1, yCm: 0.6, larguraCm: 19, alturaCm: 2.5 },
+        21 * pdf.CM, altura, { escala: 1, dx: 0, dy: 0 }
+    );
+    assert.ok(Math.abs(caixa.x / pdf.CM - 1) < 0.01);
+    assert.ok(Math.abs((altura - caixa.y - caixa.altura) / pdf.CM - 0.6) < 0.01, 'a medida é do topo da folha');
+    assert.ok(Math.abs(caixa.largura / pdf.CM - 19) < 0.01);
+    assert.ok(Math.abs(caixa.altura / pdf.CM - 2.5) < 0.01);
 });
 
-test('o quadrado fica dentro da folha mesmo se pedirem grande demais', () => {
-    const caixa = pdf.resolverCaixa({ tipo: 'quadrado', ancora: 'topo-direita', ladoCm: 40 }, 21 * pdf.CM, 29.7 * pdf.CM);
+test('cabeçalho marcado sobre a prova acompanha a redução dela', () => {
+    const altura = 29.7 * pdf.CM;
+    /* Faixa de 3,5 cm aberta no topo: a folha encolhe e desce. */
+    const escala = (29.7 - 3.5) / 29.7;
+    const caixa = pdf.resolverCaixa(
+        { xCm: 2, yCm: 5, larguraCm: 10, alturaCm: 2.5 },
+        21 * pdf.CM, altura,
+        { escala: escala, dx: (21 * pdf.CM * (1 - escala)) / 2, dy: 0 }
+    );
+    const topo = (altura - caixa.y - caixa.altura) / pdf.CM;
+    assert.ok(Math.abs(topo - (3.5 + 5 * escala)) < 0.03, 'cai em ' + topo.toFixed(2) + ' cm');
+    assert.ok(Math.abs(caixa.largura / pdf.CM - 10 * escala) < 0.01, 'a largura encolhe junto');
+});
+
+test('cabeçalho na faixa que o app abriu não encolhe com a prova', () => {
+    const altura = 29.7 * pdf.CM;
+    const escala = (29.7 - 3.5) / 29.7;
+    const caixa = pdf.resolverCaixa(
+        { xCm: 1, yCm: 0.5, larguraCm: 19, alturaCm: 2.5, noEspacoAberto: true },
+        21 * pdf.CM, altura, { escala: escala, dx: 0, dy: 0 }
+    );
+    assert.ok(Math.abs(caixa.largura / pdf.CM - 19) < 0.01, 'largura cheia na faixa nova');
+    assert.ok(Math.abs((altura - caixa.y - caixa.altura) / pdf.CM - 0.5) < 0.01);
+});
+
+test('o cabeçalho fica dentro da folha mesmo se pedirem grande demais', () => {
+    const caixa = pdf.resolverCaixa({ xCm: 30, yCm: 40, larguraCm: 40, alturaCm: 40 }, 21 * pdf.CM, 29.7 * pdf.CM, null);
     assert.ok(caixa.x >= 2 && caixa.y >= 2);
-    assert.ok(caixa.largura <= 21 * pdf.CM);
+    assert.ok(caixa.largura <= 21 * pdf.CM && caixa.altura <= 29.7 * pdf.CM);
 });
 
 test('o nome comprido encolhe até caber, sem cortar', () => {
@@ -225,8 +248,7 @@ test('sai uma página por aluno, com o tamanho da folha original', async () => {
     const gerado = await pdf.montarPrimeirasPaginas({
         arquivo: { bytes: bytes, tipo: 'pdf' },
         identificacoes: provas,
-        espacoTopoCm: 3.7,
-        marcas: [{ tipo: 'quadrado', ancora: 'topo-direita', ladoCm: 3.4 }, { tipo: 'linha', xCm: 5, yCm: 3, larguraCm: 8, campos: ['nome', 'numero'] }],
+        cabecalho: { xCm: 1, yCm: 0.6, larguraCm: 19, alturaCm: 2.5 },
         serieNome: '1ª SÉRIE'
     });
 
@@ -235,6 +257,73 @@ test('sai uma página por aluno, com o tamanho da folha original', async () => {
     const tamanho = conferido.getPage(0).getSize();
     assert.ok(Math.abs(tamanho.width - 21 * pdf.CM) < 0.5);
     assert.ok(Math.abs(tamanho.height - 29.7 * pdf.CM) < 0.5);
+});
+
+/* Página e fontes de mentirinha, para ler exatamente o que o cabeçalho
+   escreve, sem precisar abrir o PDF de volta. */
+function paginaDeTeste() {
+    const textos = [];
+    const retangulos = [];
+    return {
+        textos: textos,
+        retangulos: retangulos,
+        drawText: (texto, opcoes) => textos.push(Object.assign({ texto: texto }, opcoes)),
+        drawRectangle: (opcoes) => retangulos.push(opcoes),
+        drawLine: () => {},
+        escrito: () => textos.map((t) => t.texto).join(' | ')
+    };
+}
+
+const FONTES_DE_TESTE = (function () {
+    const fonte = (fator) => ({ widthOfTextAtSize: (texto, tamanho) => texto.length * tamanho * fator });
+    return { normal: fonte(0.5), negrito: fonte(0.55), mono: fonte(0.6) };
+})();
+
+test('o cabeçalho escreve nome, série, turma, número e código — e nada do que a prova já diz', () => {
+    const prova = identificacao.identificar({
+        ano: '2026', bimestre: 'B3', turma: '1A', numero: 3, componente: 'LIN',
+        nome: 'José Ítalo Gonçalves', chave: CHAVE
+    });
+    const pagina = paginaDeTeste();
+    pdf.desenharCabecalho(pagina, FONTES_DE_TESTE, prova, { x: 28, y: 700, largura: 19 * pdf.CM, altura: 2.5 * pdf.CM }, { serieNome: '1ª SÉRIE' });
+
+    const escrito = pagina.escrito();
+    assert.match(escrito, /ALUNO\(A\)/);
+    assert.match(escrito, /JOSÉ ÍTALO GONÇALVES/);
+    assert.match(escrito, /1ª SÉRIE {3}· {3}TURMA 1A {3}· {3}Nº 03/);
+    assert.ok(escrito.includes(prova.id), 'o código sai legível ao lado dos dados');
+    assert.ok(!/LINGUAGENS/i.test(escrito), 'não repete o componente, que o cabeçalho da prova já traz');
+    assert.ok(!/SABOIA|BIMESTRE/i.test(escrito), 'não repete escola nem bimestre');
+});
+
+test('o nome é o maior elemento do cabeçalho', () => {
+    const prova = identificacao.identificar({ ano: '2026', bimestre: 'B3', turma: '1A', numero: 3, componente: 'LIN', nome: 'Ana Lima', chave: CHAVE });
+    const pagina = paginaDeTeste();
+    pdf.desenharCabecalho(pagina, FONTES_DE_TESTE, prova, { x: 28, y: 700, largura: 19 * pdf.CM, altura: 2.5 * pdf.CM }, { serieNome: '1ª SÉRIE' });
+
+    const doNome = pagina.textos.filter((t) => t.texto === 'ANA LIMA')[0];
+    const maiorDosOutros = Math.max.apply(null, pagina.textos.filter((t) => t.texto !== 'ANA LIMA').map((t) => t.size));
+    assert.ok(doNome.size > maiorDosOutros, 'nome em ' + doNome.size + 'pt contra ' + maiorDosOutros + 'pt');
+});
+
+test('sem QR, o código continua saindo; o QR encaixa na altura do bloco', () => {
+    const prova = identificacao.identificar({ ano: '2026', bimestre: 'B3', turma: '1A', numero: 3, componente: 'LIN', nome: 'Ana Lima', chave: CHAVE });
+    const caixa = { x: 28, y: 700, largura: 19 * pdf.CM, altura: 2.5 * pdf.CM };
+
+    const semQr = paginaDeTeste();
+    pdf.desenharCabecalho(semQr, FONTES_DE_TESTE, prova, caixa, { serieNome: '1ª SÉRIE', incluirQr: false });
+    assert.ok(semQr.escrito().includes(prova.id));
+    /* Sem QR sobram só a moldura e o fundo; com QR vêm centenas de módulos. */
+    assert.ok(semQr.retangulos.length < 5, 'nenhum módulo de QR desenhado');
+
+    const comQr = paginaDeTeste();
+    pdf.desenharCabecalho(comQr, FONTES_DE_TESTE, prova, caixa, { serieNome: '1ª SÉRIE' });
+    assert.ok(comQr.retangulos.length > 100, 'o QR sai desenhado em retângulos');
+
+    const fundoQr = comQr.retangulos.filter((r) => r.width === r.height && r.width > 40)[0];
+    assert.ok(fundoQr, 'o QR é quadrado');
+    assert.ok(fundoQr.width <= caixa.altura, 'e cabe na altura do cabeçalho');
+    assert.ok(fundoQr.x + fundoQr.width <= caixa.x + caixa.largura, 'e dentro da largura');
 });
 
 test('a folha de etiquetas quebra de 14 em 14', async () => {

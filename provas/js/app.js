@@ -21,7 +21,6 @@
         /* componentes marcados no modelo de etiquetas */
         etiquetas: Object.create(null),
         previa: { chave: null, medidas: null },
-        alvoDoClique: 'linha',
         resultados: []
     };
 
@@ -290,122 +289,68 @@
         leitor.readAsArrayBuffer(arquivo);
     }
 
-    /* ===================== passo 4: posição ===================== */
+    /* ===================== passo 4: o cabeçalho ===================== */
 
     function modelo() {
         const marcado = document.querySelector('input[name="modelo"]:checked');
-        return marcado ? marcado.value : 'quadrado-espaco';
+        return marcado ? marcado.value : 'espaco-deixado';
     }
 
     function aoTrocarModelo() {
         const atual = modelo();
-        $('opcoes-quadrado').hidden = atual !== 'quadrado-espaco' && atual !== 'quadrado-sobreposto';
-        $('opcoes-nome').hidden = atual === 'etiquetas';
-        $('sub-linha').hidden = !$('usar-linha').checked;
+        $('opcoes-cabecalho').hidden = atual === 'etiquetas';
         document.querySelector('.previa').hidden = atual === 'etiquetas';
 
-        /* No modelo sobreposto o quadrado precisa de um lugar escolhido à mão,
-           porque a prova não abre espaço nenhum. */
-        if (atual === 'quadrado-sobreposto' && $('quadrado-ancora').value !== 'livre') {
-            $('quadrado-ancora').value = 'livre';
-        }
-        if (atual === 'quadrado-espaco' && $('quadrado-ancora').value === 'livre') {
-            $('quadrado-ancora').value = 'topo-direita';
+        /* Quando o app abre a faixa, o cabeçalho mora nela: a posição deixa de
+           ser escolhida na prova e passa a ser o alto da folha. */
+        const naFaixa = atual === 'abrir-espaco';
+        $('cab-x').disabled = naFaixa;
+        $('cab-y').disabled = naFaixa;
+        if (naFaixa) {
+            $('cab-x').value = '1';
+            $('cab-y').value = '0.5';
         }
 
         montarSlots();
-        montarSeletorDeAlvo();
         atualizarPrevia();
     }
 
     document.querySelectorAll('input[name="modelo"]').forEach(function (radio) {
         radio.addEventListener('change', aoTrocarModelo);
     });
-    $('usar-linha').addEventListener('change', function () {
-        $('sub-linha').hidden = !$('usar-linha').checked;
-        montarSeletorDeAlvo();
-        atualizarPrevia();
-    });
-    ['quadrado-lado', 'quadrado-ancora', 'quadrado-nome', 'linha-x', 'linha-y', 'linha-largura', 'linha-tamanho'].forEach(function (id) {
+
+    ['cab-largura', 'cab-altura', 'cab-x', 'cab-y', 'cab-qr', 'cab-codigo', 'cab-moldura'].forEach(function (id) {
         $(id).addEventListener('input', atualizarPrevia);
-        $(id).addEventListener('change', function () {
-            montarSeletorDeAlvo();
-            atualizarPrevia();
-        });
-    });
-    document.querySelectorAll('.campo-linha').forEach(function (caixa) {
-        caixa.addEventListener('change', atualizarPrevia);
+        $(id).addEventListener('change', atualizarPrevia);
     });
 
-    /* Quando as duas marcas podem ser posicionadas, o clique precisa saber para
-       qual delas vale. */
-    function montarSeletorDeAlvo() {
-        const existente = $('seletor-alvo');
-        if (existente) existente.remove();
-
-        const quadradoLivre = $('quadrado-ancora').value === 'livre' && !$('opcoes-quadrado').hidden;
-        const linhaAtiva = $('usar-linha').checked && !$('opcoes-nome').hidden;
-        if (!(quadradoLivre && linhaAtiva)) {
-            estado.alvoDoClique = quadradoLivre ? 'quadrado' : 'linha';
-            return;
-        }
-
-        const caixa = criar('label', 'previa-barra-alvo');
-        caixa.id = 'seletor-alvo';
-        caixa.appendChild(criar('span', null, 'O clique posiciona'));
-        const escolha = criar('select');
-        [['linha', 'o nome'], ['quadrado', 'o quadrado']].forEach(function (par) {
-            const opcao = criar('option', null, par[1]);
-            opcao.value = par[0];
-            escolha.appendChild(opcao);
-        });
-        escolha.value = estado.alvoDoClique;
-        escolha.addEventListener('change', function () { estado.alvoDoClique = escolha.value; });
-        caixa.appendChild(escolha);
-        $('previa-barra').insertBefore(caixa, $('previa-cursor'));
+    function numero(id, padrao) {
+        const valor = parseFloat($(id).value);
+        return isNaN(valor) ? padrao : valor;
     }
 
-    /* As marcas que o gerador vai desenhar, do jeito que a tela está agora. */
+    /* O cabeçalho do jeito que a tela está agora. */
     function montarConfiguracao() {
         const atual = modelo();
-        const marcas = [];
-        let espacoTopoCm = 0;
+        const cabecalho = {
+            xCm: numero('cab-x', Pdf.PADRAO.xCm),
+            yCm: numero('cab-y', Pdf.PADRAO.yCm),
+            larguraCm: numero('cab-largura', Pdf.PADRAO.larguraCm),
+            alturaCm: numero('cab-altura', Pdf.PADRAO.alturaCm),
+            incluirQr: $('cab-qr').value !== 'sem',
+            qrNaEsquerda: $('cab-qr').value === 'esquerda',
+            incluirCodigo: $('cab-codigo').checked,
+            moldura: $('cab-moldura').checked
+        };
 
-        if (atual === 'quadrado-espaco' || atual === 'quadrado-sobreposto') {
-            const lado = parseFloat($('quadrado-lado').value) || 3.4;
-            const larguraFolha = (estado.previa.medidas && estado.previa.medidas.larguraCm) || 21;
-            marcas.push({
-                tipo: 'quadrado',
-                ancora: $('quadrado-ancora').value,
-                ladoCm: lado,
-                incluirNome: $('quadrado-nome').checked,
-                /* Só valem no modo "onde eu marcar"; até o primeiro clique, o
-                   quadrado fica no alto à direita, encostado na margem. */
-                xCm: estado.quadradoX != null ? estado.quadradoX : Math.max(0.5, larguraFolha - lado - 0.8),
-                yCm: estado.quadradoY != null ? estado.quadradoY : 0.6,
-                incluirQr: true
-            });
-            if (atual === 'quadrado-espaco') espacoTopoCm = lado + 0.3;
-        } else if (atual === 'faixa') {
-            marcas.push({ tipo: 'faixa', local: 'topo' });
-            espacoTopoCm = Pdf.FAIXA / CM;
-        }
+        /* O código escrito é o que sobra se o QR sair; não dá para tirar os
+           dois, senão a prova fica sem identificação nenhuma. */
+        if (!cabecalho.incluirQr) cabecalho.incluirCodigo = true;
 
-        if ($('usar-linha').checked && atual !== 'etiquetas') {
-            const campos = Array.prototype.map.call(document.querySelectorAll('.campo-linha:checked'), function (c) { return c.value; });
-            if (campos.length) {
-                marcas.push({
-                    tipo: 'linha',
-                    xCm: parseFloat($('linha-x').value) || 0,
-                    yCm: parseFloat($('linha-y').value) || 0,
-                    larguraCm: parseFloat($('linha-largura').value) || 8,
-                    tamanho: parseFloat($('linha-tamanho').value) || 9,
-                    campos: campos
-                });
-            }
-        }
-
-        return { marcas: marcas, espacoTopoCm: espacoTopoCm };
+        return {
+            cabecalho: cabecalho,
+            espacoTopoCm: atual === 'abrir-espaco' ? cabecalho.alturaCm + cabecalho.yCm + 0.4 : 0
+        };
     }
 
     /* ===================== prévia ===================== */
@@ -443,8 +388,8 @@
         if (!arquivo) {
             canvas.hidden = true;
             $('previa-vazia').hidden = false;
-            $('marca-linha').hidden = true;
-            $('marca-quadrado').hidden = true;
+            $('marca-cabecalho').hidden = true;
+            $('previa-faixa').hidden = true;
             return;
         }
 
@@ -469,17 +414,16 @@
         posicionarMarcasNaPrevia();
     }
 
-    /* Mostra na prévia onde cada marca vai cair, nas medidas da prova original.
-       Quando o modelo abre espaço no topo, a faixa aparece acima da página: é o
-       tanto que a prova desce (e encolhe) para caber embaixo dela. */
+    /* Mostra na prévia onde o cabeçalho vai cair, nas medidas da prova
+       original. Quando o modelo abre espaço, a faixa aparece acima da página: é
+       o tanto que a prova desce (e encolhe) para caber embaixo dela. */
     function posicionarMarcasNaPrevia() {
         const medidas = estado.previa.medidas;
         if (!medidas) return;
 
         const escala = $('previa-canvas').clientWidth / medidas.larguraCm;
         const configuracao = montarConfiguracao();
-        const linha = configuracao.marcas.filter(function (m) { return m.tipo === 'linha'; })[0];
-        const quadrado = configuracao.marcas.filter(function (m) { return m.tipo === 'quadrado'; })[0];
+        const cabecalho = configuracao.cabecalho;
 
         const faixa = $('previa-faixa');
         let desloca = 0;
@@ -489,48 +433,16 @@
             faixa.style.height = desloca + 'px';
             $('previa-faixa-texto').textContent = 'espaço aberto no topo: ' +
                 configuracao.espacoTopoCm.toFixed(1).replace('.', ',') + ' cm';
-
-            const molde = $('marca-quadrado-faixa');
-            if (quadrado) {
-                const lado = quadrado.ladoCm * escala;
-                const larguraFolha = medidas.larguraCm * escala;
-                let esquerda = larguraFolha - lado - 0.6 * escala;
-                if (quadrado.ancora === 'topo-esquerda') esquerda = 0.6 * escala;
-                else if (quadrado.ancora === 'topo-centro') esquerda = (larguraFolha - lado) / 2;
-                molde.hidden = false;
-                molde.style.left = esquerda + 'px';
-                molde.style.top = Math.max(1, (desloca - lado) / 2) + 'px';
-                molde.style.width = lado + 'px';
-                molde.style.height = Math.min(lado, desloca - 2) + 'px';
-            } else {
-                molde.hidden = true;
-            }
         } else {
             faixa.hidden = true;
         }
 
-        const caixaLinha = $('marca-linha');
-        if (linha) {
-            const altura = (linha.tamanho / CM) * 1.6;
-            caixaLinha.hidden = false;
-            caixaLinha.style.left = (linha.xCm * escala) + 'px';
-            caixaLinha.style.top = (desloca + (linha.yCm - altura * 0.8) * escala) + 'px';
-            caixaLinha.style.width = (linha.larguraCm * escala) + 'px';
-            caixaLinha.style.height = Math.max(8, altura * escala) + 'px';
-        } else {
-            caixaLinha.hidden = true;
-        }
-
-        const caixaQuadrado = $('marca-quadrado');
-        if (quadrado && quadrado.ancora === 'livre') {
-            caixaQuadrado.hidden = false;
-            caixaQuadrado.style.left = (quadrado.xCm * escala) + 'px';
-            caixaQuadrado.style.top = (desloca + quadrado.yCm * escala) + 'px';
-            caixaQuadrado.style.width = (quadrado.ladoCm * escala) + 'px';
-            caixaQuadrado.style.height = (quadrado.ladoCm * escala) + 'px';
-        } else {
-            caixaQuadrado.hidden = true;
-        }
+        const caixa = $('marca-cabecalho');
+        caixa.hidden = false;
+        caixa.style.left = (cabecalho.xCm * escala) + 'px';
+        caixa.style.top = ((configuracao.espacoTopoCm > 0 ? 0 : 0) + cabecalho.yCm * escala) + 'px';
+        caixa.style.width = (cabecalho.larguraCm * escala) + 'px';
+        caixa.style.height = (cabecalho.alturaCm * escala) + 'px';
     }
 
     /* Converte o clique em centímetros da prova original. Mede pelo retângulo
@@ -558,16 +470,11 @@
     });
 
     $('previa-palco').addEventListener('click', function (evento) {
+        if (modelo() === 'abrir-espaco') return; /* na faixa nova a posição é fixa */
         const ponto = cmDoEvento(evento);
         if (!ponto) return;
-
-        if (estado.alvoDoClique === 'quadrado') {
-            estado.quadradoX = Math.round(ponto.x * 10) / 10;
-            estado.quadradoY = Math.round(ponto.y * 10) / 10;
-        } else {
-            $('linha-x').value = (Math.round(ponto.x * 10) / 10).toFixed(1);
-            $('linha-y').value = (Math.round(ponto.y * 10) / 10).toFixed(1);
-        }
+        $('cab-x').value = (Math.round(ponto.x * 10) / 10).toFixed(1);
+        $('cab-y').value = (Math.round(ponto.y * 10) / 10).toFixed(1);
         posicionarMarcasNaPrevia();
     });
 
@@ -599,10 +506,9 @@
             const bytes = await Pdf.montarPrimeirasPaginas({
                 arquivo: arquivo,
                 identificacoes: provas,
-                marcas: configuracao.marcas,
+                cabecalho: configuracao.cabecalho,
                 espacoTopoCm: configuracao.espacoTopoCm,
-                serieNome: (Identificacao.serie(serie) || {}).nome,
-                cabecalho: cabecalho()
+                serieNome: (Identificacao.serie(serie) || {}).nome
             });
             const url = URL.createObjectURL(new Blob([bytes], { type: 'application/pdf' }));
             window.open(url, '_blank');
@@ -612,12 +518,6 @@
             aviso.textContent = 'Não deu: ' + (erro.message || erro);
         }
     });
-
-    function cabecalho() {
-        const bimestres = { B1: '1º', B2: '2º', B3: '3º', B4: '4º' };
-        return 'EEMTI PROF. MARIA LUIZA SABOIA RIBEIRO · AVALIAÇÃO DO ' +
-            (bimestres[$('bimestre').value] || '') + ' BIMESTRE · ' + $('ano').value;
-    }
 
     /* ===================== passo 5: gerar ===================== */
 
@@ -694,8 +594,9 @@
                         nome: Saida.nomeArquivo('ETIQUETAS', dados, 'pdf'),
                         tipo: 'application/pdf',
                         bytes: await Pdf.montarEtiquetas({
-                            identificacoes: provas, colunas: 2, linhas: 7, incluirQr: true,
-                            serieNome: serieNome, subtitulo: subtitulo, cabecalho: cabecalho()
+                            identificacoes: provas, colunas: 2, linhas: 7,
+                            incluirQr: configuracao.cabecalho.incluirQr,
+                            serieNome: serieNome, subtitulo: subtitulo
                         })
                     });
                 } else {
@@ -706,10 +607,9 @@
                         bytes: await Pdf.montarPrimeirasPaginas({
                             arquivo: estado.arquivos[tarefa.chave],
                             identificacoes: provas,
-                            marcas: configuracao.marcas,
+                            cabecalho: configuracao.cabecalho,
                             espacoTopoCm: configuracao.espacoTopoCm,
                             serieNome: serieNome,
-                            cabecalho: cabecalho(),
                             tituloArquivo: subtitulo
                         })
                     });

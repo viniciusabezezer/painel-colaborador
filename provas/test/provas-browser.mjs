@@ -104,19 +104,33 @@ try {
     conferir(medidas.largura > 380 && medidas.altura > medidas.largura,
         'a prévia sai em pé e no tamanho certo (' + medidas.largura + '×' + medidas.altura + ' ' + medidas.recado + ')');
 
-    /* --- passo 4: clicar para posicionar o nome --- */
+    /* --- passo 4: clicar para posicionar o cabeçalho --- */
     const telaPrevia = await pagina.$('#previa-canvas');
     await telaPrevia.scrollIntoViewIfNeeded();
     const caixa = await telaPrevia.boundingBox();
     /* Clicar pelo elemento (e não pelo mouse em coordenada de viewport) garante
        que o playwright role a página até a prévia antes de clicar. */
     await telaPrevia.click({ position: { x: caixa.width * 0.3, y: caixa.height * 0.1 } });
-    const x = parseFloat(await pagina.inputValue('#linha-x'));
-    const y = parseFloat(await pagina.inputValue('#linha-y'));
+    const x = parseFloat(await pagina.inputValue('#cab-x'));
+    const y = parseFloat(await pagina.inputValue('#cab-y'));
     /* 30% de 21 cm = 6,3 cm; 10% de 29,7 cm = 2,97 cm. */
     conferir(Math.abs(x - 6.3) < 0.3, 'o clique vira centímetros na horizontal: ' + x + ' cm para 30% da folha');
     conferir(Math.abs(y - 2.97) < 0.3, 'o clique vira centímetros na vertical: ' + y + ' cm para 10% da folha');
-    conferir(await pagina.isVisible('#marca-linha'), 'a marca do nome aparece sobre a prévia');
+    conferir(await pagina.isVisible('#marca-cabecalho'), 'o retângulo do cabeçalho aparece sobre a prévia');
+
+    /* Volta o cabeçalho para a faixa em branco do alto da prova. */
+    await pagina.fill('#cab-x', '1');
+    await pagina.fill('#cab-y', '0.6');
+
+    /* O modelo que abre espaço mostra a faixa e trava a posição. */
+    await pagina.check('input[name="modelo"][value="abrir-espaco"]');
+    await pagina.waitForSelector('#previa-faixa', { state: 'visible' });
+    conferir(true, 'o modelo que abre espaço mostra a faixa na prévia');
+    conferir(await pagina.isDisabled('#cab-x'), 'e a posição deixa de ser escolhida na prova');
+
+    await pagina.check('input[name="modelo"][value="espaco-deixado"]');
+    await pagina.waitForSelector('#previa-faixa', { state: 'hidden' });
+    conferir(true, 'voltando ao espaço em branco, a faixa desaparece e a prova não é reduzida');
 
     /* --- passo 5: gerar --- */
     await pagina.click('#gerar');
