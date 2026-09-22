@@ -1,0 +1,564 @@
+/* Montagem dos PDFs: pega a primeira página enviada pela coordenação e devolve
+   uma via por aluno, cada uma com o cabeçalho de identificação colado no espaço
+   em branco que o professor deixou no alto da folha.
+   Tudo acontece dentro do navegador, com o pdf-lib que está em vendor/.
+
+   O cabeçalho é a única identificação da prova: leva o nome do aluno, a série,
+   a turma, o número da lista, o código único e o QR Code encaixado nele. Nada
+   do que a prova já diz (escola, componente, bimestre) é repetido aqui.
+
+   Duas saídas:
+     montarPrimeirasPaginas — o cabeçalho colado na primeira página;
+     montarEtiquetas        — o mesmo cabeçalho em grade, para recortar e colar
+                              quando a prova é impressa direto do Word. */
+(function (global) {
+    'use strict';
+
+    const PDFLib = global.PDFLib || (typeof require === 'function' ? require('../vendor/pdf-lib.min.js') : null);
+    const Qr = global.ProvasQr || (typeof require === 'function' ? require('./qr.js') : null);
+
+    const PDFDocument = PDFLib.PDFDocument;
+    const StandardFonts = PDFLib.StandardFonts;
+    const rgb = PDFLib.rgb;
+
+    const A4 = [595.28, 841.89];
+    const CM = 28.3465;
+
+    /* Medidas padrão do cabeçalho, em centímetros. */
+    const PADRAO = { xCm: 1, yCm: 1, larguraCm: 19, alturaCm: 2.8 };
+
+    const PRETO = rgb(0, 0, 0);
+    const CINZA = rgb(0.38, 0.38, 0.38);
+    const BRANCO = rgb(1, 1, 1);
+
+    /* Sinais tipográficos que vêm de texto copiado do Word e não existem no
+       WinAnsi das fontes padrão do PDF: viram o equivalente simples. */
+    const TROCAS = {
+        '“': '"', '”': '"', '„': '"', '‘': "'", '’': "'",
+        '–': '-', '—': '-', '−': '-', '…': '...',
+        ' ': ' ', '•': '-', '‹': '<', '›': '>'
+    };
+
+    /* As fontes padrão do PDF escrevem o repertório WinAnsi, que cobre todo o
+       português. Qualquer caractere fora disso derrubaria o pdf-lib, então os
+       sinais viram o equivalente simples e o resto cai na versão sem acento. */
+    function textoSeguro(texto) {
+        const bruto = String(texto == null ? '' : texto);
+        let saida = '';
+        for (const c of bruto) {
+            if (/[\x20-\x7E\xA1-\xFF]/.test(c)) {
+                saida += c;
+            } else if (TROCAS[c]) {
+                saida += TROCAS[c];
+            } else {
+                const sem = c.normalize('NFD').replace(/[̀-ͯ]/g, '');
+                saida += /^[\x20-\x7E]+$/.test(sem) ? sem : ' ';
+            }
+        }
+        return saida;
+    }
+
+    /* Diminui a fonte até o texto caber na largura disponível. */
+    function tamanhoQueCabe(fonte, texto, ideal, larguraMax, minimo) {
+        let tamanho = ideal;
+        const piso = minimo || 6;
+        while (tamanho > piso && fonte.widthOfTextAtSize(texto, tamanho) > larguraMax) {
+            tamanho -= 0.25;
+        }
+        return tamanho;
+    }
+
+    /* Quebra o texto nas linhas que forem necessárias, sem limite. */
+    function quebrarEmLinhas(fonte, texto, tamanho, larguraMax) {
+        const palavras = String(texto).split(' ').filter(Boolean);
+        const linhas = [];
+        let atual = '';
+        for (const palavra of palavras) {
+            const tentativa = atual ? atual + ' ' + palavra : palavra;
+            if (!atual || fonte.widthOfTextAtSize(tentativa, tamanho) <= larguraMax) {
+                atual = tentativa;
+            } else {
+                linhas.push(atual);
+                atual = palavra;
+            }
+        }
+        if (atual) linhas.push(atual);
+        return linhas;
+    }
+
+    /* Quebra em no máximo `maxLinhas` linhas, cortando o que passar. Serve para
+       a folha de conferência, onde a coluna é fixa. */
+    function quebrarTexto(fonte, texto, tamanho, larguraMax, maxLinhas) {
+        const linhas = quebrarEmLinhas(fonte, texto, tamanho, larguraMax);
+        if (linhas.length > maxLinhas) linhas.length = maxLinhas;
+        const ultima = linhas.length - 1;
+        while (ultima >= 0 && fonte.widthOfTextAtSize(linhas[ultima], tamanho) > larguraMax && linhas[ultima].length > 6) {
+            linhas[ultima] = linhas[ultima].slice(0, -4) + '...';
+        }
+        return linhas;
+    }
+
+    /* O nome do aluno nunca pode sair cortado: é a identificação da prova.
+       A fonte diminui até o nome inteiro caber nas linhas disponíveis. */
+    function encaixarNome(fonte, texto, ideal, larguraMax, maxLinhas, piso) {
+        const limite = piso || 5.5;
+        let tamanho = ideal;
+        while (tamanho > limite) {
+            const linhas = quebrarEmLinhas(fonte, texto, tamanho, larguraMax);
+            if (linhas.length <= maxLinhas) return { tamanho: tamanho, linhas: linhas };
+            tamanho -= 0.25;
+        }
+        return { tamanho: limite, linhas: quebrarTexto(fonte, texto, limite, larguraMax, maxLinhas) };
+    }
+
+    /* Desenha o QR como vetor: um retângulo por sequência de módulos escuros.
+       Sai nítido em qualquer impressora e não pesa no arquivo. */
+    function desenharQr(pagina, conteudo, x, y, lado) {
+        const { tamanho, formas } = Qr.retangulos(conteudo, 'M');
+        const borda = 2; /* zona de silêncio exigida pelo padrão, em módulos */
+        const total = tamanho + borda * 2;
+        const modulo = lado / total;
+
+        pagina.drawRectangle({ x: x, y: y, width: lado, height: lado, color: BRANCO });
+        formas.forEach(function (forma) {
+            pagina.drawRectangle({
+                x: x + (forma.coluna + borda) * modulo,
+                /* A matriz conta as linhas de cima para baixo e o PDF de baixo
+                   para cima. */
+                y: y + lado - (forma.linha + borda + forma.altura) * modulo,
+                width: forma.largura * modulo,
+                height: forma.altura * modulo,
+                color: PRETO
+            });
+        });
+    }
+
+    /* O CABEÇALHO DE IDENTIFICAÇÃO.
+
+       ┌───────────────────────────────────────────────┬──────┐
+       │ ALUNO(A)                                      │ ▓▓▓▓ │
+       │ JOSÉ ÍTALO GONÇALVES DA CONCEIÇÃO             │ ▓QR▓ │
+       │ 1ª SÉRIE · TURMA 1A · Nº 03   MLS-2026-...    │ ▓▓▓▓ │
+       └───────────────────────────────────────────────┴──────┘
+
+       O nome é o maior elemento, porque é ele que impede a prova de rodar de
+       carteira em carteira. O QR fica encaixado na altura do bloco. */
+    function desenharCabecalho(pagina, fontes, prova, caixa, opcoes) {
+        const escala = caixa.escala || 1;
+        const incluirQr = opcoes.incluirQr !== false;
+        const incluirCodigo = opcoes.incluirCodigo !== false;
+        const recuo = 5 * escala;
+
+        pagina.drawRectangle({ x: caixa.x, y: caixa.y, width: caixa.largura, height: caixa.altura, color: BRANCO });
+        if (opcoes.moldura !== false) {
+            pagina.drawRectangle({
+                x: caixa.x, y: caixa.y, width: caixa.largura, height: caixa.altura,
+                borderColor: PRETO, borderWidth: 0.8
+            });
+        }
+
+        /* O QR ocupa a altura útil do bloco, sem passar de um terço da largura. */
+        let ladoQr = 0;
+        if (incluirQr) {
+            ladoQr = Math.max(0, Math.min(caixa.altura - recuo * 2, caixa.largura * 0.34));
+            const xQr = opcoes.qrNaEsquerda
+                ? caixa.x + recuo
+                : caixa.x + caixa.largura - ladoQr - recuo;
+            desenharQr(pagina, prova.conteudoQr, xQr, caixa.y + (caixa.altura - ladoQr) / 2, ladoQr);
+        }
+
+        const tx = caixa.x + (opcoes.qrNaEsquerda ? ladoQr + recuo * 2.4 : recuo * 2);
+        const largura = caixa.largura - ladoQr - recuo * 4.4;
+        if (largura <= 10) return;
+
+        const linhas = [];
+
+        /* Rótulo: a prova não tem mais o campo "ALUNO (A):", então é aqui que o
+           aluno reconhece o próprio nome. */
+        if (opcoes.rotulo !== false) {
+            const tamanho = 6.6 * escala;
+            linhas.push({ texto: 'ALUNO(A)', fonte: fontes.normal, tamanho: tamanho, cor: CINZA });
+        }
+
+        const nome = encaixarNome(
+            fontes.negrito, textoSeguro(prova.nome),
+            (opcoes.corpoNome || 15) * escala, largura, 2, 6 * escala
+        );
+        nome.linhas.forEach(function (parte) {
+            linhas.push({ texto: parte, fonte: fontes.negrito, tamanho: nome.tamanho, cor: PRETO });
+        });
+
+        /* Série, turma e número da lista. O componente só entra na etiqueta,
+           que vive solta; na prova ele já está no cabeçalho do professor. */
+        const partes = [];
+        if (opcoes.serieNome) partes.push(opcoes.serieNome);
+        partes.push('TURMA ' + prova.turma);
+        partes.push('Nº ' + prova.numeroCurto);
+        if (opcoes.incluirComponente) partes.push(prova.componenteNome.toUpperCase());
+
+        const dados = textoSeguro(partes.join('   ·   '));
+        const tamanhoDados = tamanhoQueCabe(fontes.negrito, dados, 9.6 * escala, largura, 5.5);
+        const codigo = textoSeguro(prova.id);
+        const tamanhoCodigo = Math.max(5.5, Math.min(8.4 * escala, tamanhoDados));
+
+        /* O código vai na mesma linha dos dados quando couber, encostado à
+           direita; senão desce para uma linha própria. */
+        const larguraDados = fontes.negrito.widthOfTextAtSize(dados, tamanhoDados);
+        const larguraCodigo = incluirCodigo ? fontes.mono.widthOfTextAtSize(codigo, tamanhoCodigo) : 0;
+        const juntos = incluirCodigo && (larguraDados + larguraCodigo + 12 * escala <= largura);
+
+        linhas.push({
+            texto: dados,
+            fonte: fontes.negrito,
+            tamanho: tamanhoDados,
+            cor: PRETO,
+            aDireita: juntos ? { texto: codigo, fonte: fontes.mono, tamanho: tamanhoCodigo } : null
+        });
+
+        if (incluirCodigo && !juntos) {
+            linhas.push({
+                texto: codigo,
+                fonte: fontes.mono,
+                tamanho: tamanhoQueCabe(fontes.mono, codigo, tamanhoCodigo, largura, 4.6),
+                cor: PRETO
+            });
+        }
+
+        const entrelinha = 1.3;
+        const alturaTexto = linhas.reduce(function (soma, l) { return soma + l.tamanho * entrelinha; }, 0);
+        let cursor = caixa.y + caixa.altura - Math.max(recuo, (caixa.altura - alturaTexto) / 2);
+
+        linhas.forEach(function (l) {
+            cursor -= l.tamanho;
+            pagina.drawText(l.texto, { x: tx, y: cursor, size: l.tamanho, font: l.fonte, color: l.cor });
+            if (l.aDireita) {
+                const direita = tx + largura - l.aDireita.fonte.widthOfTextAtSize(l.aDireita.texto, l.aDireita.tamanho);
+                pagina.drawText(l.aDireita.texto, {
+                    x: direita, y: cursor, size: l.aDireita.tamanho, font: l.aDireita.fonte, color: PRETO
+                });
+            }
+            cursor -= l.tamanho * (entrelinha - 1);
+        });
+    }
+
+    /* Onde o cabeçalho fica na folha. As medidas são em centímetros contados da
+       borda superior esquerda da PÁGINA ORIGINAL — é como se mede numa folha
+       impressa na mão. Se a prova tiver sido reduzida para abrir espaço, o
+       cabeçalho passa pela mesma redução e pelo mesmo deslocamento, e assim cai
+       onde foi marcado. */
+    function resolverCaixa(marca, largura, altura, transformacao) {
+        const t = transformacao || { escala: 1, dx: 0, dy: 0 };
+        const noEspacoAberto = !!marca.noEspacoAberto;
+
+        const larguraPedida = (marca.larguraCm || PADRAO.larguraCm) * CM;
+        const alturaPedida = (marca.alturaCm || PADRAO.alturaCm) * CM;
+
+        /* No espaço aberto pelo próprio app, o cabeçalho não encolhe: ele vive
+           na faixa nova, em cima da prova reduzida. */
+        const escala = noEspacoAberto ? 1 : t.escala;
+        const larguraCaixa = Math.min(largura - 4, larguraPedida * escala);
+        const alturaCaixa = Math.min(altura - 4, alturaPedida * escala);
+
+        const xPedido = (marca.xCm != null ? marca.xCm : PADRAO.xCm) * CM;
+        const yPedido = (marca.yCm != null ? marca.yCm : PADRAO.yCm) * CM;
+
+        const x = noEspacoAberto ? xPedido : t.dx + xPedido * t.escala;
+        const topo = noEspacoAberto ? yPedido : (altura - t.dy - (altura - yPedido) * t.escala);
+
+        return {
+            x: Math.max(2, Math.min(largura - larguraCaixa - 2, x)),
+            y: Math.max(2, Math.min(altura - alturaCaixa - 2, altura - topo - alturaCaixa)),
+            largura: larguraCaixa,
+            altura: alturaCaixa,
+            escala: escala
+        };
+    }
+
+    /* Uma página em branco não tem /Contents. Incorporar uma dessas faria o
+       pdf-lib falhar só no fim, ao salvar o arquivo todo. */
+    function temConteudo(pagina) {
+        try {
+            return !!(pagina.node && pagina.node.Contents && pagina.node.Contents());
+        } catch (erro) {
+            return false;
+        }
+    }
+
+    /* Encosta a prova no alto da área que sobrou, para não abrir um vão entre o
+       cabeçalho e o começo da prova. */
+    function posicaoVertical(area, alturaUsada) {
+        if (area.alinhar === 'centro') return area.y + (area.altura - alturaUsada) / 2;
+        return area.y + area.altura - alturaUsada;
+    }
+
+    /* Prepara a página enviada: devolve o tamanho e uma função que a redesenha
+       dentro de qualquer retângulo, sem distorcer. */
+    async function prepararFonte(destino, arquivo) {
+        const tipo = String(arquivo.tipo || '').toLowerCase();
+
+        if (tipo === 'pdf') {
+            let origem;
+            try {
+                origem = await PDFDocument.load(arquivo.bytes, { ignoreEncryption: true });
+            } catch (erro) {
+                throw new Error('Não consegui abrir este PDF (' + (erro.message || erro) + '). Se ele estiver protegido por senha, salve uma cópia sem senha e envie de novo.');
+            }
+            if (origem.getPageCount() === 0) throw new Error('Este PDF não tem nenhuma página.');
+
+            const pagina = origem.getPage(0);
+            const tam = pagina.getSize();
+            const giro = ((pagina.getRotation().angle % 360) + 360) % 360;
+
+            /* Página escaneada de lado: o giro entra na matriz do objeto, para a
+               cópia sair em pé e o cabeçalho ficar no lugar certo. */
+            let matriz = null;
+            let largura = tam.width;
+            let altura = tam.height;
+            if (giro === 90) {
+                matriz = [0, -1, 1, 0, 0, tam.width];
+                largura = tam.height; altura = tam.width;
+            } else if (giro === 180) {
+                matriz = [-1, 0, 0, -1, tam.width, tam.height];
+            } else if (giro === 270) {
+                matriz = [0, 1, -1, 0, tam.height, 0];
+                largura = tam.height; altura = tam.width;
+            }
+
+            /* Página sem conteúdo nenhum (folha em branco no arquivo enviado):
+               não há o que incorporar, e a via do aluno sai só com o cabeçalho,
+               em vez de a geração toda parar. */
+            let incorporada = null;
+            if (temConteudo(pagina)) {
+                incorporada = matriz
+                    ? await destino.embedPage(pagina, undefined, matriz)
+                    : await destino.embedPage(pagina);
+            }
+
+            return {
+                largura: largura,
+                altura: altura,
+                paginas: origem.getPageCount(),
+                vazia: !incorporada,
+                desenhar: function (folha, area) {
+                    if (!incorporada) return;
+                    const escala = Math.min(area.largura / largura, area.altura / altura);
+                    folha.drawPage(incorporada, {
+                        x: area.x + (area.largura - largura * escala) / 2,
+                        y: posicaoVertical(area, altura * escala),
+                        xScale: escala,
+                        yScale: escala
+                    });
+                }
+            };
+        }
+
+        if (tipo === 'jpg' || tipo === 'jpeg' || tipo === 'png') {
+            const imagem = tipo === 'png'
+                ? await destino.embedPng(arquivo.bytes)
+                : await destino.embedJpg(arquivo.bytes);
+            return {
+                largura: A4[0],
+                altura: A4[1],
+                paginas: 1,
+                imagem: true,
+                desenhar: function (folha, area) {
+                    const escala = Math.min(area.largura / imagem.width, area.altura / imagem.height);
+                    folha.drawImage(imagem, {
+                        x: area.x + (area.largura - imagem.width * escala) / 2,
+                        y: posicaoVertical(area, imagem.height * escala),
+                        width: imagem.width * escala,
+                        height: imagem.height * escala
+                    });
+                }
+            };
+        }
+
+        throw new Error('Formato não reconhecido: envie a primeira página em PDF, JPG ou PNG.');
+    }
+
+    async function carregarFontes(destino) {
+        return {
+            normal: await destino.embedFont(StandardFonts.Helvetica),
+            negrito: await destino.embedFont(StandardFonts.HelveticaBold),
+            mono: await destino.embedFont(StandardFonts.CourierBold)
+        };
+    }
+
+    /* Uma via da primeira página por aluno, com o cabeçalho de identificação. */
+    async function montarPrimeirasPaginas(opcoes) {
+        const provas = opcoes.identificacoes || [];
+        if (!provas.length) throw new Error('Nenhum aluno para identificar.');
+
+        const cabecalho = opcoes.cabecalho || {};
+        const destino = await PDFDocument.create();
+        const fontes = await carregarFontes(destino);
+        const fonte = await prepararFonte(destino, opcoes.arquivo);
+
+        /* Espaço aberto no topo: a prova desce e encolhe o necessário. Em zero
+           — o caso normal, quando o professor já deixou a faixa em branco na
+           prova —, a cópia sai em tamanho original e nada é redimensionado. */
+        const espacoTopo = Math.max(0, (opcoes.espacoTopoCm || 0) * CM);
+        const area = espacoTopo > 0
+            ? { x: 0, y: 0, largura: fonte.largura, altura: fonte.altura - espacoTopo, alinhar: 'topo' }
+            : { x: 0, y: 0, largura: fonte.largura, altura: fonte.altura, alinhar: 'centro' };
+
+        const escala = Math.min(area.largura / fonte.largura, area.altura / fonte.altura);
+        const transformacao = {
+            escala: escala,
+            dx: area.x + (area.largura - fonte.largura * escala) / 2,
+            dy: posicaoVertical(area, fonte.altura * escala)
+        };
+
+        const marca = {
+            xCm: cabecalho.xCm, yCm: cabecalho.yCm,
+            larguraCm: cabecalho.larguraCm, alturaCm: cabecalho.alturaCm,
+            noEspacoAberto: espacoTopo > 0
+        };
+
+        destino.setTitle(textoSeguro(opcoes.tituloArquivo || 'Provas identificadas'));
+        destino.setCreator('Provas Identificadas — Painel do Colaborador');
+        destino.setProducer('Provas Identificadas — Painel do Colaborador');
+
+        for (let i = 0; i < provas.length; i++) {
+            const folha = destino.addPage([fonte.largura, fonte.altura]);
+            fonte.desenhar(folha, area);
+            desenharCabecalho(folha, fontes, provas[i], resolverCaixa(marca, fonte.largura, fonte.altura, transformacao), {
+                incluirQr: cabecalho.incluirQr,
+                incluirCodigo: cabecalho.incluirCodigo,
+                qrNaEsquerda: cabecalho.qrNaEsquerda,
+                moldura: cabecalho.moldura,
+                rotulo: cabecalho.rotulo,
+                corpoNome: cabecalho.corpoNome,
+                serieNome: opcoes.serieNome
+            });
+            if (opcoes.aoProgresso) opcoes.aoProgresso(i + 1, provas.length);
+        }
+
+        return destino.save();
+    }
+
+    /* Etiquetas: o mesmo cabeçalho em grade, para recortar e colar. É a saída
+       para quem imprime a prova direto do Word. Aqui o componente entra, porque
+       a etiqueta anda solta antes de ser colada. */
+    async function montarEtiquetas(opcoes) {
+        const provas = opcoes.identificacoes || [];
+        if (!provas.length) throw new Error('Nenhum aluno para identificar.');
+
+        const destino = await PDFDocument.create();
+        const fontes = await carregarFontes(destino);
+        const colunas = Math.max(1, opcoes.colunas || 2);
+        const linhas = Math.max(1, opcoes.linhas || 7);
+        const margem = 28;
+        const porFolha = colunas * linhas;
+        const celulaLargura = (A4[0] - margem * 2) / colunas;
+        const celulaAltura = (A4[1] - margem * 2) / linhas;
+
+        let folha = null;
+        provas.forEach(function (prova, indice) {
+            const posicao = indice % porFolha;
+            if (posicao === 0) folha = destino.addPage(A4);
+            const coluna = posicao % colunas;
+            const linha = Math.floor(posicao / colunas);
+            /* A etiqueta fica com a altura do conteúdo, centralizada na célula:
+               sem isso a moldura sobraria vazia embaixo do texto. */
+            const alturaEtiqueta = Math.min(celulaAltura - 6, 2.9 * CM);
+            const caixa = {
+                x: margem + coluna * celulaLargura + 3,
+                y: A4[1] - margem - (linha + 1) * celulaAltura + (celulaAltura - alturaEtiqueta) / 2,
+                largura: celulaLargura - 6,
+                altura: alturaEtiqueta,
+                escala: Math.min(1, (celulaLargura - 6) / (13 * CM))
+            };
+            desenharCabecalho(folha, fontes, prova, caixa, {
+                incluirQr: opcoes.incluirQr,
+                serieNome: opcoes.serieNome,
+                incluirComponente: true,
+                corpoNome: 12
+            });
+        });
+
+        destino.setTitle(textoSeguro('Etiquetas de identificação — ' + (opcoes.subtitulo || '')));
+        return destino.save();
+    }
+
+    /* Folha de conferência: a lista que fica com a coordenação ligando cada
+       código ao aluno. É o único lugar onde nome e código aparecem juntos fora
+       da prova, e sai como arquivo para você guardar onde quiser. */
+    async function montarFolhaConferencia(opcoes) {
+        const provas = opcoes.identificacoes || [];
+        const destino = await PDFDocument.create();
+        const fontes = await carregarFontes(destino);
+
+        const largura = A4[0];
+        const altura = A4[1];
+        const margem = 34;
+        const alturaLinha = 19;
+        const colunas = { numero: margem, nome: margem + 34, id: margem + 250, assinatura: margem + 400 };
+
+        let folha = null;
+        let cursor = 0;
+        let indicePagina = 0;
+
+        function novaFolha() {
+            folha = destino.addPage([largura, altura]);
+            indicePagina++;
+            cursor = altura - margem;
+
+            folha.drawText(textoSeguro('FOLHA DE CONFERÊNCIA DAS PROVAS'), {
+                x: margem, y: cursor - 12, size: 12, font: fontes.negrito, color: PRETO
+            });
+            cursor -= 26;
+            folha.drawText(textoSeguro(opcoes.subtitulo || ''), {
+                x: margem, y: cursor - 9, size: 9.5, font: fontes.normal, color: PRETO
+            });
+            cursor -= 22;
+            folha.drawText(textoSeguro('Página ' + indicePagina), {
+                x: largura - margem - 50, y: altura - margem - 12, size: 8, font: fontes.normal, color: CINZA
+            });
+
+            ['Nº', 'ALUNO(A)', 'IDENTIFICAÇÃO DA PROVA', 'ASSINATURA'].forEach(function (titulo, i) {
+                const x = [colunas.numero, colunas.nome, colunas.id, colunas.assinatura][i];
+                folha.drawText(textoSeguro(titulo), { x: x, y: cursor, size: 7.5, font: fontes.negrito, color: CINZA });
+            });
+            cursor -= 6;
+            folha.drawLine({ start: { x: margem, y: cursor }, end: { x: largura - margem, y: cursor }, thickness: 0.8, color: PRETO });
+            cursor -= alturaLinha;
+        }
+
+        novaFolha();
+
+        provas.forEach(function (prova) {
+            if (cursor < margem + alturaLinha) novaFolha();
+            const nome = quebrarTexto(fontes.normal, textoSeguro(prova.nome), 9, colunas.id - colunas.nome - 10, 1)[0] || '';
+            folha.drawText(textoSeguro(prova.numeroCurto), { x: colunas.numero, y: cursor + 5, size: 9, font: fontes.normal, color: PRETO });
+            folha.drawText(nome, { x: colunas.nome, y: cursor + 5, size: 9, font: fontes.normal, color: PRETO });
+            folha.drawText(textoSeguro(prova.id), { x: colunas.id, y: cursor + 5, size: 7.6, font: fontes.mono, color: PRETO });
+            folha.drawLine({
+                start: { x: margem, y: cursor }, end: { x: largura - margem, y: cursor },
+                thickness: 0.4, color: rgb(0.7, 0.7, 0.7)
+            });
+            cursor -= alturaLinha;
+        });
+
+        destino.setTitle(textoSeguro('Folha de conferência — ' + (opcoes.subtitulo || '')));
+        return destino.save();
+    }
+
+    const api = {
+        A4: A4,
+        CM: CM,
+        PADRAO: PADRAO,
+        textoSeguro: textoSeguro,
+        quebrarTexto: quebrarTexto,
+        quebrarEmLinhas: quebrarEmLinhas,
+        encaixarNome: encaixarNome,
+        resolverCaixa: resolverCaixa,
+        desenharCabecalho: desenharCabecalho,
+        montarPrimeirasPaginas: montarPrimeirasPaginas,
+        montarEtiquetas: montarEtiquetas,
+        montarFolhaConferencia: montarFolhaConferencia
+    };
+
+    global.ProvasPdf = api;
+    if (typeof module !== 'undefined' && module.exports) module.exports = api;
+})(typeof globalThis !== 'undefined' ? globalThis : this);
