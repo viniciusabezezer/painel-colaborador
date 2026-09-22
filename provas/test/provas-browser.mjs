@@ -4,7 +4,7 @@
    em test/saida/ para inspeção. */
 import { createServer } from 'node:http';
 import { readFile, writeFile, mkdir } from 'node:fs/promises';
-import { existsSync } from 'node:fs';
+import { existsSync, statSync } from 'node:fs';
 import { extname, join, resolve } from 'node:path';
 import { createRequire } from 'node:module';
 
@@ -37,7 +37,13 @@ const TIPOS = {
 function servir() {
     const servidor = createServer(async (pedido, resposta) => {
         const caminho = decodeURIComponent(pedido.url.split('?')[0]);
-        const arquivo = join(RAIZ, caminho === '/' ? 'provas/index.html' : caminho);
+        let arquivo = join(RAIZ, caminho === '/' ? 'provas/index.html' : caminho);
+        /* Endereço de pasta cai no index.html dela, como a Vercel faz. Assim o
+           teste abre /provas/ e prova que os caminhos relativos do app
+           (vendor/, js/, ../logo.png) resolvem do mesmo jeito que em produção. */
+        if (existsSync(arquivo) && statSync(arquivo).isDirectory()) {
+            arquivo = join(arquivo, 'index.html');
+        }
         if (!arquivo.startsWith(RAIZ) || !existsSync(arquivo)) {
             resposta.writeHead(404).end('nao encontrado');
             return;
@@ -77,7 +83,7 @@ pagina.on('requestfailed', (p) => { if (!RUIDO.test(p.url())) erros.push('pedido
 
 try {
     await mkdir(SAIDA, { recursive: true });
-    await pagina.goto(`http://127.0.0.1:${PORTA}/provas/index.html`);
+    await pagina.goto(`http://127.0.0.1:${PORTA}/provas/`);
 
     /* --- passo 2: a lista --- */
     await pagina.fill('#lote', LOTE);
