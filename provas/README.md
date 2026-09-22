@@ -9,7 +9,24 @@ O cabeçalho é a única identificação da prova. O campo `ALUNO (A):` e o
 `SÉRIE / TURMA` do cabeçalho do professor **saem da prova**; no lugar deles fica
 uma faixa em branco de uns 3 cm no alto da folha, que é onde o app escreve.
 
-Abre direto em `/provas/`.
+## Publicação
+
+O app se sustenta sozinho, então roda de dois jeitos sem mudar nada:
+
+- **Dentro do Painel do Colaborador**, em `/provas/` — é o card 🔖 do painel. O
+  `vercel.json` da raiz do repositório dá `no-cache` a `/provas` e `/provas/`,
+  porque endereço de pasta não casa com a regra `/(.*).html` e a página podia
+  ser servida do cache da CDN depois de um deploy novo.
+- **Como site próprio, em domínio separado** — na Vercel, um projeto novo
+  apontando para este mesmo repositório com **Root Directory = `provas`**,
+  *Framework Preset* em **Other**. Aí valem o `provas/vercel.json` e o
+  `provas/.vercelignore` (que deixa `test/` e o README fora do deploy).
+
+Na segunda forma a pasta do app é a raiz do domínio, e o link "Voltar ao
+Painel" sai de cena sozinho: um script de duas linhas no `index.html` remove o
+link quando o endereço é a raiz. O logo é uma cópia própria em `provas/logo.png`
+(192 px, 78 kB, contra os 2,25 MB do original do painel), justamente para o app
+não depender de arquivo de fora.
 
 Roda inteiro dentro do navegador: o PDF enviado, os nomes colados e os arquivos
 gerados **não saem do computador** e não ficam guardados em lugar nenhum. Ao
@@ -126,12 +143,14 @@ leve. O SHA-256 é implementação própria em `js/sha256.js`, porque o
 ## Testes
 
 ```bash
-node --test provas/test/provas.test.cjs   # código, lista, QR, posição e PDF
-node provas/test/provas-browser.mjs       # a tela inteira, com Chromium
+node --test provas/test/provas.test.cjs   # 28 verificações: código, lista, QR, posição e PDF
+node provas/test/provas-browser.mjs       # 25 verificações na tela, com Chromium
 ```
 
 O teste de navegador precisa do `playwright` instalado (global serve), sobe um
 servidor local, cola uma lista, envia `test/prova-exemplo.pdf` — uma prova de
 mentirinha no formato da escola, com a faixa em branco no alto e sem o campo
 `ALUNO (A):` —, clica na prévia, gera os arquivos e confere o CSV e a aba de
-conferência. Os arquivos ficam em `test/saida/` para inspeção.
+conferência. Depois ele repete o essencial servindo a pasta do app na raiz, que
+é o modo de domínio próprio, e confere que o logo carrega e que o link de volta
+desaparece. Os arquivos ficam em `test/saida/` para inspeção.

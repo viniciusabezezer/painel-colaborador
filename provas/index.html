@@ -12,10 +12,19 @@
 <body>
 
 <div class="wrap">
-    <a class="back-link" href="../index.html">&larr; Voltar ao Painel do Colaborador</a>
+    <a class="back-link" id="voltar-ao-painel" href="../index.html">&larr; Voltar ao Painel do Colaborador</a>
+    <script>
+        /* O app roda de dois jeitos: dentro do Painel do Colaborador, em
+           /provas/, e como site próprio, onde esta pasta é a raiz. Na raiz não
+           existe painel acima, então o link de volta sai de cena. Inline e
+           logo aqui para o link não piscar na tela antes de ser removido. */
+        if (/^\/(index\.html)?$/.test(location.pathname)) {
+            document.getElementById('voltar-ao-painel').remove();
+        }
+    </script>
 
     <div class="masthead">
-        <img src="../logo.png" alt="Logo EEMTI Maria Luiza Saboia">
+        <img src="logo.png" alt="Logo EEMTI Maria Luiza Saboia">
         <div>
             <h1>Provas Identificadas</h1>
             <p>Suba a primeira página da prova, cole a lista dos alunos e receba uma via por aluno, cada uma com o nome, a turma, o número da lista e um código único com QR Code. Nada sai deste navegador.</p>

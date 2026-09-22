@@ -1,4 +1,6 @@
 /* Regressão de ponta a ponta do app de provas, com Chromium de verdade.
+   Testa os dois modos de publicação: dentro do painel, em /provas/, e como
+   site próprio, com a pasta do app na raiz do domínio.
    Uso:  node test/provas-browser.mjs            (serve a pasta e roda tudo)
    Precisa do playwright instalado na máquina (global serve). Gera os arquivos
    em test/saida/ para inspeção. */
@@ -34,24 +36,24 @@ const TIPOS = {
     '.pdf': 'application/pdf'
 };
 
-function servir() {
+function servir(raiz, porta, inicial) {
     const servidor = createServer(async (pedido, resposta) => {
         const caminho = decodeURIComponent(pedido.url.split('?')[0]);
-        let arquivo = join(RAIZ, caminho === '/' ? 'provas/index.html' : caminho);
+        let arquivo = join(raiz, caminho === '/' ? inicial : caminho);
         /* Endereço de pasta cai no index.html dela, como a Vercel faz. Assim o
            teste abre /provas/ e prova que os caminhos relativos do app
            (vendor/, js/, ../logo.png) resolvem do mesmo jeito que em produção. */
         if (existsSync(arquivo) && statSync(arquivo).isDirectory()) {
             arquivo = join(arquivo, 'index.html');
         }
-        if (!arquivo.startsWith(RAIZ) || !existsSync(arquivo)) {
+        if (!arquivo.startsWith(raiz) || !existsSync(arquivo)) {
             resposta.writeHead(404).end('nao encontrado');
             return;
         }
         resposta.writeHead(200, { 'Content-Type': TIPOS[extname(arquivo)] || 'application/octet-stream' });
         resposta.end(await readFile(arquivo));
     });
-    return new Promise((ok) => servidor.listen(PORTA, () => ok(servidor)));
+    return new Promise((ok) => servidor.listen(porta, () => ok(servidor)));
 }
 
 const feitos = [];
@@ -71,7 +73,7 @@ TURMA 3A
 1;Rafaela Gomes Nunes;3A
 2;Pedro Henrique Alves;3A`;
 
-const servidor = await servir();
+const servidor = await servir(RAIZ, PORTA, 'provas/index.html');
 const navegador = await chromium.launch();
 const pagina = await navegador.newPage({ viewport: { width: 1280, height: 1000 } });
 
@@ -84,6 +86,9 @@ pagina.on('requestfailed', (p) => { if (!RUIDO.test(p.url())) erros.push('pedido
 try {
     await mkdir(SAIDA, { recursive: true });
     await pagina.goto(`http://127.0.0.1:${PORTA}/provas/`);
+
+    conferir(await pagina.isVisible('#voltar-ao-painel'),
+        'servido em /provas/, o link de volta ao painel aparece');
 
     /* --- passo 2: a lista --- */
     await pagina.fill('#lote', LOTE);
@@ -179,6 +184,33 @@ try {
     conferir(await pagina.isVisible('.conferencia-cartao.invalida'), 'o mesmo código com outro nome é recusado');
 
     conferir(erros.length === 0, 'nenhum erro de JavaScript no caminho todo' + (erros.length ? ': ' + erros.join(' | ') : ''));
+
+    /* --- o mesmo app servido como site próprio (Root Directory = provas) --- */
+    const servidorProprio = await servir(APP, PORTA + 1, 'index.html');
+    try {
+        const sozinho = await navegador.newPage();
+        const errosSozinho = [];
+        sozinho.on('pageerror', (erro) => errosSozinho.push(String(erro)));
+        sozinho.on('requestfailed', (p) => { if (!RUIDO.test(p.url())) errosSozinho.push('pedido falhou: ' + p.url()); });
+
+        await sozinho.goto(`http://127.0.0.1:${PORTA + 1}/`);
+        conferir(await sozinho.$('#voltar-ao-painel') === null,
+            'em domínio próprio o link de volta ao painel sai de cena');
+        conferir(await sozinho.evaluate(() => {
+            const logo = document.querySelector('.masthead img');
+            return logo.complete && logo.naturalWidth > 0;
+        }), 'o logo carrega da própria pasta do app');
+
+        /* Prova que o app continua inteiro com a pasta na raiz. */
+        await sozinho.fill('#lote', 'TURMA 2B\n01 - Ana Lima\n02 - Bruno Dias');
+        await sozinho.waitForFunction(() => document.querySelectorAll('.turma-chip').length === 1);
+        conferir((await sozinho.textContent('#contagem-lote')).includes('2 alunos'), 'e a leitura da lista funciona igual');
+        conferir(errosSozinho.length === 0,
+            'nenhum erro de JavaScript como site próprio' + (errosSozinho.length ? ': ' + errosSozinho.join(' | ') : ''));
+        await sozinho.close();
+    } finally {
+        servidorProprio.close();
+    }
 
     console.log('\n' + feitos.length + ' verificações passaram:');
     feitos.forEach((f) => console.log('  ok  ' + f));
