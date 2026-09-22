@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Provas Identificadas — EEMTI Prof. Maria Luiza Saboia</title>
+    <meta name="description" content="Gera a primeira página de cada prova já identificada com o nome do aluno, a turma e um código único com QR Code. Funciona no navegador, sem internet e sem enviar nada para fora.">
+    <meta name="robots" content="noindex">
+    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='24' fill='%23166534'/%3E%3Crect x='24' y='24' width='22' height='22' fill='white'/%3E%3Crect x='54' y='24' width='22' height='22' fill='white'/%3E%3Crect x='24' y='54' width='22' height='22' fill='white'/%3E%3Crect x='56' y='56' width='8' height='8' fill='white'/%3E%3Crect x='68' y='68' width='8' height='8' fill='white'/%3E%3C/svg%3E">
+    <link rel="stylesheet" href="app.css?v=1">
+</head>
+<body>
+
+<div class="wrap">
+    <a class="back-link" href="../index.html">&larr; Voltar ao Painel do Colaborador</a>
+
+    <div class="masthead">
+        <img src="../logo.png" alt="Logo EEMTI Maria Luiza Saboia">
+        <div>
+            <h1>Provas Identificadas</h1>
+            <p>Suba a primeira página da prova, cole a lista dos alunos e receba uma via por aluno, cada uma com o nome, a turma, o número da lista e um código único com QR Code. Nada sai deste navegador.</p>
+        </div>
+    </div>
+
+    <nav class="abas" id="abas">
+        <button type="button" class="aba ativa" data-aba="gerar">Gerar as provas</button>
+        <button type="button" class="aba" data-aba="conferir">Conferir um código</button>
+        <button type="button" class="aba" data-aba="ajuda">Como funciona</button>
+    </nav>
+
+    <!-- ===================== GERAR ===================== -->
+    <section class="painel" id="painel-gerar">
+
+        <fieldset class="passo">
+            <legend><span class="num">1</span> A avaliação</legend>
+            <div class="linha-campos">
+                <label>Bimestre
+                    <select id="bimestre">
+                        <option value="B1">1º bimestre</option>
+                        <option value="B2">2º bimestre</option>
+                        <option value="B3" selected>3º bimestre</option>
+                        <option value="B4">4º bimestre</option>
+                    </select>
+                </label>
+                <label>Ano
+                    <input type="number" id="ano" min="2020" max="2100" step="1" value="2026">
+                </label>
+                <label class="campo-largo">Chave da escola
+                    <input type="text" id="chave" value="malu-2026" spellcheck="false">
+                    <small>Entra no cálculo do código verificador. Guarde a chave: só com ela o app reconhece um código como autêntico e só com ela os mesmos alunos geram os mesmos códigos de novo.</small>
+                </label>
+            </div>
+        </fieldset>
+
+        <fieldset class="passo">
+            <legend><span class="num">2</span> Os alunos</legend>
+            <p class="dica">Cole todas as turmas de uma vez. A turma pode vir como título (<code>TURMA 3B</code>) ou na própria linha (<code>3B; João da Silva</code>, <code>7;CARLA MENDES;1B</code>). Se a lista já vier numerada, o app usa <strong>esse</strong> número — o mesmo que o aluno preenche em “Núm. da lista” na folha de respostas.</p>
+            <textarea id="lote" rows="10" spellcheck="false" placeholder="TURMA 1A&#10;01 - Ana Beatriz Lima&#10;02 - Bruno Dias&#10;&#10;TURMA 1B&#10;01 - Carla Mendes&#10;02 - Daniel Souza"></textarea>
+            <div class="acoes-lista">
+                <button type="button" class="btn" id="limpar-lote">Limpar a lista</button>
+                <span class="contagem" id="contagem-lote">Nenhum aluno lido ainda.</span>
+            </div>
+            <div id="resumo-turmas" class="turmas"></div>
+            <div id="avisos-lista" class="avisos"></div>
+        </fieldset>
+
+        <fieldset class="passo">
+            <legend><span class="num">3</span> As provas</legend>
+            <p class="dica">Uma prova por série e componente — é a <strong>primeira página</strong>, a que tem o cabeçalho. Em PDF (recomendado), JPG ou PNG. Se a prova está no Word, abra e use <em>Arquivo → Salvar como → PDF</em>; o Word não pode ser lido direto aqui sem estragar o desenho da página.</p>
+            <div id="slots" class="slots"></div>
+        </fieldset>
+
+        <fieldset class="passo">
+            <legend><span class="num">4</span> Onde entra a identificação</legend>
+
+            <div class="modelos" id="modelos">
+                <label class="modelo">
+                    <input type="radio" name="modelo" value="quadrado-espaco" checked>
+                    <span class="modelo-titulo">Quadrado no topo, abrindo espaço</span>
+                    <span class="modelo-texto">Um quadradinho com QR e código entra no alto da folha. A prova desce e encolhe o necessário, então nada do que o professor escreveu fica coberto.</span>
+                </label>
+                <label class="modelo">
+                    <input type="radio" name="modelo" value="quadrado-sobreposto">
+                    <span class="modelo-titulo">Quadrado sobreposto, sem mexer na prova</span>
+                    <span class="modelo-texto">A prova sai em tamanho original e o quadrado é colado onde você marcar. Use quando a página tem folha de respostas com marcas de alinhamento.</span>
+                </label>
+                <label class="modelo">
+                    <input type="radio" name="modelo" value="faixa">
+                    <span class="modelo-titulo">Faixa larga no topo</span>
+                    <span class="modelo-texto">Faixa de ponta a ponta com nome, turma, código e QR. Boa para prova sem cabeçalho apertado, como a de redação.</span>
+                </label>
+                <label class="modelo">
+                    <input type="radio" name="modelo" value="etiquetas">
+                    <span class="modelo-titulo">Só a folha de etiquetas</span>
+                    <span class="modelo-texto">Não mexe na prova: gera uma folha de etiquetas para recortar e colar. É a saída para quem imprime direto do Word.</span>
+                </label>
+            </div>
+
+            <div class="opcoes" id="opcoes-quadrado">
+                <label>Lado do quadrado
+                    <span class="com-unidade"><input type="number" id="quadrado-lado" min="2" max="6" step="0.1" value="3.4"><span>cm</span></span>
+                </label>
+                <label>Canto
+                    <select id="quadrado-ancora">
+                        <option value="topo-direita" selected>Alto, à direita</option>
+                        <option value="topo-centro">Alto, no centro</option>
+                        <option value="topo-esquerda">Alto, à esquerda</option>
+                        <option value="livre">Onde eu marcar na prévia</option>
+                    </select>
+                </label>
+                <label class="caixa-check"><input type="checkbox" id="quadrado-nome"> Escrever o nome também dentro do quadrado <small>(sai miúdo; melhor usar o campo ALUNO (A) abaixo)</small></label>
+            </div>
+
+            <div class="opcoes" id="opcoes-nome">
+                <label class="caixa-check"><input type="checkbox" id="usar-linha" checked> Escrever o nome do aluno dentro da prova, no campo <code>ALUNO (A):</code></label>
+                <div class="sub-opcoes" id="sub-linha">
+                    <label>Começa a
+                        <span class="com-unidade"><input type="number" id="linha-x" min="0" max="20" step="0.1" value="5.2"><span>cm da esquerda</span></span>
+                    </label>
+                    <label>e a
+                        <span class="com-unidade"><input type="number" id="linha-y" min="0" max="29" step="0.1" value="3.05"><span>cm do topo</span></span>
+                    </label>
+                    <label>Largura
+                        <span class="com-unidade"><input type="number" id="linha-largura" min="2" max="20" step="0.1" value="7.5"><span>cm</span></span>
+                    </label>
+                    <label>Corpo
+                        <span class="com-unidade"><input type="number" id="linha-tamanho" min="5" max="14" step="0.5" value="9"><span>pt</span></span>
+                    </label>
+                    <div class="campos-linha">
+                        <span>Escrever:</span>
+                        <label><input type="checkbox" class="campo-linha" value="nome" checked> nome</label>
+                        <label><input type="checkbox" class="campo-linha" value="numero" checked> nº</label>
+                        <label><input type="checkbox" class="campo-linha" value="turma" checked> turma</label>
+                        <label><input type="checkbox" class="campo-linha" value="id"> código</label>
+                    </div>
+                </div>
+            </div>
+
+            <div class="previa">
+                <div class="previa-barra">
+                    <label>Prévia da prova
+                        <select id="previa-arquivo"></select>
+                    </label>
+                    <span class="previa-cursor" id="previa-cursor"></span>
+                </div>
+                <div class="previa-corpo">
+                    <div class="previa-palco" id="previa-palco">
+                        <div class="previa-faixa" id="previa-faixa" hidden><span id="previa-faixa-texto"></span><div class="marca-quadrado-faixa" id="marca-quadrado-faixa"></div></div>
+                        <canvas id="previa-canvas"></canvas>
+                        <div class="marca-linha" id="marca-linha" hidden></div>
+                        <div class="marca-quadrado" id="marca-quadrado" hidden></div>
+                        <p class="previa-vazia" id="previa-vazia">Envie uma prova no passo 3 para ver a prévia.</p>
+                    </div>
+                    <div class="previa-lado">
+                        <p class="previa-dica" id="previa-dica"><strong>Clique na prova</strong> para marcar onde a identificação entra. O ponto clicado é onde o texto começa.</p>
+                        <ul class="legenda">
+                            <li><span class="amostra amostra--linha"></span> o nome do aluno, no campo da prova</li>
+                            <li><span class="amostra amostra--quadrado"></span> o quadrado com o QR e o código</li>
+                        </ul>
+                        <p class="previa-dica">Antes de gerar a turma toda, vale abrir o PDF de um aluno e olhar de perto.</p>
+                        <button type="button" class="btn" id="ver-amostra">Ver o PDF de um aluno</button>
+                        <span class="contagem" id="aviso-amostra"></span>
+                    </div>
+                </div>
+            </div>
+        </fieldset>
+
+        <fieldset class="passo">
+            <legend><span class="num">5</span> Gerar</legend>
+            <div class="acoes-lista">
+                <button type="button" class="btn btn--primary" id="gerar">Gerar as provas identificadas</button>
+                <span class="contagem" id="estado-geracao"></span>
+            </div>
+            <div id="resultados" class="resultados"></div>
+        </fieldset>
+    </section>
+
+    <!-- ===================== CONFERIR ===================== -->
+    <section class="painel" id="painel-conferir" hidden>
+        <fieldset class="passo">
+            <legend>Conferir um código</legend>
+            <p class="dica">Leia o QR com a câmera do celular e cole aqui o texto que apareceu, ou digite o código e o nome. O app recalcula o verificador com a chave da escola e diz se aquele código pertence mesmo àquele aluno.</p>
+            <div class="linha-campos">
+                <label class="campo-largo">Código (ou o texto lido no QR)
+                    <textarea id="conferir-entrada" rows="3" spellcheck="false" placeholder="MLS-2026-B3-1A-007-LIN-DRYT&#10;JOSÉ ÍTALO GONÇALVES"></textarea>
+                </label>
+                <label class="campo-largo">Nome do aluno <small>(deixe em branco se o nome já veio no QR)</small>
+                    <input type="text" id="conferir-nome" spellcheck="false">
+                </label>
+            </div>
+            <div class="acoes-lista">
+                <button type="button" class="btn btn--primary" id="conferir">Conferir</button>
+            </div>
+            <div id="conferir-resposta" class="conferencia"></div>
+        </fieldset>
+    </section>
+
+    <!-- ===================== AJUDA ===================== -->
+    <section class="painel" id="painel-ajuda" hidden>
+        <fieldset class="passo">
+            <legend>Como funciona</legend>
+
+            <h3>O que sai no fim</h3>
+            <ul>
+                <li><strong>As primeiras páginas</strong>: um PDF por turma e componente, com uma página por aluno. Você imprime, e o miolo da prova continua saindo no xerox em massa.</li>
+                <li><strong>A folha de conferência</strong>: a lista que liga cada código ao aluno, em PDF para imprimir e em CSV para abrir no Excel. Guarde: é o que permite saber de quem é uma prova pelo código.</li>
+                <li><strong>As etiquetas</strong>: a mesma identificação em grade, para recortar e colar quando a prova for impressa direto do Word.</li>
+            </ul>
+
+            <h3>O código</h3>
+            <p><code>MLS-2026-B3-1A-007-LIN-DRYT</code> quer dizer: escola, ano, bimestre, turma, número da lista, componente e um verificador de quatro caracteres. O verificador sai de um cálculo com o nome do aluno e a chave da escola, então trocar o nome ou a turma na caneta derruba a conferência. O QR Code leva o mesmo código e o nome.</p>
+            <p>Os componentes entram no código como <code>RED</code> (Redação), <code>LIN</code> (Linguagens e Códigos), <code>NAT</code> (Ciências da Natureza), <code>HUM</code> (Ciências Humanas) e <code>MAT</code> (Matemática).</p>
+
+            <h3>Prova no Word</h3>
+            <p>O app precisa da página desenhada, e um <code>.docx</code> só ganha desenho quando o Word o pagina — não há como fazer isso aqui dentro sem estragar o cabeçalho. Duas saídas: abrir no Word e usar <em>Salvar como → PDF</em> (é um clique e mantém o layout igual), ou gerar a folha de etiquetas e colar nas provas impressas.</p>
+
+            <h3>Folha de respostas na mesma página</h3>
+            <p>Se a primeira página traz o gabarito com os quadrados de alinhamento, prefira o modelo <strong>sobreposto</strong>: a prova sai em tamanho original e as marcas ficam exatamente onde estavam. O modelo que abre espaço reduz a folha a cerca de 88%, e leitor de gabarito que trabalhe com template fixo pode reclamar.</p>
+
+            <h3>Onde ficam os dados</h3>
+            <p>Em nenhum servidor. O PDF que você envia, os nomes que você cola e os arquivos gerados existem só na memória desta aba: ao fechar, tudo desaparece. Por isso baixe a folha de conferência antes de sair.</p>
+        </fieldset>
+    </section>
+
+    <footer class="rodape">
+        <p>Painel do Colaborador · EEMTI Prof. Maria Luiza Saboia Ribeiro</p>
+    </footer>
+</div>
+
+<script src="vendor/pdf-lib.min.js"></script>
+<script src="vendor/qrcode.js"></script>
+<script src="js/sha256.js"></script>
+<script src="js/identificacao.js"></script>
+<script src="js/lista.js"></script>
+<script src="js/qr.js"></script>
+<script src="js/pdf.js"></script>
+<script src="js/saida.js"></script>
+<script src="js/previa.js"></script>
+<script src="js/app.js?v=1"></script>
+</body>
+</html>
