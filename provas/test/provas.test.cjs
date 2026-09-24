@@ -387,6 +387,27 @@ test('com prova de várias páginas, cada aluno leva a capa com cabeçalho e o v
     }
 });
 
+test('o cabeçalho traz o nome da avaliação e o espaço para a data, sem vazar da moldura', () => {
+    const prova = identificacao.identificar({
+        ano: '2026', bimestre: 'B3', turma: '1A', numero: 3, componente: 'LIN',
+        nome: 'José Ítalo Gonçalves da Conceição Ribeiro Albuquerque', chave: CHAVE
+    });
+    const caixa = { x: 28, y: 700, largura: 19 * pdf.CM, altura: 2.5 * pdf.CM };
+    const pagina = paginaDeTeste();
+    pdf.desenharCabecalho(pagina, FONTES_DE_TESTE, prova, caixa, {
+        serieNome: '1ª SÉRIE', avaliacao: 'Avaliação Bimestral de Linguagens'
+    });
+    const escrito = pagina.escrito();
+    assert.match(escrito, /AVALIAÇÃO BIMESTRAL DE LINGUAGENS/);
+    assert.match(escrito, /DATA: _+\/_+\/_+/);
+    const nome = pagina.textos.filter((t) => /JOSÉ/.test(t.texto))[0];
+    const outros = pagina.textos.filter((t) => !/JOSÉ|ALBUQUERQUE|CONCEIÇÃO/.test(t.texto));
+    assert.ok(nome.size >= Math.max.apply(null, outros.map((t) => t.size)), 'o nome continua o maior');
+    pagina.textos.forEach((t) => {
+        assert.ok(t.y >= caixa.y && t.y + t.size <= caixa.y + caixa.altura + 0.01, '"' + t.texto + '" dentro da moldura');
+    });
+});
+
 test('a folha de etiquetas quebra de 14 em 14', async () => {
     const alunos = [];
     for (let i = 1; i <= 15; i++) alunos.push({ nome: 'ALUNO ' + i, numero: i });

@@ -4,9 +4,9 @@
    Tudo acontece dentro do navegador, com o pdf-lib que está em vendor/.
 
    O cabeçalho é a única identificação da prova: leva o logotipo da escola, o
-   nome do aluno, a série, a turma, o número da lista, o código único e o QR
-   Code encaixado nele. Nada do que a prova já diz por escrito (escola,
-   componente, bimestre) é repetido aqui.
+   nome da avaliação, o espaço para o aluno escrever a data, o nome do aluno,
+   a série, a turma, o número da lista, o código único e o QR Code encaixado
+   nele.
 
    Duas saídas:
      montarPrimeirasPaginas — o cabeçalho colado na primeira página;
@@ -137,8 +137,9 @@
     /* O CABEÇALHO DE IDENTIFICAÇÃO.
 
        ┌──────┬────────────────────────────────────────┬──────┐
-       │ ╭──╮ │ ALUNO(A)                               │ ▓▓▓▓ │
-       │ LOGO │ JOSÉ ÍTALO GONÇALVES DA CONCEIÇÃO      │ ▓QR▓ │
+       │ ╭──╮ │ AVALIAÇÃO BIMESTRAL   DATA: __/__/__   │ ▓▓▓▓ │
+       │ LOGO │ ALUNO(A)                               │ ▓QR▓ │
+       │      │ JOSÉ ÍTALO GONÇALVES DA CONCEIÇÃO      │ ▓▓▓▓ │
        │ ╰──╯ │ 1ª SÉRIE · TURMA 1A · Nº 03  MLS-...   │ ▓▓▓▓ │
        └──────┴────────────────────────────────────────┴──────┘
 
@@ -192,6 +193,35 @@
         if (largura <= 10) return;
 
         const linhas = [];
+
+        /* Linha de cima: o nome da avaliação, que a coordenação escreve no
+           passo 1, e à direita o espaço para o aluno preencher a data. */
+        if (opcoes.incluirData !== false || opcoes.avaliacao) {
+            const tamanhoData = 7.6 * escala;
+            const data = opcoes.incluirData !== false
+                ? { texto: 'DATA: ____/____/________', fonte: fontes.normal, tamanho: tamanhoData }
+                : null;
+            const larguraData = data ? data.fonte.widthOfTextAtSize(data.texto, data.tamanho) + 10 * escala : 0;
+            const avaliacao = textoSeguro(String(opcoes.avaliacao || '').trim().toUpperCase());
+            const tamanhoLado = avaliacao ? tamanhoQueCabe(fontes.negrito, avaliacao, 8.4 * escala, largura - larguraData, 5.5) : 0;
+
+            if (!avaliacao || fontes.negrito.widthOfTextAtSize(avaliacao, tamanhoLado) <= largura - larguraData) {
+                /* Cabe tudo numa linha: avaliação à esquerda, data à direita. */
+                linhas.push({
+                    texto: avaliacao, fonte: fontes.negrito, tamanho: Math.max(tamanhoLado, tamanhoData),
+                    cor: PRETO, aDireita: data, espacoDepois: 2.5 * escala
+                });
+            } else {
+                /* Cabeçalho estreito (etiqueta): a avaliação ganha a linha
+                   inteira, em até duas linhas, e a data desce para baixo dela. */
+                const encaixe = encaixarNome(fontes.negrito, avaliacao, 8.4 * escala, largura, 2, 5.5);
+                encaixe.linhas.forEach(function (parte) {
+                    linhas.push({ texto: parte, fonte: fontes.negrito, tamanho: encaixe.tamanho, cor: PRETO });
+                });
+                if (data) linhas.push({ texto: data.texto, fonte: data.fonte, tamanho: data.tamanho, cor: PRETO });
+                linhas[linhas.length - 1].espacoDepois = 2.5 * escala;
+            }
+        }
 
         /* Rótulo: a prova não tem mais o campo "ALUNO (A):", então é aqui que o
            aluno reconhece o próprio nome. */
@@ -272,19 +302,33 @@
         }
 
         const entrelinha = 1.3;
-        const alturaTexto = linhas.reduce(function (soma, l) { return soma + l.tamanho * entrelinha; }, 0);
+        let alturaTexto = linhas.reduce(function (soma, l) { return soma + l.tamanho * entrelinha + (l.espacoDepois || 0); }, 0);
+
+        /* Se o conjunto não couber na altura do bloco (nome em duas linhas,
+           cabeçalho baixo), tudo encolhe na mesma proporção. */
+        const alturaUtil = caixa.altura - recuo * 2;
+        if (alturaTexto > alturaUtil) {
+            const fator = alturaUtil / alturaTexto;
+            linhas.forEach(function (l) {
+                l.tamanho *= fator;
+                if (l.espacoDepois) l.espacoDepois *= fator;
+                if (l.aDireita) l.aDireita.tamanho *= fator;
+            });
+            alturaTexto = alturaUtil;
+        }
+
         let cursor = caixa.y + caixa.altura - Math.max(recuo, (caixa.altura - alturaTexto) / 2);
 
         linhas.forEach(function (l) {
             cursor -= l.tamanho;
-            pagina.drawText(l.texto, { x: tx, y: cursor, size: l.tamanho, font: l.fonte, color: l.cor });
+            if (l.texto) pagina.drawText(l.texto, { x: tx, y: cursor, size: l.tamanho, font: l.fonte, color: l.cor });
             if (l.aDireita) {
                 const direita = tx + largura - l.aDireita.fonte.widthOfTextAtSize(l.aDireita.texto, l.aDireita.tamanho);
                 pagina.drawText(l.aDireita.texto, {
                     x: direita, y: cursor, size: l.aDireita.tamanho, font: l.aDireita.fonte, color: PRETO
                 });
             }
-            cursor -= l.tamanho * (entrelinha - 1);
+            cursor -= l.tamanho * (entrelinha - 1) + (l.espacoDepois || 0);
         });
     }
 
@@ -489,7 +533,8 @@
                 moldura: cabecalho.moldura,
                 rotulo: cabecalho.rotulo,
                 corpoNome: cabecalho.corpoNome,
-                serieNome: opcoes.serieNome
+                serieNome: opcoes.serieNome,
+                avaliacao: opcoes.avaliacao
             });
 
             /* O verso vem logo atrás da capa, do jeito que foi enviado e sem
@@ -542,7 +587,8 @@
                 incluirQr: opcoes.incluirQr,
                 serieNome: opcoes.serieNome,
                 incluirComponente: true,
-                corpoNome: 12
+                corpoNome: 12,
+                avaliacao: opcoes.avaliacao
             });
         });
 

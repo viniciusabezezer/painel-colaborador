@@ -523,6 +523,7 @@
                 cabecalho: configuracao.cabecalho,
                 espacoTopoCm: configuracao.espacoTopoCm,
                 serieNome: (Identificacao.serie(serie) || {}).nome,
+                avaliacao: $('avaliacao').value,
                 logo: await bytesDoLogo()
             });
             const url = URL.createObjectURL(new Blob([bytes], { type: 'application/pdf' }));
@@ -598,7 +599,8 @@
                     componente: tarefa.componente.codigo,
                     serieNome: serieNome
                 };
-                const subtitulo = serieNome + ' · Turma ' + tarefa.turma.turma + ' · ' + tarefa.componente.nome +
+                const nomeAvaliacao = $('avaliacao').value.trim();
+                const subtitulo = (nomeAvaliacao ? nomeAvaliacao + ' · ' : '') + serieNome + ' · Turma ' + tarefa.turma.turma + ' · ' + tarefa.componente.nome +
                     ' · ' + $('bimestre').value.replace('B', '') + 'º bimestre de ' + $('ano').value;
 
                 const pacote = { titulo: subtitulo, dados: dados, provas: provas, arquivos: [] };
@@ -612,6 +614,7 @@
                             identificacoes: provas, colunas: 2, linhas: 7,
                             incluirQr: configuracao.cabecalho.incluirQr,
                             serieNome: serieNome, subtitulo: subtitulo,
+                            avaliacao: $('avaliacao').value,
                             logo: await bytesDoLogo()
                         })
                     });
@@ -627,6 +630,7 @@
                             espacoTopoCm: configuracao.espacoTopoCm,
                             serieNome: serieNome,
                             tituloArquivo: subtitulo,
+                            avaliacao: $('avaliacao').value,
                             logo: await bytesDoLogo()
                         })
                     });
