@@ -3,9 +3,10 @@
    em branco que o professor deixou no alto da folha.
    Tudo acontece dentro do navegador, com o pdf-lib que está em vendor/.
 
-   O cabeçalho é a única identificação da prova: leva o nome do aluno, a série,
-   a turma, o número da lista, o código único e o QR Code encaixado nele. Nada
-   do que a prova já diz (escola, componente, bimestre) é repetido aqui.
+   O cabeçalho é a única identificação da prova: leva o logotipo da escola, o
+   nome do aluno, a série, a turma, o número da lista, o código único e o QR
+   Code encaixado nele. Nada do que a prova já diz por escrito (escola,
+   componente, bimestre) é repetido aqui.
 
    Duas saídas:
      montarPrimeirasPaginas — o cabeçalho colado na primeira página;
@@ -135,14 +136,15 @@
 
     /* O CABEÇALHO DE IDENTIFICAÇÃO.
 
-       ┌───────────────────────────────────────────────┬──────┐
-       │ ALUNO(A)                                      │ ▓▓▓▓ │
-       │ JOSÉ ÍTALO GONÇALVES DA CONCEIÇÃO             │ ▓QR▓ │
-       │ 1ª SÉRIE · TURMA 1A · Nº 03   MLS-2026-...    │ ▓▓▓▓ │
-       └───────────────────────────────────────────────┴──────┘
+       ┌──────┬────────────────────────────────────────┬──────┐
+       │ ╭──╮ │ ALUNO(A)                               │ ▓▓▓▓ │
+       │ LOGO │ JOSÉ ÍTALO GONÇALVES DA CONCEIÇÃO      │ ▓QR▓ │
+       │ ╰──╯ │ 1ª SÉRIE · TURMA 1A · Nº 03  MLS-...   │ ▓▓▓▓ │
+       └──────┴────────────────────────────────────────┴──────┘
 
        O nome é o maior elemento, porque é ele que impede a prova de rodar de
-       carteira em carteira. O QR fica encaixado na altura do bloco. */
+       carteira em carteira. O QR e o logotipo ficam encaixados na altura do
+       bloco, cada um de um lado. */
     function desenharCabecalho(pagina, fontes, prova, caixa, opcoes) {
         const escala = caixa.escala || 1;
         const incluirQr = opcoes.incluirQr !== false;
@@ -167,8 +169,26 @@
             desenharQr(pagina, prova.conteudoQr, xQr, caixa.y + (caixa.altura - ladoQr) / 2, ladoQr);
         }
 
-        const tx = caixa.x + (opcoes.qrNaEsquerda ? ladoQr + recuo * 2.4 : recuo * 2);
-        const largura = caixa.largura - ladoQr - recuo * 4.4;
+        /* O logotipo da escola vai no lado oposto ao QR, na mesma altura, sem
+           passar de um quinto da largura. */
+        let ladoLogo = 0;
+        if (fontes.logo && opcoes.incluirLogo !== false) {
+            const alturaUtil = caixa.altura - recuo * 2;
+            const proporcao = fontes.logo.width / fontes.logo.height;
+            const alturaLogo = Math.max(0, Math.min(alturaUtil, (caixa.largura * 0.2) / proporcao));
+            ladoLogo = alturaLogo * proporcao;
+            const xLogo = opcoes.qrNaEsquerda
+                ? caixa.x + caixa.largura - ladoLogo - recuo
+                : caixa.x + recuo;
+            pagina.drawImage(fontes.logo, {
+                x: xLogo, y: caixa.y + (caixa.altura - alturaLogo) / 2,
+                width: ladoLogo, height: alturaLogo
+            });
+        }
+
+        const ladoEsquerdo = opcoes.qrNaEsquerda ? ladoQr : ladoLogo;
+        const tx = caixa.x + (ladoEsquerdo ? ladoEsquerdo + recuo * 2.4 : recuo * 2);
+        const largura = caixa.largura - ladoQr - ladoLogo - recuo * 4.4 - (ladoQr && ladoLogo ? recuo * 1.4 : 0);
         if (largura <= 10) return;
 
         const linhas = [];
@@ -194,10 +214,28 @@
         if (opcoes.serieNome) partes.push(opcoes.serieNome);
         partes.push('TURMA ' + prova.turma);
         partes.push('Nº ' + prova.numeroCurto);
-        if (opcoes.incluirComponente) partes.push(prova.componenteNome.toUpperCase());
+        const componente = opcoes.incluirComponente ? textoSeguro(prova.componenteNome.toUpperCase()) : '';
 
-        const dados = textoSeguro(partes.join('   ·   '));
-        const tamanhoDados = tamanhoQueCabe(fontes.negrito, dados, 9.6 * escala, largura, 5.5);
+        /* Quando a linha aperta (etiqueta estreita, com logo e QR dos lados), os
+           separadores encolhem e, se ainda não couber, o componente desce para
+           uma linha própria, em vez de o texto invadir o QR. */
+        function montarDados(comComponente, separador) {
+            const texto = textoSeguro(partes.concat(comComponente ? [componente] : []).join(separador));
+            const tamanho = tamanhoQueCabe(fontes.negrito, texto, 9.6 * escala, largura, 5.5);
+            return { texto: texto, tamanho: tamanho, cabe: fontes.negrito.widthOfTextAtSize(texto, tamanho) <= largura };
+        }
+        let escolha = null;
+        const tentativas = componente ? [true, false] : [false];
+        tentativas.some(function (comComponente) {
+            return ['   ·   ', '  ·  ', ' · '].some(function (separador) {
+                escolha = montarDados(comComponente, separador);
+                escolha.comComponente = comComponente;
+                return escolha.cabe;
+            });
+        });
+        const dados = escolha.texto;
+        const tamanhoDados = escolha.tamanho;
+        const componenteSolto = componente && !escolha.comComponente;
         const codigo = textoSeguro(prova.id);
         const tamanhoCodigo = Math.max(5.5, Math.min(8.4 * escala, tamanhoDados));
 
@@ -214,6 +252,15 @@
             cor: PRETO,
             aDireita: juntos ? { texto: codigo, fonte: fontes.mono, tamanho: tamanhoCodigo } : null
         });
+
+        if (componenteSolto) {
+            linhas.push({
+                texto: componente,
+                fonte: fontes.negrito,
+                tamanho: tamanhoQueCabe(fontes.negrito, componente, tamanhoDados, largura, 4.6),
+                cor: PRETO
+            });
+        }
 
         if (incluirCodigo && !juntos) {
             linhas.push({
@@ -376,11 +423,14 @@
         throw new Error('Formato não reconhecido: envie a primeira página em PDF, JPG ou PNG.');
     }
 
-    async function carregarFontes(destino) {
+    /* Junto das fontes vai o logotipo da escola, quando o app o fornece (os
+       bytes do logo.png). Sem ele, o cabeçalho sai só com texto e QR. */
+    async function carregarFontes(destino, logoBytes) {
         return {
             normal: await destino.embedFont(StandardFonts.Helvetica),
             negrito: await destino.embedFont(StandardFonts.HelveticaBold),
-            mono: await destino.embedFont(StandardFonts.CourierBold)
+            mono: await destino.embedFont(StandardFonts.CourierBold),
+            logo: logoBytes ? await destino.embedPng(logoBytes) : null
         };
     }
 
@@ -391,7 +441,7 @@
 
         const cabecalho = opcoes.cabecalho || {};
         const destino = await PDFDocument.create();
-        const fontes = await carregarFontes(destino);
+        const fontes = await carregarFontes(destino, opcoes.logo);
         const fonte = await prepararFonte(destino, opcoes.arquivo);
 
         /* Espaço aberto no topo: a prova desce e encolhe o necessário. Em zero
@@ -445,7 +495,7 @@
         if (!provas.length) throw new Error('Nenhum aluno para identificar.');
 
         const destino = await PDFDocument.create();
-        const fontes = await carregarFontes(destino);
+        const fontes = await carregarFontes(destino, opcoes.logo);
         const colunas = Math.max(1, opcoes.colunas || 2);
         const linhas = Math.max(1, opcoes.linhas || 7);
         const margem = 28;

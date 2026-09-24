@@ -33,6 +33,20 @@
     }
     function limpar(elemento) { while (elemento.firstChild) elemento.removeChild(elemento.firstChild); }
 
+    /* O logotipo da escola entra no cabeçalho de identificação. É lido uma vez
+       só, do logo.png que mora ao lado do app; se falhar, o cabeçalho sai sem
+       ele em vez de a geração parar. */
+    let logoPromessa = null;
+    function bytesDoLogo() {
+        if (!logoPromessa) {
+            logoPromessa = fetch('logo.png')
+                .then(function (resposta) { return resposta.ok ? resposta.arrayBuffer() : null; })
+                .then(function (buffer) { return buffer ? new Uint8Array(buffer) : null; })
+                .catch(function () { return null; });
+        }
+        return logoPromessa;
+    }
+
     /* ===================== abas ===================== */
 
     $('abas').addEventListener('click', function (evento) {
@@ -508,7 +522,8 @@
                 identificacoes: provas,
                 cabecalho: configuracao.cabecalho,
                 espacoTopoCm: configuracao.espacoTopoCm,
-                serieNome: (Identificacao.serie(serie) || {}).nome
+                serieNome: (Identificacao.serie(serie) || {}).nome,
+                logo: await bytesDoLogo()
             });
             const url = URL.createObjectURL(new Blob([bytes], { type: 'application/pdf' }));
             window.open(url, '_blank');
@@ -596,7 +611,8 @@
                         bytes: await Pdf.montarEtiquetas({
                             identificacoes: provas, colunas: 2, linhas: 7,
                             incluirQr: configuracao.cabecalho.incluirQr,
-                            serieNome: serieNome, subtitulo: subtitulo
+                            serieNome: serieNome, subtitulo: subtitulo,
+                            logo: await bytesDoLogo()
                         })
                     });
                 } else {
@@ -610,7 +626,8 @@
                             cabecalho: configuracao.cabecalho,
                             espacoTopoCm: configuracao.espacoTopoCm,
                             serieNome: serieNome,
-                            tituloArquivo: subtitulo
+                            tituloArquivo: subtitulo,
+                            logo: await bytesDoLogo()
                         })
                     });
                 }

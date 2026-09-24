@@ -326,6 +326,40 @@ test('sem QR, o código continua saindo; o QR encaixa na altura do bloco', () =>
     assert.ok(fundoQr.x + fundoQr.width <= caixa.x + caixa.largura, 'e dentro da largura');
 });
 
+test('o logotipo da escola entra no cabeçalho, do lado oposto ao QR, sem invadir o texto', () => {
+    const prova = identificacao.identificar({ ano: '2026', bimestre: 'B3', turma: '1A', numero: 3, componente: 'LIN', nome: 'Ana Lima', chave: CHAVE });
+    const caixa = { x: 28, y: 700, largura: 19 * pdf.CM, altura: 2.5 * pdf.CM };
+    const imagens = [];
+    const pagina = paginaDeTeste();
+    pagina.drawImage = (imagem, opcoes) => imagens.push(opcoes);
+    const fontes = Object.assign({ logo: { width: 192, height: 192 } }, FONTES_DE_TESTE);
+    pdf.desenharCabecalho(pagina, fontes, prova, caixa, { serieNome: '1ª SÉRIE' });
+
+    assert.equal(imagens.length, 1, 'o logo é desenhado uma vez');
+    const logo = imagens[0];
+    assert.ok(logo.x >= caixa.x && logo.x + logo.width < caixa.x + caixa.largura / 2, 'o logo fica à esquerda');
+    assert.ok(logo.height <= caixa.altura && logo.y >= caixa.y, 'e cabe na altura do cabeçalho');
+    const textoMaisAEsquerda = Math.min.apply(null, pagina.textos.map((t) => t.x));
+    assert.ok(textoMaisAEsquerda > logo.x + logo.width, 'o texto começa depois do logo');
+});
+
+test('as primeiras páginas saem com o logo.png embutido', async () => {
+    const fs = require('node:fs');
+    const original = await global.PDFLib.PDFDocument.create();
+    original.addPage([21 * pdf.CM, 29.7 * pdf.CM]).drawText('PROVA', { x: 60, y: 700, size: 11 });
+    const provas = identificacao.identificarTurma({
+        ano: '2026', bimestre: 'B3', turma: '1A', componente: 'LIN', chave: CHAVE, alunos: ['Ana Beatriz']
+    });
+    const gerado = await pdf.montarPrimeirasPaginas({
+        arquivo: { bytes: await original.save(), tipo: 'pdf' },
+        identificacoes: provas,
+        logo: new Uint8Array(fs.readFileSync(path.join(__dirname, '..', 'logo.png')))
+    });
+    const conferido = await global.PDFLib.PDFDocument.load(gerado);
+    const recursos = conferido.getPage(0).node.Resources().toString();
+    assert.match(recursos, /XObject/, 'a página traz a imagem do logo');
+});
+
 test('a folha de etiquetas quebra de 14 em 14', async () => {
     const alunos = [];
     for (let i = 1; i <= 15; i++) alunos.push({ nome: 'ALUNO ' + i, numero: i });
