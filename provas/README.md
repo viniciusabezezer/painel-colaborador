@@ -42,8 +42,8 @@ sair.
    numerada, é **esse** número que vale: é o mesmo que o aluno preenche em
    “Núm. da lista” na folha de respostas. Sem numeração, a ordem alfabética
    manda — e aí a mesma turma gera sempre os mesmos códigos.
-3. **As provas** — a **primeira página** de cada prova, uma por série e
-   componente, em PDF, JPG ou PNG.
+3. **As provas** — as **duas primeiras páginas** de cada prova (capa e verso),
+   uma por série e componente, em PDF. JPG ou PNG servem, mas aí sai só a capa.
 4. **O cabeçalho de identificação** — clica-se na prévia da própria prova para
    encostar ali o canto de cima do cabeçalho, e ajusta-se largura e altura até
    o retângulo cobrir a faixa deixada em branco.
@@ -51,8 +51,10 @@ sair.
 
 ## O que sai no fim
 
-- **Primeiras páginas** (`PROVA-2026-B3-1A-LIN.pdf`): uma página por aluno, na
-  ordem da chamada. O miolo da prova continua saindo no xerox em massa.
+- **Provas identificadas** (`PROVA-2026-B3-1A-LIN.pdf`): para cada aluno, na
+  ordem da chamada, a capa com o cabeçalho e o verso logo atrás, sem
+  cabeçalho. Impresso frente e verso, cada aluno fica com uma folha. O resto
+  da prova continua saindo no xerox em massa.
 - **Folha de conferência** (PDF e CSV): a lista que liga cada código ao aluno,
   com espaço para assinatura. É o único lugar em que nome e código aparecem
   juntos fora da prova.

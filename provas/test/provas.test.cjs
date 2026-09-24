@@ -360,6 +360,33 @@ test('as primeiras páginas saem com o logo.png embutido', async () => {
     assert.match(recursos, /XObject/, 'a página traz a imagem do logo');
 });
 
+test('com prova de várias páginas, cada aluno leva a capa com cabeçalho e o verso sem cabeçalho', async () => {
+    const original = await global.PDFLib.PDFDocument.create();
+    ['CAPA', 'VERSO', 'TERCEIRA'].forEach((texto) => {
+        original.addPage([21 * pdf.CM, 29.7 * pdf.CM]).drawText(texto, { x: 60, y: 700, size: 11 });
+    });
+    const provas = identificacao.identificarTurma({
+        ano: '2026', bimestre: 'B3', turma: '1A', componente: 'LIN', chave: CHAVE,
+        alunos: ['Ana Beatriz', 'Bruno Dias', 'Carla Mendes']
+    });
+    const gerado = await pdf.montarPrimeirasPaginas({
+        arquivo: { bytes: await original.save(), tipo: 'pdf' }, identificacoes: provas
+    });
+    const conferido = await global.PDFLib.PDFDocument.load(gerado);
+    assert.equal(conferido.getPageCount(), 6, 'duas páginas por aluno; a terceira página não entra');
+
+    /* A capa recebe o cabeçalho (fontes e desenho próprios); o verso só
+       carrega a página original, incorporada como um único objeto. */
+    const fontesDa = (i) => {
+        const fontes = conferido.getPage(i).node.Resources().lookup(global.PDFLib.PDFName.of('Font'));
+        return fontes ? fontes.keys().length : 0;
+    };
+    for (let aluno = 0; aluno < 3; aluno++) {
+        assert.ok(fontesDa(aluno * 2) > 0, 'a capa do aluno ' + (aluno + 1) + ' traz o cabeçalho');
+        assert.equal(fontesDa(aluno * 2 + 1), 0, 'o verso do aluno ' + (aluno + 1) + ' sai sem cabeçalho');
+    }
+});
+
 test('a folha de etiquetas quebra de 14 em 14', async () => {
     const alunos = [];
     for (let i = 1; i <= 15; i++) alunos.push({ nome: 'ALUNO ' + i, numero: i });

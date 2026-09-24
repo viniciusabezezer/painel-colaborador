@@ -338,8 +338,58 @@
         return area.y + area.altura - alturaUsada;
     }
 
-    /* Prepara a página enviada: devolve o tamanho e uma função que a redesenha
-       dentro de qualquer retângulo, sem distorcer. */
+    /* Prepara uma página de um PDF enviado: devolve o tamanho e uma função que
+       a redesenha dentro de qualquer retângulo, sem distorcer. */
+    async function prepararPaginaPdf(destino, origem, indice) {
+        const pagina = origem.getPage(indice);
+        const tam = pagina.getSize();
+        const giro = ((pagina.getRotation().angle % 360) + 360) % 360;
+
+        /* Página escaneada de lado: o giro entra na matriz do objeto, para a
+           cópia sair em pé e o cabeçalho ficar no lugar certo. */
+        let matriz = null;
+        let largura = tam.width;
+        let altura = tam.height;
+        if (giro === 90) {
+            matriz = [0, -1, 1, 0, 0, tam.width];
+            largura = tam.height; altura = tam.width;
+        } else if (giro === 180) {
+            matriz = [-1, 0, 0, -1, tam.width, tam.height];
+        } else if (giro === 270) {
+            matriz = [0, 1, -1, 0, tam.height, 0];
+            largura = tam.height; altura = tam.width;
+        }
+
+        /* Página sem conteúdo nenhum (folha em branco no arquivo enviado):
+           não há o que incorporar, e a via do aluno sai só com o cabeçalho,
+           em vez de a geração toda parar. */
+        let incorporada = null;
+        if (temConteudo(pagina)) {
+            incorporada = matriz
+                ? await destino.embedPage(pagina, undefined, matriz)
+                : await destino.embedPage(pagina);
+        }
+
+        return {
+            largura: largura,
+            altura: altura,
+            vazia: !incorporada,
+            desenhar: function (folha, area) {
+                if (!incorporada) return;
+                const escala = Math.min(area.largura / largura, area.altura / altura);
+                folha.drawPage(incorporada, {
+                    x: area.x + (area.largura - largura * escala) / 2,
+                    y: posicaoVertical(area, altura * escala),
+                    xScale: escala,
+                    yScale: escala
+                });
+            }
+        };
+    }
+
+    /* Prepara a prova enviada. Do PDF saem as duas primeiras páginas: a capa,
+       que recebe o cabeçalho, e o verso, que vai intacto logo atrás dela, para
+       a impressão frente e verso. Imagem (JPG/PNG) é só a capa. */
     async function prepararFonte(destino, arquivo) {
         const tipo = String(arquivo.tipo || '').toLowerCase();
 
@@ -352,51 +402,10 @@
             }
             if (origem.getPageCount() === 0) throw new Error('Este PDF não tem nenhuma página.');
 
-            const pagina = origem.getPage(0);
-            const tam = pagina.getSize();
-            const giro = ((pagina.getRotation().angle % 360) + 360) % 360;
-
-            /* Página escaneada de lado: o giro entra na matriz do objeto, para a
-               cópia sair em pé e o cabeçalho ficar no lugar certo. */
-            let matriz = null;
-            let largura = tam.width;
-            let altura = tam.height;
-            if (giro === 90) {
-                matriz = [0, -1, 1, 0, 0, tam.width];
-                largura = tam.height; altura = tam.width;
-            } else if (giro === 180) {
-                matriz = [-1, 0, 0, -1, tam.width, tam.height];
-            } else if (giro === 270) {
-                matriz = [0, 1, -1, 0, tam.height, 0];
-                largura = tam.height; altura = tam.width;
-            }
-
-            /* Página sem conteúdo nenhum (folha em branco no arquivo enviado):
-               não há o que incorporar, e a via do aluno sai só com o cabeçalho,
-               em vez de a geração toda parar. */
-            let incorporada = null;
-            if (temConteudo(pagina)) {
-                incorporada = matriz
-                    ? await destino.embedPage(pagina, undefined, matriz)
-                    : await destino.embedPage(pagina);
-            }
-
-            return {
-                largura: largura,
-                altura: altura,
-                paginas: origem.getPageCount(),
-                vazia: !incorporada,
-                desenhar: function (folha, area) {
-                    if (!incorporada) return;
-                    const escala = Math.min(area.largura / largura, area.altura / altura);
-                    folha.drawPage(incorporada, {
-                        x: area.x + (area.largura - largura * escala) / 2,
-                        y: posicaoVertical(area, altura * escala),
-                        xScale: escala,
-                        yScale: escala
-                    });
-                }
-            };
+            const capa = await prepararPaginaPdf(destino, origem, 0);
+            capa.paginas = origem.getPageCount();
+            capa.verso = origem.getPageCount() > 1 ? await prepararPaginaPdf(destino, origem, 1) : null;
+            return capa;
         }
 
         if (tipo === 'jpg' || tipo === 'jpeg' || tipo === 'png') {
@@ -434,7 +443,8 @@
         };
     }
 
-    /* Uma via da primeira página por aluno, com o cabeçalho de identificação. */
+    /* Uma via por aluno: a capa com o cabeçalho de identificação e, se a prova
+       enviada tiver, o verso logo atrás, sem cabeçalho. */
     async function montarPrimeirasPaginas(opcoes) {
         const provas = opcoes.identificacoes || [];
         if (!provas.length) throw new Error('Nenhum aluno para identificar.');
@@ -481,6 +491,15 @@
                 corpoNome: cabecalho.corpoNome,
                 serieNome: opcoes.serieNome
             });
+
+            /* O verso vem logo atrás da capa, do jeito que foi enviado e sem
+               cabeçalho: impresso frente e verso, cada aluno fica com uma folha. */
+            if (fonte.verso) {
+                const verso = destino.addPage([fonte.verso.largura, fonte.verso.altura]);
+                fonte.verso.desenhar(verso, {
+                    x: 0, y: 0, largura: fonte.verso.largura, altura: fonte.verso.altura, alinhar: 'centro'
+                });
+            }
             if (opcoes.aoProgresso) opcoes.aoProgresso(i + 1, provas.length);
         }
 

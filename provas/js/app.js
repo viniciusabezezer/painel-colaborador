@@ -617,7 +617,7 @@
                     });
                 } else {
                     pacote.arquivos.push({
-                        rotulo: 'Primeiras páginas (PDF)',
+                        rotulo: 'Provas identificadas, capa e verso (PDF)',
                         nome: Saida.nomeArquivo('PROVA', dados, 'pdf'),
                         tipo: 'application/pdf',
                         bytes: await Pdf.montarPrimeirasPaginas({
