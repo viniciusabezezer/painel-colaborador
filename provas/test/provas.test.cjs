@@ -403,6 +403,8 @@ test('o cabeçalho traz o nome da avaliação e o espaço para a data, sem vazar
     const nome = pagina.textos.filter((t) => /JOSÉ/.test(t.texto))[0];
     const outros = pagina.textos.filter((t) => !/JOSÉ|ALBUQUERQUE|CONCEIÇÃO/.test(t.texto));
     assert.ok(nome.size >= Math.max.apply(null, outros.map((t) => t.size)), 'o nome continua o maior');
+    const daAvaliacao = pagina.textos.filter((t) => /AVALIAÇÃO BIMESTRAL/.test(t.texto))[0];
+    assert.ok(daAvaliacao.size >= nome.size * 0.7, 'a avaliação sai grande: ' + daAvaliacao.size + 'pt contra ' + nome.size + 'pt do nome');
     pagina.textos.forEach((t) => {
         assert.ok(t.y >= caixa.y && t.y + t.size <= caixa.y + caixa.altura + 0.01, '"' + t.texto + '" dentro da moldura');
     });

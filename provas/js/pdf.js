@@ -137,8 +137,8 @@
     /* O CABEÇALHO DE IDENTIFICAÇÃO.
 
        ┌──────┬────────────────────────────────────────┬──────┐
-       │ ╭──╮ │ AVALIAÇÃO BIMESTRAL   DATA: __/__/__   │ ▓▓▓▓ │
-       │ LOGO │ ALUNO(A)                               │ ▓QR▓ │
+       │ ╭──╮ │ AVALIAÇÃO BIMESTRAL DE LINGUAGENS      │ ▓▓▓▓ │
+       │ LOGO │ ALUNO(A)                DATA: __/__/__ │ ▓QR▓ │
        │      │ JOSÉ ÍTALO GONÇALVES DA CONCEIÇÃO      │ ▓▓▓▓ │
        │ ╰──╯ │ 1ª SÉRIE · TURMA 1A · Nº 03  MLS-...   │ ▓▓▓▓ │
        └──────┴────────────────────────────────────────┴──────┘
@@ -194,46 +194,47 @@
 
         const linhas = [];
 
-        /* Linha de cima: o nome da avaliação, que a coordenação escreve no
-           passo 1, e à direita o espaço para o aluno preencher a data. */
-        if (opcoes.incluirData !== false || opcoes.avaliacao) {
-            const tamanhoData = 7.6 * escala;
-            const data = opcoes.incluirData !== false
-                ? { texto: 'DATA: ____/____/________', fonte: fontes.normal, tamanho: tamanhoData }
-                : null;
-            const larguraData = data ? data.fonte.widthOfTextAtSize(data.texto, data.tamanho) + 10 * escala : 0;
-            const avaliacao = textoSeguro(String(opcoes.avaliacao || '').trim().toUpperCase());
-            const tamanhoLado = avaliacao ? tamanhoQueCabe(fontes.negrito, avaliacao, 8.4 * escala, largura - larguraData, 5.5) : 0;
+        const corpoNome = (opcoes.corpoNome || 15) * escala;
+        const nome = encaixarNome(fontes.negrito, textoSeguro(prova.nome), corpoNome, largura, 2, 6 * escala);
 
-            if (!avaliacao || fontes.negrito.widthOfTextAtSize(avaliacao, tamanhoLado) <= largura - larguraData) {
-                /* Cabe tudo numa linha: avaliação à esquerda, data à direita. */
-                linhas.push({
-                    texto: avaliacao, fonte: fontes.negrito, tamanho: Math.max(tamanhoLado, tamanhoData),
-                    cor: PRETO, aDireita: data, espacoDepois: 2.5 * escala
-                });
-            } else {
-                /* Cabeçalho estreito (etiqueta): a avaliação ganha a linha
-                   inteira, em até duas linhas, e a data desce para baixo dela. */
-                const encaixe = encaixarNome(fontes.negrito, avaliacao, 8.4 * escala, largura, 2, 5.5);
-                encaixe.linhas.forEach(function (parte) {
-                    linhas.push({ texto: parte, fonte: fontes.negrito, tamanho: encaixe.tamanho, cor: PRETO });
-                });
-                if (data) linhas.push({ texto: data.texto, fonte: data.fonte, tamanho: data.tamanho, cor: PRETO });
-                linhas[linhas.length - 1].espacoDepois = 2.5 * escala;
+        /* Linha de cima: o nome da avaliação, que a coordenação escreve no
+           passo 1. Sai grande, só um pouco menor que o nome do aluno; se não
+           couber numa linha, encolhe um pouco e depois quebra em duas. */
+        const avaliacao = textoSeguro(String(opcoes.avaliacao || '').trim().toUpperCase());
+        if (avaliacao) {
+            const ideal = Math.min(corpoNome * 0.8, nome.tamanho * 0.9);
+            let encaixe = { tamanho: tamanhoQueCabe(fontes.negrito, avaliacao, ideal, largura, ideal * 0.75), linhas: [avaliacao] };
+            if (fontes.negrito.widthOfTextAtSize(avaliacao, encaixe.tamanho) > largura) {
+                encaixe = encaixarNome(fontes.negrito, avaliacao, ideal, largura, 2, 5.5);
             }
+            encaixe.linhas.forEach(function (parte) {
+                linhas.push({ texto: parte, fonte: fontes.negrito, tamanho: encaixe.tamanho, cor: PRETO });
+            });
+            linhas[linhas.length - 1].espacoDepois = 2.5 * escala;
         }
 
         /* Rótulo: a prova não tem mais o campo "ALUNO (A):", então é aqui que o
-           aluno reconhece o próprio nome. */
-        if (opcoes.rotulo !== false) {
-            const tamanho = 6.6 * escala;
-            linhas.push({ texto: 'ALUNO(A)', fonte: fontes.normal, tamanho: tamanho, cor: CINZA });
+           aluno reconhece o próprio nome. Na mesma linha, encostado à direita,
+           vai o espaço para o aluno escrever a data; se não couber, a data
+           ganha uma linha própria. */
+        const tamanhoRotulo = 6.6 * escala;
+        const data = opcoes.incluirData !== false
+            ? { texto: 'DATA: ____/____/________', fonte: fontes.normal, tamanho: 7.6 * escala }
+            : null;
+        const rotulo = opcoes.rotulo !== false ? 'ALUNO(A)' : '';
+        const larguraRotulo = rotulo ? fontes.normal.widthOfTextAtSize(rotulo, tamanhoRotulo) + 12 * escala : 0;
+        const dataCabe = data && larguraRotulo + data.fonte.widthOfTextAtSize(data.texto, data.tamanho) <= largura;
+        if (data && !dataCabe) {
+            data.tamanho = tamanhoQueCabe(data.fonte, data.texto, data.tamanho, largura, 5);
+            linhas.push({ texto: data.texto, fonte: data.fonte, tamanho: data.tamanho, cor: PRETO });
+        }
+        if (rotulo || dataCabe) {
+            linhas.push({
+                texto: rotulo, fonte: fontes.normal, tamanho: dataCabe ? Math.max(tamanhoRotulo, data.tamanho) : tamanhoRotulo,
+                cor: CINZA, aDireita: dataCabe ? data : null
+            });
         }
 
-        const nome = encaixarNome(
-            fontes.negrito, textoSeguro(prova.nome),
-            (opcoes.corpoNome || 15) * escala, largura, 2, 6 * escala
-        );
         nome.linhas.forEach(function (parte) {
             linhas.push({ texto: parte, fonte: fontes.negrito, tamanho: nome.tamanho, cor: PRETO });
         });
