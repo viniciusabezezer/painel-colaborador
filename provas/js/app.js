@@ -634,6 +634,21 @@
                             logo: await bytesDoLogo()
                         })
                     });
+                    pacote.arquivos.push({
+                        rotulo: 'Prova reserva, sem identificação (PDF)',
+                        nome: Saida.nomeArquivo('PROVA-RESERVA', dados, 'pdf'),
+                        tipo: 'application/pdf',
+                        bytes: await Pdf.montarProvaGenerica({
+                            arquivo: estado.arquivos[tarefa.chave],
+                            turma: tarefa.turma.turma,
+                            cabecalho: configuracao.cabecalho,
+                            espacoTopoCm: configuracao.espacoTopoCm,
+                            serieNome: serieNome,
+                            tituloArquivo: 'Prova reserva · ' + subtitulo,
+                            avaliacao: $('avaliacao').value,
+                            logo: await bytesDoLogo()
+                        })
+                    });
                 }
 
                 pacote.arquivos.push({

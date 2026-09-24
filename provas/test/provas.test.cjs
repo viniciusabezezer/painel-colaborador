@@ -410,6 +410,32 @@ test('o cabeçalho traz o nome da avaliação e o espaço para a data, sem vazar
     });
 });
 
+test('a prova reserva sai com capa e verso, sem nome, sem QR e sem código', async () => {
+    const original = await global.PDFLib.PDFDocument.create();
+    ['CAPA', 'VERSO'].forEach((texto) => {
+        original.addPage([21 * pdf.CM, 29.7 * pdf.CM]).drawText(texto, { x: 60, y: 700, size: 11 });
+    });
+    const gerado = await pdf.montarProvaGenerica({
+        arquivo: { bytes: await original.save(), tipo: 'pdf' },
+        turma: '1A', serieNome: '1ª SÉRIE', avaliacao: 'Avaliação Bimestral',
+        cabecalho: { incluirQr: true, incluirCodigo: true }
+    });
+    const conferido = await global.PDFLib.PDFDocument.load(gerado);
+    assert.equal(conferido.getPageCount(), 2, 'uma prova só: capa e verso');
+
+    const pagina = paginaDeTeste();
+    pdf.desenharCabecalho(pagina, FONTES_DE_TESTE,
+        { generica: true, nome: '', turma: '1A', numeroCurto: '______', id: '' },
+        { x: 28, y: 700, largura: 19 * pdf.CM, altura: 2.8 * pdf.CM },
+        { serieNome: '1ª SÉRIE', avaliacao: 'Avaliação Bimestral', incluirQr: false, incluirCodigo: false });
+    const escrito = pagina.escrito();
+    assert.match(escrito, /AVALIAÇÃO BIMESTRAL/);
+    assert.match(escrito, /1ª SÉRIE {3}· {3}TURMA 1A {3}· {3}Nº _+/);
+    assert.match(escrito, /DATA:/);
+    assert.ok(!/MLS-/.test(escrito), 'sem código');
+    assert.ok(pagina.retangulos.length < 5, 'sem QR');
+});
+
 test('a folha de etiquetas quebra de 14 em 14', async () => {
     const alunos = [];
     for (let i = 1; i <= 15; i++) alunos.push({ nome: 'ALUNO ' + i, numero: i });

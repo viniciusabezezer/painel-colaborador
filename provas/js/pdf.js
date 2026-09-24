@@ -235,9 +235,14 @@
             });
         }
 
-        nome.linhas.forEach(function (parte) {
-            linhas.push({ texto: parte, fonte: fontes.negrito, tamanho: nome.tamanho, cor: PRETO });
-        });
+        if (prova.generica) {
+            /* Prova reserva: no lugar do nome, uma linha para escrever à mão. */
+            linhas.push({ texto: '', linhaEmBranco: true, fonte: fontes.negrito, tamanho: corpoNome, cor: PRETO });
+        } else {
+            nome.linhas.forEach(function (parte) {
+                linhas.push({ texto: parte, fonte: fontes.negrito, tamanho: nome.tamanho, cor: PRETO });
+            });
+        }
 
         /* Série, turma e número da lista. O componente só entra na etiqueta,
            que vive solta; na prova ele já está no cabeçalho do professor. */
@@ -323,6 +328,12 @@
         linhas.forEach(function (l) {
             cursor -= l.tamanho;
             if (l.texto) pagina.drawText(l.texto, { x: tx, y: cursor, size: l.tamanho, font: l.fonte, color: l.cor });
+            if (l.linhaEmBranco) {
+                pagina.drawLine({
+                    start: { x: tx, y: cursor }, end: { x: tx + largura, y: cursor },
+                    thickness: 0.7, color: PRETO
+                });
+            }
             if (l.aDireita) {
                 const direita = tx + largura - l.aDireita.fonte.widthOfTextAtSize(l.aDireita.texto, l.aDireita.tamanho);
                 pagina.drawText(l.aDireita.texto, {
@@ -552,6 +563,16 @@
         return destino.save();
     }
 
+    /* Prova reserva, sem identificação: capa e verso iguais aos das provas
+       identificadas, mas o cabeçalho traz linhas em branco no lugar do nome e
+       do número, e nem QR nem código. Serve para substituir a prova de alguém
+       (folha rasgada, aluno fora da lista) na hora da aplicação. */
+    function montarProvaGenerica(opcoes) {
+        const cabecalho = Object.assign({}, opcoes.cabecalho || {}, { incluirQr: false, incluirCodigo: false });
+        const generica = { generica: true, nome: '', turma: opcoes.turma || '________', numeroCurto: '______', id: '' };
+        return montarPrimeirasPaginas(Object.assign({}, opcoes, { cabecalho: cabecalho, identificacoes: [generica] }));
+    }
+
     /* Etiquetas: o mesmo cabeçalho em grade, para recortar e colar. É a saída
        para quem imprime a prova direto do Word. Aqui o componente entra, porque
        a etiqueta anda solta antes de ser colada. */
@@ -671,6 +692,7 @@
         resolverCaixa: resolverCaixa,
         desenharCabecalho: desenharCabecalho,
         montarPrimeirasPaginas: montarPrimeirasPaginas,
+        montarProvaGenerica: montarProvaGenerica,
         montarEtiquetas: montarEtiquetas,
         montarFolhaConferencia: montarFolhaConferencia
     };

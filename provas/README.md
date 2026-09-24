@@ -55,6 +55,10 @@ sair.
   ordem da chamada, a capa com o cabeçalho e o verso logo atrás, sem
   cabeçalho. Impresso frente e verso, cada aluno fica com uma folha. O resto
   da prova continua saindo no xerox em massa.
+- **Prova reserva** (`PROVA-RESERVA-2026-B3-1A-LIN.pdf`): uma por turma e
+  componente, com capa e verso, sem identificação: o cabeçalho traz o logo, a
+  avaliação, a série e a turma, e linhas em branco para o nome e o número, sem
+  QR nem código. É para substituir a prova de alguém na hora da aplicação.
 - **Folha de conferência** (PDF e CSV): a lista que liga cada código ao aluno,
   com espaço para assinatura. É o único lugar em que nome e código aparecem
   juntos fora da prova.
