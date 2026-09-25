@@ -244,14 +244,15 @@
            passo 1. Sai grande, só um pouco menor que o nome do aluno; se não
            couber numa linha, encolhe um pouco e depois quebra em duas. */
         const avaliacao = textoSeguro(String(opcoes.avaliacao || '').trim().toUpperCase());
+        const fonteAvaliacao = fontes.titulo || fontes.negrito;
         if (avaliacao) {
             const ideal = Math.min(corpoNome * 0.8, nome.tamanho * 0.9);
-            let encaixe = { tamanho: tamanhoQueCabe(fontes.negrito, avaliacao, ideal, largura, ideal * 0.75), linhas: [avaliacao] };
-            if (fontes.negrito.widthOfTextAtSize(avaliacao, encaixe.tamanho) > largura) {
-                encaixe = encaixarNome(fontes.negrito, avaliacao, ideal, largura, 2, 5.5);
+            let encaixe = { tamanho: tamanhoQueCabe(fonteAvaliacao, avaliacao, ideal, largura, ideal * 0.75), linhas: [avaliacao] };
+            if (fonteAvaliacao.widthOfTextAtSize(avaliacao, encaixe.tamanho) > largura) {
+                encaixe = encaixarNome(fonteAvaliacao, avaliacao, ideal, largura, 2, 5.5);
             }
             encaixe.linhas.forEach(function (parte) {
-                linhas.push({ texto: parte, fonte: fontes.negrito, tamanho: encaixe.tamanho, cor: PRETO });
+                linhas.push({ texto: parte, fonte: fonteAvaliacao, tamanho: encaixe.tamanho, cor: PRETO });
             });
             linhas[linhas.length - 1].espacoDepois = 2.5 * escala;
         }
@@ -532,6 +533,9 @@
             normal: await destino.embedFont(StandardFonts.Helvetica),
             negrito: await destino.embedFont(StandardFonts.HelveticaBold),
             mono: await destino.embedFont(StandardFonts.CourierBold),
+            /* Fonte com serifa só para o nome da avaliação, para ele não se
+               confundir com o nome do aluno, que vai em Helvetica. */
+            titulo: await destino.embedFont(StandardFonts.TimesRomanBold),
             logo: logoBytes ? await destino.embedPng(logoBytes) : null
         };
     }

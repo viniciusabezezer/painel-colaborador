@@ -276,7 +276,7 @@ function paginaDeTeste() {
 
 const FONTES_DE_TESTE = (function () {
     const fonte = (fator) => ({ widthOfTextAtSize: (texto, tamanho) => texto.length * tamanho * fator });
-    return { normal: fonte(0.5), negrito: fonte(0.55), mono: fonte(0.6) };
+    return { normal: fonte(0.5), negrito: fonte(0.55), mono: fonte(0.6), titulo: fonte(0.52) };
 })();
 
 test('o cabeçalho escreve nome, série, turma, número e código — e nada do que a prova já diz', () => {
@@ -407,6 +407,7 @@ test('o cabeçalho traz o nome da avaliação e o espaço para a data, sem vazar
     const outros = pagina.textos.filter((t) => !/JOSÉ|ALBUQUERQUE|CONCEIÇÃO/.test(t.texto));
     assert.ok(nome.size >= Math.max.apply(null, outros.map((t) => t.size)), 'o nome continua o maior');
     const daAvaliacao = pagina.textos.filter((t) => /AVALIAÇÃO BIMESTRAL/.test(t.texto))[0];
+    assert.notEqual(daAvaliacao.font, nome.font, 'a avaliação usa uma fonte diferente da do nome');
     assert.ok(daAvaliacao.size >= nome.size * 0.7, 'a avaliação sai grande: ' + daAvaliacao.size + 'pt contra ' + nome.size + 'pt do nome');
     pagina.textos.forEach((t) => {
         assert.ok(t.y >= caixa.y && t.y + t.size <= caixa.y + caixa.altura + 0.01, '"' + t.texto + '" dentro da moldura');
