@@ -288,7 +288,10 @@ test('o cabeçalho escreve nome, série, turma, número e código — e nada do 
     pdf.desenharCabecalho(pagina, FONTES_DE_TESTE, prova, { x: 28, y: 700, largura: 19 * pdf.CM, altura: 2.5 * pdf.CM }, { serieNome: '1ª SÉRIE' });
 
     const escrito = pagina.escrito();
-    assert.match(escrito, /ALUNO\(A\)/);
+    assert.ok(!/ALUNO/.test(escrito), 'sem a palavra ALUNO(A)');
+    const linhaTurma = pagina.textos.filter((t) => /TURMA 1A/.test(t.texto))[0];
+    const daData = pagina.textos.filter((t) => /^DATA:/.test(t.texto))[0];
+    assert.equal(daData.y, linhaTurma.y, 'a data fica na linha da série e da turma');
     assert.match(escrito, /JOSÉ ÍTALO GONÇALVES/);
     assert.match(escrito, /1ª SÉRIE {3}· {3}TURMA 1A {3}· {3}Nº 03/);
     assert.ok(escrito.includes(prova.id), 'o código sai legível ao lado dos dados');

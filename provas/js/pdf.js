@@ -135,20 +135,22 @@
         });
     }
 
-    /* Dois quadros empilhados, com o rótulo pequeno no canto de cima e o resto
-       livre para o professor escrever à mão. */
+    /* Dois quadros empilhados, compridos e baixos, centralizados na altura do
+       bloco: o rótulo fica à esquerda, no meio da altura, e o resto do quadro
+       fica livre para o professor escrever à mão. */
     function desenharQuadrosCorrecao(pagina, fontes, area, escala) {
         const vao = 3 * escala;
-        const alturaQuadro = (area.altura - vao) / 2;
-        const tamanhoRotulo = Math.min(6.2 * escala, alturaQuadro * 0.3);
+        const alturaQuadro = Math.min(0.8 * CM * escala, (area.altura - vao) / 2);
+        const topo = area.y + (area.altura + alturaQuadro * 2 + vao) / 2;
+        const tamanhoRotulo = Math.min(6.4 * escala, alturaQuadro * 0.4);
         ['ACERTOS', 'PONTOS'].forEach(function (rotulo, i) {
-            const y = area.y + area.altura - (i + 1) * alturaQuadro - i * vao;
+            const y = topo - (i + 1) * alturaQuadro - i * vao;
             pagina.drawRectangle({
                 x: area.x, y: y, width: area.largura, height: alturaQuadro,
                 borderColor: PRETO, borderWidth: 0.6
             });
             pagina.drawText(rotulo, {
-                x: area.x + 2.5 * escala, y: y + alturaQuadro - tamanhoRotulo - 2 * escala,
+                x: area.x + 3 * escala, y: y + (alturaQuadro - tamanhoRotulo * 0.7) / 2,
                 size: tamanhoRotulo, font: fontes.normal, color: CINZA
             });
         });
@@ -156,19 +158,19 @@
 
     /* O CABEÇALHO DE IDENTIFICAÇÃO.
 
-       ┌──────┬────────────────────────────────────────┬─────────┬──────┐
-       │ ╭──╮ │ AVALIAÇÃO BIMESTRAL DE LINGUAGENS      │ ACERTOS │ ▓▓▓▓ │
-       │ LOGO │ ALUNO(A)                DATA: __/__/__ │         │ ▓QR▓ │
-       │      │ JOSÉ ÍTALO GONÇALVES DA CONCEIÇÃO      ├─────────┤ ▓▓▓▓ │
-       │ ╰──╯ │ 1ª SÉRIE · TURMA 1A · Nº 03  MLS-...   │ PONTOS  │ ▓▓▓▓ │
-       └──────┴────────────────────────────────────────┴─────────┴──────┘
+       ┌──────┬──────────────────────────────────────┬──────────────┬──────┐
+       │ ╭──╮ │ AVALIAÇÃO BIMESTRAL DE LINGUAGENS    │              │ ▓▓▓▓ │
+       │ LOGO │ JOSÉ ÍTALO GONÇALVES DA CONCEIÇÃO    │ ACERTOS      │ ▓QR▓ │
+       │      │ 1ª SÉRIE · TURMA 1A · Nº 03  DATA: __ │ PONTOS       │ ▓▓▓▓ │
+       │ ╰──╯ │ MLS-2026-B3-1A-003-LIN-K45X          │              │ ▓▓▓▓ │
+       └──────┴──────────────────────────────────────┴──────────────┴──────┘
 
        O nome é o maior elemento, porque é ele que impede a prova de rodar de
        carteira em carteira. O QR e o logotipo ficam encaixados na altura do
        bloco, cada um de um lado. Os quadros de ACERTOS e PONTOS só saem na
-       prova (não na etiqueta) e nunca na Redação. Na prova, o QR e o logotipo
-       ficam um pouco menores e o nome vai sempre numa linha só, encolhendo a
-       letra se for preciso. */
+       prova (não na etiqueta) e nunca na Redação. Na prova, o logotipo fica
+       um pouco menor e o nome vai sempre numa linha só, encolhendo a letra se
+       for preciso. */
     function desenharCabecalho(pagina, fontes, prova, caixa, opcoes) {
         const escala = caixa.escala || 1;
         const incluirQr = opcoes.incluirQr !== false;
@@ -220,7 +222,7 @@
            QR, para o professor preencher. A Redação não leva, porque é
            corrigida por competências. */
         if (opcoes.incluirCorrecao && prova.componente !== 'RED') {
-            const larguraQuadros = Math.min(1.7 * CM * escala, caixa.largura * 0.12);
+            const larguraQuadros = Math.min(3.2 * CM * escala, caixa.largura * 0.2);
             const folga = recuo * 1.4;
             if (largura - larguraQuadros - folga > 10) {
                 largura -= larguraQuadros + folga;
@@ -254,27 +256,11 @@
             linhas[linhas.length - 1].espacoDepois = 2.5 * escala;
         }
 
-        /* Rótulo: a prova não tem mais o campo "ALUNO (A):", então é aqui que o
-           aluno reconhece o próprio nome. Na mesma linha, encostado à direita,
-           vai o espaço para o aluno escrever a data; se não couber, a data
-           ganha uma linha própria. */
-        const tamanhoRotulo = 6.6 * escala;
+        /* O espaço para o aluno escrever a data vai na linha da série e da
+           turma, encostado à direita; se não couber, ganha uma linha própria. */
         const data = opcoes.incluirData !== false
             ? { texto: 'DATA: ____/____/________', fonte: fontes.normal, tamanho: 7.6 * escala }
             : null;
-        const rotulo = opcoes.rotulo !== false ? 'ALUNO(A)' : '';
-        const larguraRotulo = rotulo ? fontes.normal.widthOfTextAtSize(rotulo, tamanhoRotulo) + 12 * escala : 0;
-        const dataCabe = data && larguraRotulo + data.fonte.widthOfTextAtSize(data.texto, data.tamanho) <= largura;
-        if (data && !dataCabe) {
-            data.tamanho = tamanhoQueCabe(data.fonte, data.texto, data.tamanho, largura, 5);
-            linhas.push({ texto: data.texto, fonte: data.fonte, tamanho: data.tamanho, cor: PRETO });
-        }
-        if (rotulo || dataCabe) {
-            linhas.push({
-                texto: rotulo, fonte: fontes.normal, tamanho: dataCabe ? Math.max(tamanhoRotulo, data.tamanho) : tamanhoRotulo,
-                cor: CINZA, aDireita: dataCabe ? data : null
-            });
-        }
 
         if (prova.generica) {
             /* Prova reserva: no lugar do nome, uma linha para escrever à mão. */
@@ -316,18 +302,15 @@
         const codigo = textoSeguro(prova.id);
         const tamanhoCodigo = Math.max(5.5, Math.min(8.4 * escala, tamanhoDados));
 
-        /* O código vai na mesma linha dos dados quando couber, encostado à
-           direita; senão desce para uma linha própria. */
         const larguraDados = fontes.negrito.widthOfTextAtSize(dados, tamanhoDados);
-        const larguraCodigo = incluirCodigo ? fontes.mono.widthOfTextAtSize(codigo, tamanhoCodigo) : 0;
-        const juntos = incluirCodigo && (larguraDados + larguraCodigo + 12 * escala <= largura);
+        const dataJunto = data && (larguraDados + data.fonte.widthOfTextAtSize(data.texto, data.tamanho) + 12 * escala <= largura);
 
         linhas.push({
             texto: dados,
             fonte: fontes.negrito,
             tamanho: tamanhoDados,
             cor: PRETO,
-            aDireita: juntos ? { texto: codigo, fonte: fontes.mono, tamanho: tamanhoCodigo } : null
+            aDireita: dataJunto ? data : null
         });
 
         if (componenteSolto) {
@@ -339,7 +322,13 @@
             });
         }
 
-        if (incluirCodigo && !juntos) {
+        if (data && !dataJunto) {
+            data.tamanho = tamanhoQueCabe(data.fonte, data.texto, data.tamanho, largura, 5);
+            linhas.push({ texto: data.texto, fonte: data.fonte, tamanho: data.tamanho, cor: PRETO });
+        }
+
+        /* O código fecha o bloco, numa linha própria. */
+        if (incluirCodigo) {
             linhas.push({
                 texto: codigo,
                 fonte: fontes.mono,
@@ -597,7 +586,6 @@
                 avaliacao: opcoes.avaliacao,
                 incluirCorrecao: true,
                 nomeEmUmaLinha: true,
-                ladoQrCm: 2,
                 ladoLogoCm: 1.9
             });
 
