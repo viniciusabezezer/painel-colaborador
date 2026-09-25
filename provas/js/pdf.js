@@ -168,9 +168,9 @@
        O nome é o maior elemento, porque é ele que impede a prova de rodar de
        carteira em carteira. O QR e o logotipo ficam encaixados na altura do
        bloco, cada um de um lado. Os quadros de ACERTOS e PONTOS só saem na
-       prova (não na etiqueta) e nunca na Redação. Na prova, o logotipo fica
-       um pouco menor e o nome vai sempre numa linha só, encolhendo a letra se
-       for preciso. */
+       prova (não na etiqueta) e nunca na Redação. Na prova, o QR fica com 2 cm
+       e o logotipo com 1,9 cm, e o nome vai sempre numa linha só, encolhendo
+       a letra se for preciso. */
     function desenharCabecalho(pagina, fontes, prova, caixa, opcoes) {
         const escala = caixa.escala || 1;
         const incluirQr = opcoes.incluirQr !== false;
@@ -590,6 +590,7 @@
                 avaliacao: opcoes.avaliacao,
                 incluirCorrecao: true,
                 nomeEmUmaLinha: true,
+                ladoQrCm: 2,
                 ladoLogoCm: 1.9
             });
 
