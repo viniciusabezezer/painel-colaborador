@@ -533,9 +533,9 @@
             normal: await destino.embedFont(StandardFonts.Helvetica),
             negrito: await destino.embedFont(StandardFonts.HelveticaBold),
             mono: await destino.embedFont(StandardFonts.CourierBold),
-            /* Fonte com serifa só para o nome da avaliação, para ele não se
+            /* Fonte com serifa, sem negrito, só para o nome da avaliação, para ele não se
                confundir com o nome do aluno, que vai em Helvetica. */
-            titulo: await destino.embedFont(StandardFonts.TimesRomanBold),
+            titulo: await destino.embedFont(StandardFonts.TimesRoman),
             logo: logoBytes ? await destino.embedPng(logoBytes) : null
         };
     }
