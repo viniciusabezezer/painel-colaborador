@@ -484,10 +484,12 @@
         };
     }
 
-    /* Prepara a prova enviada. Do PDF saem as duas primeiras páginas: a capa,
-       que recebe o cabeçalho, e o verso, que vai intacto logo atrás dela, para
-       a impressão frente e verso. Imagem (JPG/PNG) é só a capa. */
-    async function prepararFonte(destino, arquivo) {
+    /* Prepara a prova enviada. Do PDF saem a capa, que recebe o cabeçalho, e
+       as páginas que vão intactas atrás dela: só o verso, para a coordenação
+       imprimir a capa e mandar o resto para o xerox, ou, com `provaInteira`,
+       todas as outras páginas, para imprimir a prova completa direto do
+       arquivo. Imagem (JPG/PNG) é só a capa. */
+    async function prepararFonte(destino, arquivo, provaInteira) {
         const tipo = String(arquivo.tipo || '').toLowerCase();
 
         if (tipo === 'pdf') {
@@ -501,7 +503,11 @@
 
             const capa = await prepararPaginaPdf(destino, origem, 0);
             capa.paginas = origem.getPageCount();
-            capa.verso = origem.getPageCount() > 1 ? await prepararPaginaPdf(destino, origem, 1) : null;
+            /* Cada página é incorporada uma vez só e desenhada em todas as
+               vias: o arquivo não cresce página a página com a turma. */
+            const ultima = provaInteira ? origem.getPageCount() : Math.min(2, origem.getPageCount());
+            capa.seguintes = [];
+            for (let i = 1; i < ultima; i++) capa.seguintes.push(await prepararPaginaPdf(destino, origem, i));
             return capa;
         }
 
@@ -514,6 +520,7 @@
                 altura: A4[1],
                 paginas: 1,
                 imagem: true,
+                seguintes: [],
                 desenhar: function (folha, area) {
                     const escala = Math.min(area.largura / imagem.width, area.altura / imagem.height);
                     folha.drawImage(imagem, {
@@ -540,8 +547,8 @@
         };
     }
 
-    /* Uma via por aluno: a capa com o cabeçalho de identificação e, se a prova
-       enviada tiver, o verso logo atrás, sem cabeçalho. */
+    /* Uma via por aluno: a capa com o cabeçalho de identificação e, logo
+       atrás, sem cabeçalho, o verso ou (com `provaInteira`) o resto da prova. */
     async function montarPrimeirasPaginas(opcoes) {
         const provas = opcoes.identificacoes || [];
         if (!provas.length) throw new Error('Nenhum aluno para identificar.');
@@ -549,7 +556,7 @@
         const cabecalho = opcoes.cabecalho || {};
         const destino = await PDFDocument.create();
         const fontes = await carregarFontes(destino, opcoes.logo);
-        const fonte = await prepararFonte(destino, opcoes.arquivo);
+        const fonte = await prepararFonte(destino, opcoes.arquivo, opcoes.provaInteira);
 
         /* Espaço aberto no topo: a prova desce e encolhe o necessário. Em zero
            — o caso normal, quando o professor já deixou a faixa em branco na
@@ -594,13 +601,20 @@
                 ladoLogoCm: 1.9
             });
 
-            /* O verso vem logo atrás da capa, do jeito que foi enviado e sem
-               cabeçalho: impresso frente e verso, cada aluno fica com uma folha. */
-            if (fonte.verso) {
-                const verso = destino.addPage([fonte.verso.largura, fonte.verso.altura]);
-                fonte.verso.desenhar(verso, {
-                    x: 0, y: 0, largura: fonte.verso.largura, altura: fonte.verso.altura, alinhar: 'centro'
+            /* As páginas seguintes vêm logo atrás da capa, do jeito que foram
+               enviadas e sem cabeçalho. */
+            fonte.seguintes.forEach(function (seguinte) {
+                const folhaSeguinte = destino.addPage([seguinte.largura, seguinte.altura]);
+                seguinte.desenhar(folhaSeguinte, {
+                    x: 0, y: 0, largura: seguinte.largura, altura: seguinte.altura, alinhar: 'centro'
                 });
+            });
+
+            /* Prova inteira com número ímpar de páginas: uma página em branco
+               no fim, para que, impresso frente e verso, a capa do aluno
+               seguinte não saia no verso da última folha deste. */
+            if (opcoes.provaInteira && fonte.seguintes.length % 2 === 0 && fonte.seguintes.length > 0) {
+                destino.addPage([fonte.largura, fonte.altura]);
             }
             if (opcoes.aoProgresso) opcoes.aoProgresso(i + 1, provas.length);
         }

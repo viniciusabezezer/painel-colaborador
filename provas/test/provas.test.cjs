@@ -490,3 +490,26 @@ test('a prova traz os quadros de acertos e pontos, menos a Redação e a etiquet
     assert.ok(!textos('RED', { incluirCorrecao: true }).includes('ACERTOS'), 'Redação fica sem');
     assert.ok(!textos('MAT', {}).includes('ACERTOS'), 'etiqueta fica sem');
 });
+
+test('a prova inteira leva todas as páginas, com página em branco quando o total é ímpar', async () => {
+    async function provaDe(paginas) {
+        const original = await global.PDFLib.PDFDocument.create();
+        for (let i = 0; i < paginas; i++) {
+            original.addPage([21 * pdf.CM, 29.7 * pdf.CM]).drawText('PAGINA ' + (i + 1), { x: 60, y: 400, size: 11 });
+        }
+        return original.save();
+    }
+    const provas = identificacao.identificarTurma({
+        ano: '2026', bimestre: 'B3', turma: '1A', componente: 'MAT', chave: CHAVE, alunos: ['Ana', 'Bruno']
+    });
+    async function contar(paginas, provaInteira) {
+        const gerado = await pdf.montarPrimeirasPaginas({
+            arquivo: { bytes: await provaDe(paginas), tipo: 'pdf' },
+            identificacoes: provas, cabecalho: {}, provaInteira: provaInteira
+        });
+        return (await global.PDFLib.PDFDocument.load(gerado)).getPageCount();
+    }
+    assert.equal(await contar(5, false), 4, 'só capa e verso: duas por aluno');
+    assert.equal(await contar(4, true), 8, 'quatro páginas por aluno');
+    assert.equal(await contar(5, true), 12, 'cinco páginas e uma em branco por aluno');
+});
