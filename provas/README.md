@@ -42,8 +42,10 @@ sair.
    numerada, é **esse** número que vale: é o mesmo que o aluno preenche em
    “Núm. da lista” na folha de respostas. Sem numeração, a ordem alfabética
    manda — e aí a mesma turma gera sempre os mesmos códigos.
-3. **As provas** — as **duas primeiras páginas** de cada prova (capa e verso),
-   uma por série e componente, em PDF. JPG ou PNG servem, mas aí sai só a capa.
+3. **As provas** — cada prova em PDF, uma por série e componente, e a escolha
+   do que cada aluno recebe: **só a capa e o verso** (as duas primeiras
+   páginas; o resto sai no xerox em massa) ou **a prova inteira**, pronta para
+   imprimir completa. JPG ou PNG servem, mas aí sai só a capa.
 4. **O cabeçalho de identificação** — clica-se na prévia da própria prova para
    encostar ali o canto de cima do cabeçalho, e ajusta-se largura e altura até
    o retângulo cobrir a faixa deixada em branco.
@@ -52,11 +54,13 @@ sair.
 ## O que sai no fim
 
 - **Provas identificadas** (`PROVA-2026-B3-1A-LIN.pdf`): para cada aluno, na
-  ordem da chamada, a capa com o cabeçalho e o verso logo atrás, sem
-  cabeçalho. Impresso frente e verso, cada aluno fica com uma folha. O resto
-  da prova continua saindo no xerox em massa.
+  ordem da chamada, a capa com o cabeçalho e, logo atrás, sem cabeçalho, o
+  verso ou o resto da prova, conforme a escolha do passo 3. Impresso frente e
+  verso, cada aluno fica com as suas folhas. Na prova inteira com número
+  ímpar de páginas entra uma página em branco no fim de cada aluno, para a
+  capa do seguinte não cair no verso da última folha.
 - **Prova reserva** (`PROVA-RESERVA-2026-B3-1A-LIN.pdf`): uma por turma e
-  componente, com capa e verso, sem identificação: o cabeçalho traz o logo, a
+  componente, com as mesmas páginas das identificadas, sem identificação: o cabeçalho traz o logo, a
   avaliação, a série e a turma, e linhas em branco para o nome e o número, sem
   QR nem código. É para substituir a prova de alguém na hora da aplicação.
 - **Folha de conferência** (PDF e CSV): a lista que liga cada código ao aluno,

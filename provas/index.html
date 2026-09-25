@@ -81,7 +81,21 @@
 
         <fieldset class="passo">
             <legend><span class="num">3</span> As provas</legend>
-            <p class="dica">Uma prova por série e componente, com as <strong>duas primeiras páginas</strong>: a capa, que recebe o cabeçalho, e o verso, que sai atrás dela sem cabeçalho, para imprimir frente e verso. Em PDF (recomendado); se vier em JPG ou PNG, sai só a capa. Se a prova está no Word, abra e use <em>Arquivo → Salvar como → PDF</em>; o Word não pode ser lido direto aqui sem estragar o desenho da página.</p>
+            <p class="dica">Uma prova por série e componente, em PDF (recomendado): a primeira página é a capa, que recebe o cabeçalho, e as outras saem atrás dela sem cabeçalho, para imprimir frente e verso. Se vier em JPG ou PNG, sai só a capa. Se a prova está no Word, abra e use <em>Arquivo → Salvar como → PDF</em>; o Word não pode ser lido direto aqui sem estragar o desenho da página.</p>
+
+            <div class="modelos" id="paginas-prova">
+                <label class="modelo">
+                    <input type="radio" name="paginas" value="capa-verso" checked>
+                    <span class="modelo-titulo">Só a capa e o verso</span>
+                    <span class="modelo-texto">Cada aluno recebe as duas primeiras páginas, com o cabeçalho na capa. O resto da prova sai no xerox em massa.</span>
+                </label>
+                <label class="modelo">
+                    <input type="radio" name="paginas" value="inteira">
+                    <span class="modelo-titulo">A prova inteira</span>
+                    <span class="modelo-texto">Cada aluno recebe todas as páginas do PDF enviado, com o cabeçalho na capa: o arquivo sai pronto para imprimir a prova completa.</span>
+                </label>
+            </div>
+
             <div id="slots" class="slots"></div>
         </fieldset>
 
@@ -192,8 +206,8 @@
 
             <h3>O que sai no fim</h3>
             <ul>
-                <li><strong>As provas identificadas</strong>: um PDF por turma e componente com, para cada aluno, a capa com o cabeçalho e o verso logo atrás. Imprima frente e verso: cada aluno fica com uma folha. O restante da prova continua saindo no xerox em massa.</li>
-                <li><strong>A prova reserva</strong>: uma prova por turma e componente, com capa e verso, sem nome, sem QR e sem código, com espaço para escrever à mão o nome e o número. Serve para substituir a prova de alguém na hora da aplicação.</li>
+                <li><strong>As provas identificadas</strong>: um PDF por turma e componente com, para cada aluno, a capa com o cabeçalho e, logo atrás, o verso ou a prova inteira, conforme a escolha do passo 3. Imprima frente e verso. Na prova inteira com número ímpar de páginas, entra uma página em branco no fim de cada aluno, para a capa do seguinte não cair no verso da última folha.</li>
+                <li><strong>A prova reserva</strong>: uma prova por turma e componente, com as mesmas páginas das identificadas, sem nome, sem QR e sem código, com espaço para escrever à mão o nome e o número. Serve para substituir a prova de alguém na hora da aplicação.</li>
                 <li><strong>A folha de conferência</strong>: a lista que liga cada código ao aluno, em PDF para imprimir e em CSV para abrir no Excel. Guarde: é o que permite saber de quem é uma prova pelo código.</li>
                 <li><strong>As etiquetas</strong>: a mesma identificação em grade, para recortar e colar quando a prova for impressa direto do Word.</li>
             </ul>

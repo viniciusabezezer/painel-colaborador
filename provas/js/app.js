@@ -312,6 +312,8 @@
 
     function aoTrocarModelo() {
         const atual = modelo();
+        /* Etiqueta não usa a prova enviada: a escolha das páginas sai de cena. */
+        $('paginas-prova').hidden = atual === 'etiquetas';
         $('opcoes-cabecalho').hidden = atual === 'etiquetas';
         document.querySelector('.previa').hidden = atual === 'etiquetas';
 
@@ -361,8 +363,10 @@
            dois, senão a prova fica sem identificação nenhuma. */
         if (!cabecalho.incluirQr) cabecalho.incluirCodigo = true;
 
+        const paginas = document.querySelector('input[name="paginas"]:checked');
         return {
             cabecalho: cabecalho,
+            provaInteira: !!paginas && paginas.value === 'inteira',
             espacoTopoCm: atual === 'abrir-espaco' ? cabecalho.alturaCm + cabecalho.yCm + 0.4 : 0
         };
     }
@@ -522,6 +526,7 @@
                 identificacoes: provas,
                 cabecalho: configuracao.cabecalho,
                 espacoTopoCm: configuracao.espacoTopoCm,
+                provaInteira: configuracao.provaInteira,
                 serieNome: (Identificacao.serie(serie) || {}).nome,
                 avaliacao: $('avaliacao').value,
                 logo: await bytesDoLogo()
@@ -620,7 +625,7 @@
                     });
                 } else {
                     pacote.arquivos.push({
-                        rotulo: 'Provas identificadas, capa e verso (PDF)',
+                        rotulo: 'Provas identificadas, ' + (configuracao.provaInteira ? 'prova inteira' : 'capa e verso') + ' (PDF)',
                         nome: Saida.nomeArquivo('PROVA', dados, 'pdf'),
                         tipo: 'application/pdf',
                         bytes: await Pdf.montarPrimeirasPaginas({
@@ -628,6 +633,7 @@
                             identificacoes: provas,
                             cabecalho: configuracao.cabecalho,
                             espacoTopoCm: configuracao.espacoTopoCm,
+                            provaInteira: configuracao.provaInteira,
                             serieNome: serieNome,
                             tituloArquivo: subtitulo,
                             avaliacao: $('avaliacao').value,
@@ -644,6 +650,7 @@
                             componente: tarefa.componente.codigo,
                             cabecalho: configuracao.cabecalho,
                             espacoTopoCm: configuracao.espacoTopoCm,
+                            provaInteira: configuracao.provaInteira,
                             serieNome: serieNome,
                             tituloArquivo: 'Prova reserva · ' + subtitulo,
                             avaliacao: $('avaliacao').value,

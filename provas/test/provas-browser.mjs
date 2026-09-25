@@ -162,7 +162,7 @@ try {
 
     const csv = await Promise.all([
         pagina.waitForEvent('download'),
-        pagina.click('.resultado >> nth=0 >> button >> nth=2')
+        pagina.click('.resultado >> nth=0 >> button >> nth=3')
     ]);
     const caminhoCsv = join(SAIDA, 'CONFERENCIA-1A.csv');
     await csv[0].saveAs(caminhoCsv);
