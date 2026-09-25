@@ -56,8 +56,9 @@ sair.
 - **Provas identificadas** (`PROVA-2026-B3-1A-LIN.pdf`): para cada aluno, na
   ordem da chamada, a capa com o cabeçalho e, logo atrás, sem cabeçalho, o
   verso ou o resto da prova, conforme a escolha do passo 3. Impresso frente e
-  verso, cada aluno fica com as suas folhas. Na prova inteira com número
-  ímpar de páginas entra uma página em branco no fim de cada aluno, para a
+  verso, cada aluno fica com as suas folhas. Sempre que a prova tiver
+  número ímpar de páginas (inclusive uma só) entra uma página em branco no
+  fim de cada aluno, para a
   capa do seguinte não cair no verso da última folha.
 - **Prova reserva** (`PROVA-RESERVA-2026-B3-1A-LIN.pdf`): uma por turma e
   componente, com as mesmas páginas das identificadas, sem identificação: o cabeçalho traz o logo, a

@@ -234,7 +234,7 @@ test('o nome do arquivo identifica a turma e o componente', () => {
 
 /* ===== geração do PDF ===== */
 
-test('sai uma página por aluno, com o tamanho da folha original', async () => {
+test('prova de uma página: capa e uma página em branco por aluno, com o tamanho da folha original', async () => {
     const original = await global.PDFLib.PDFDocument.create();
     const folha = original.addPage([21 * pdf.CM, 29.7 * pdf.CM]);
     folha.drawText('ALUNO (A):', { x: 60, y: 760, size: 11 });
@@ -253,7 +253,10 @@ test('sai uma página por aluno, com o tamanho da folha original', async () => {
     });
 
     const conferido = await global.PDFLib.PDFDocument.load(gerado);
-    assert.equal(conferido.getPageCount(), 3);
+    /* Uma página só é número ímpar: cada capa ganha uma página em branco
+       atrás, para a capa seguinte não cair no verso na impressão frente e verso. */
+    assert.equal(conferido.getPageCount(), 6);
+    [1, 3, 5].forEach((i) => assert.ok(!conferido.getPage(i).node.Contents(), 'a página ' + (i + 1) + ' sai em branco'));
     const tamanho = conferido.getPage(0).getSize();
     assert.ok(Math.abs(tamanho.width - 21 * pdf.CM) < 0.5);
     assert.ok(Math.abs(tamanho.height - 29.7 * pdf.CM) < 0.5);
@@ -457,7 +460,7 @@ test('folha em branco não derruba a geração: sai só a identificação', asyn
 
     const gerado = await pdf.montarPrimeirasPaginas({ arquivo: { bytes: bytes, tipo: 'pdf' }, identificacoes: provas });
     const documento = await global.PDFLib.PDFDocument.load(gerado);
-    assert.equal(documento.getPageCount(), 1);
+    assert.equal(documento.getPageCount(), 2, 'a capa e a página em branco do verso');
 });
 
 test('arquivo que não é prova nenhuma dá recado claro', async () => {
@@ -516,4 +519,7 @@ test('a prova inteira leva todas as páginas, com página em branco quando o tot
     assert.equal(await contar(5, false), 4, 'só capa e verso: duas por aluno');
     assert.equal(await contar(4, true), 8, 'quatro páginas por aluno');
     assert.equal(await contar(5, true), 12, 'cinco páginas e uma em branco por aluno');
+    assert.equal(await contar(3, true), 8, 'três páginas e uma em branco por aluno');
+    assert.equal(await contar(1, true), 4, 'prova inteira de uma página: capa e uma em branco');
+    assert.equal(await contar(1, false), 4, 'capa e verso com PDF de uma página: capa e uma em branco');
 });

@@ -603,11 +603,13 @@
                 });
             });
 
-            /* Prova inteira com número ímpar de páginas: uma página em branco
-               no fim, para que, impresso frente e verso, a capa do aluno
+            /* Número ímpar de páginas por aluno (a capa mais as seguintes),
+               em qualquer modo, inclusive prova de uma página só: uma página em
+               branco no fim, para que, impresso frente e verso, a capa do aluno
                seguinte não saia no verso da última folha deste. */
-            if (opcoes.provaInteira && fonte.seguintes.length % 2 === 0 && fonte.seguintes.length > 0) {
-                destino.addPage([fonte.largura, fonte.altura]);
+            if ((1 + fonte.seguintes.length) % 2 === 1) {
+                const ultima = fonte.seguintes.length ? fonte.seguintes[fonte.seguintes.length - 1] : fonte;
+                destino.addPage([ultima.largura, ultima.altura]);
             }
             if (opcoes.aoProgresso) opcoes.aoProgresso(i + 1, provas.length);
         }
