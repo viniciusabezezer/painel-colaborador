@@ -467,3 +467,26 @@ test('arquivo que não é prova nenhuma dá recado claro', async () => {
         /formato não reconhecido/i
     );
 });
+
+test('a prova traz os quadros de acertos e pontos, menos a Redação e a etiqueta', () => {
+    /* Página e fontes de mentirinha, que só anotam o que foi escrito. */
+    const fonte = { widthOfTextAtSize: (texto, tamanho) => String(texto).length * tamanho * 0.5 };
+    const fontes = { normal: fonte, negrito: fonte, mono: fonte, logo: null };
+    const caixa = { x: 28, y: 700, largura: 19 * pdf.CM, altura: 2.8 * pdf.CM };
+    function textos(componente, opcoes) {
+        const escritos = [];
+        const pagina = {
+            drawText: (texto) => escritos.push(texto),
+            drawRectangle: () => {}, drawLine: () => {}, drawImage: () => {}
+        };
+        const prova = identificacao.identificar({ ano: '2026', bimestre: 'B3', turma: '1A', numero: 3, componente: componente, nome: 'Ana', chave: CHAVE });
+        pdf.desenharCabecalho(pagina, fontes, prova, caixa, opcoes);
+        return escritos;
+    }
+    ['LIN', 'NAT', 'HUM', 'MAT'].forEach(function (componente) {
+        const escritos = textos(componente, { incluirCorrecao: true });
+        assert.ok(escritos.includes('ACERTOS') && escritos.includes('PONTOS'), componente);
+    });
+    assert.ok(!textos('RED', { incluirCorrecao: true }).includes('ACERTOS'), 'Redação fica sem');
+    assert.ok(!textos('MAT', {}).includes('ACERTOS'), 'etiqueta fica sem');
+});
