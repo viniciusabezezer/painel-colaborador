@@ -641,6 +641,7 @@
                         bytes: await Pdf.montarProvaGenerica({
                             arquivo: estado.arquivos[tarefa.chave],
                             turma: tarefa.turma.turma,
+                            componente: tarefa.componente.codigo,
                             cabecalho: configuracao.cabecalho,
                             espacoTopoCm: configuracao.espacoTopoCm,
                             serieNome: serieNome,

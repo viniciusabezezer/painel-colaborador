@@ -6,7 +6,8 @@
    O cabeçalho é a única identificação da prova: leva o logotipo da escola, o
    nome da avaliação, o espaço para o aluno escrever a data, o nome do aluno,
    a série, a turma, o número da lista, o código único e o QR Code encaixado
-   nele.
+   nele. Fora da Redação, leva também os quadros de ACERTOS e PONTOS para o
+   professor preencher na correção.
 
    Duas saídas:
      montarPrimeirasPaginas — o cabeçalho colado na primeira página;
@@ -134,18 +135,40 @@
         });
     }
 
+    /* Dois quadros empilhados, com o rótulo pequeno no canto de cima e o resto
+       livre para o professor escrever à mão. */
+    function desenharQuadrosCorrecao(pagina, fontes, area, escala) {
+        const vao = 3 * escala;
+        const alturaQuadro = (area.altura - vao) / 2;
+        const tamanhoRotulo = Math.min(6.2 * escala, alturaQuadro * 0.3);
+        ['ACERTOS', 'PONTOS'].forEach(function (rotulo, i) {
+            const y = area.y + area.altura - (i + 1) * alturaQuadro - i * vao;
+            pagina.drawRectangle({
+                x: area.x, y: y, width: area.largura, height: alturaQuadro,
+                borderColor: PRETO, borderWidth: 0.6
+            });
+            pagina.drawText(rotulo, {
+                x: area.x + 2.5 * escala, y: y + alturaQuadro - tamanhoRotulo - 2 * escala,
+                size: tamanhoRotulo, font: fontes.normal, color: CINZA
+            });
+        });
+    }
+
     /* O CABEÇALHO DE IDENTIFICAÇÃO.
 
-       ┌──────┬────────────────────────────────────────┬──────┐
-       │ ╭──╮ │ AVALIAÇÃO BIMESTRAL DE LINGUAGENS      │ ▓▓▓▓ │
-       │ LOGO │ ALUNO(A)                DATA: __/__/__ │ ▓QR▓ │
-       │      │ JOSÉ ÍTALO GONÇALVES DA CONCEIÇÃO      │ ▓▓▓▓ │
-       │ ╰──╯ │ 1ª SÉRIE · TURMA 1A · Nº 03  MLS-...   │ ▓▓▓▓ │
-       └──────┴────────────────────────────────────────┴──────┘
+       ┌──────┬────────────────────────────────────────┬─────────┬──────┐
+       │ ╭──╮ │ AVALIAÇÃO BIMESTRAL DE LINGUAGENS      │ ACERTOS │ ▓▓▓▓ │
+       │ LOGO │ ALUNO(A)                DATA: __/__/__ │         │ ▓QR▓ │
+       │      │ JOSÉ ÍTALO GONÇALVES DA CONCEIÇÃO      ├─────────┤ ▓▓▓▓ │
+       │ ╰──╯ │ 1ª SÉRIE · TURMA 1A · Nº 03  MLS-...   │ PONTOS  │ ▓▓▓▓ │
+       └──────┴────────────────────────────────────────┴─────────┴──────┘
 
        O nome é o maior elemento, porque é ele que impede a prova de rodar de
        carteira em carteira. O QR e o logotipo ficam encaixados na altura do
-       bloco, cada um de um lado. */
+       bloco, cada um de um lado. Os quadros de ACERTOS e PONTOS só saem na
+       prova (não na etiqueta) e nunca na Redação. Na prova, o QR e o logotipo
+       ficam um pouco menores e o nome vai sempre numa linha só, encolhendo a
+       letra se for preciso. */
     function desenharCabecalho(pagina, fontes, prova, caixa, opcoes) {
         const escala = caixa.escala || 1;
         const incluirQr = opcoes.incluirQr !== false;
@@ -164,6 +187,7 @@
         let ladoQr = 0;
         if (incluirQr) {
             ladoQr = Math.max(0, Math.min(caixa.altura - recuo * 2, caixa.largura * 0.34));
+            if (opcoes.ladoQrCm) ladoQr = Math.min(ladoQr, opcoes.ladoQrCm * CM * escala);
             const xQr = opcoes.qrNaEsquerda
                 ? caixa.x + recuo
                 : caixa.x + caixa.largura - ladoQr - recuo;
@@ -176,7 +200,8 @@
         if (fontes.logo && opcoes.incluirLogo !== false) {
             const alturaUtil = caixa.altura - recuo * 2;
             const proporcao = fontes.logo.width / fontes.logo.height;
-            const alturaLogo = Math.max(0, Math.min(alturaUtil, (caixa.largura * 0.2) / proporcao));
+            let alturaLogo = Math.max(0, Math.min(alturaUtil, (caixa.largura * 0.2) / proporcao));
+            if (opcoes.ladoLogoCm) alturaLogo = Math.min(alturaLogo, (opcoes.ladoLogoCm * CM * escala) / proporcao);
             ladoLogo = alturaLogo * proporcao;
             const xLogo = opcoes.qrNaEsquerda
                 ? caixa.x + caixa.largura - ladoLogo - recuo
@@ -188,14 +213,30 @@
         }
 
         const ladoEsquerdo = opcoes.qrNaEsquerda ? ladoQr : ladoLogo;
-        const tx = caixa.x + (ladoEsquerdo ? ladoEsquerdo + recuo * 2.4 : recuo * 2);
-        const largura = caixa.largura - ladoQr - ladoLogo - recuo * 4.4 - (ladoQr && ladoLogo ? recuo * 1.4 : 0);
+        let tx = caixa.x + (ladoEsquerdo ? ladoEsquerdo + recuo * 2.4 : recuo * 2);
+        let largura = caixa.largura - ladoQr - ladoLogo - recuo * 4.4 - (ladoQr && ladoLogo ? recuo * 1.4 : 0);
+
+        /* Quadros da correção: ACERTOS e PONTOS, empilhados entre o texto e o
+           QR, para o professor preencher. A Redação não leva, porque é
+           corrigida por competências. */
+        if (opcoes.incluirCorrecao && prova.componente !== 'RED') {
+            const larguraQuadros = Math.min(1.7 * CM * escala, caixa.largura * 0.12);
+            const folga = recuo * 1.4;
+            if (largura - larguraQuadros - folga > 10) {
+                largura -= larguraQuadros + folga;
+                if (opcoes.qrNaEsquerda) tx += larguraQuadros + folga;
+                const xQuadros = opcoes.qrNaEsquerda ? tx - folga - larguraQuadros : tx + largura + folga;
+                desenharQuadrosCorrecao(pagina, fontes, {
+                    x: xQuadros, y: caixa.y + recuo, largura: larguraQuadros, altura: caixa.altura - recuo * 2
+                }, escala);
+            }
+        }
         if (largura <= 10) return;
 
         const linhas = [];
 
         const corpoNome = (opcoes.corpoNome || 15) * escala;
-        const nome = encaixarNome(fontes.negrito, textoSeguro(prova.nome), corpoNome, largura, 2, 6 * escala);
+        const nome = encaixarNome(fontes.negrito, textoSeguro(prova.nome), corpoNome, largura, opcoes.nomeEmUmaLinha ? 1 : 2, 6 * escala);
 
         /* Linha de cima: o nome da avaliação, que a coordenação escreve no
            passo 1. Sai grande, só um pouco menor que o nome do aluno; se não
@@ -546,7 +587,11 @@
                 rotulo: cabecalho.rotulo,
                 corpoNome: cabecalho.corpoNome,
                 serieNome: opcoes.serieNome,
-                avaliacao: opcoes.avaliacao
+                avaliacao: opcoes.avaliacao,
+                incluirCorrecao: true,
+                nomeEmUmaLinha: true,
+                ladoQrCm: 2,
+                ladoLogoCm: 1.9
             });
 
             /* O verso vem logo atrás da capa, do jeito que foi enviado e sem
@@ -569,7 +614,10 @@
        (folha rasgada, aluno fora da lista) na hora da aplicação. */
     function montarProvaGenerica(opcoes) {
         const cabecalho = Object.assign({}, opcoes.cabecalho || {}, { incluirQr: false, incluirCodigo: false });
-        const generica = { generica: true, nome: '', turma: opcoes.turma || '________', numeroCurto: '______', id: '' };
+        const generica = {
+            generica: true, nome: '', turma: opcoes.turma || '________', numeroCurto: '______', id: '',
+            componente: opcoes.componente
+        };
         return montarPrimeirasPaginas(Object.assign({}, opcoes, { cabecalho: cabecalho, identificacoes: [generica] }));
     }
 
