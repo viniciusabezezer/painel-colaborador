@@ -573,8 +573,8 @@
         };
 
         destino.setTitle(textoSeguro(opcoes.tituloArquivo || 'Provas identificadas'));
-        destino.setCreator('Provas Identificadas — Painel do Colaborador');
-        destino.setProducer('Provas Identificadas — Painel do Colaborador');
+        destino.setCreator('Identificador de Provas da Malu — Painel do Colaborador');
+        destino.setProducer('Identificador de Provas da Malu — Painel do Colaborador');
 
         for (let i = 0; i < provas.length; i++) {
             const folha = destino.addPage([fonte.largura, fonte.altura]);

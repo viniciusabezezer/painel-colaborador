@@ -1,4 +1,4 @@
-# Provas Identificadas
+# Identificador de Provas da Malu
 
 Ferramenta para a coordenação **identificar cada prova bimestral com o aluno**:
 o app cola na faixa em branco do alto da primeira página um **cabeçalho de
@@ -29,9 +29,10 @@ link quando o endereço é a raiz. O logo é uma cópia própria em `provas/logo
 não depender de arquivo de fora.
 
 Roda inteiro dentro do navegador: o PDF enviado, os nomes colados e os arquivos
-gerados **não saem do computador** e não ficam guardados em lugar nenhum. Ao
-fechar a aba, tudo desaparece — por isso baixe a folha de conferência antes de
-sair.
+gerados **não saem do computador**. A lista colada some ao fechar a aba; os
+**60 últimos arquivos gerados** ficam guardados no próprio navegador
+(IndexedDB, `js/historico.js`), na aba *Arquivos recentes*, para baixar de novo.
+Quando entra um novo, o mais antigo sai; dá para apagar um a um ou todos.
 
 ## O caminho
 

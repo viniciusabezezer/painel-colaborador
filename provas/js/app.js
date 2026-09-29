@@ -1,7 +1,8 @@
-/* Provas Identificadas — a tela.
+/* Identificador de Provas da Malu — a tela.
    Junta a lista colada, os arquivos das provas e as opções de posição, e manda
-   o trabalho para os módulos de identificação e de PDF. Nada é gravado: os
-   nomes vivem só na memória desta aba, e ao fechar desaparecem. */
+   o trabalho para os módulos de identificação e de PDF. A lista colada vive só
+   na memória desta aba; os arquivos gerados (os 60 últimos) ficam guardados
+   neste navegador, na aba Arquivos recentes. */
 (function () {
     'use strict';
 
@@ -10,6 +11,7 @@
     const Pdf = window.ProvasPdf;
     const Saida = window.ProvasSaida;
     const Previa = window.ProvasPrevia;
+    const Historico = window.ProvasHistorico;
 
     const CM = Pdf.CM;
     const LARGURA_PREVIA = 440;
@@ -55,9 +57,10 @@
         Array.prototype.forEach.call(document.querySelectorAll('.aba'), function (aba) {
             aba.classList.toggle('ativa', aba === botao);
         });
-        ['gerar', 'conferir', 'ajuda'].forEach(function (nome) {
+        ['gerar', 'recentes', 'conferir', 'ajuda'].forEach(function (nome) {
             $('painel-' + nome).hidden = nome !== botao.dataset.aba;
         });
+        if (botao.dataset.aba === 'recentes') mostrarRecentes();
     });
 
     /* ===================== passo 2: a lista ===================== */
@@ -676,7 +679,10 @@
                 alvo.appendChild(cartaoDeResultado(pacote));
             }
 
-            estadoTexto.textContent = 'pronto: ' + tarefas.length + (tarefas.length === 1 ? ' arquivo gerado.' : ' conjuntos gerados.');
+            estadoTexto.textContent = 'guardando nos arquivos recentes…';
+            const guardou = await guardarNoHistorico(estado.resultados);
+            estadoTexto.textContent = 'pronto: ' + tarefas.length + (tarefas.length === 1 ? ' arquivo gerado.' : ' conjuntos gerados.') +
+                (guardou ? '' : ' (Não consegui guardar nos arquivos recentes: baixe agora.)');
             alvo.appendChild(barraDeTudo());
         } catch (erro) {
             estadoTexto.textContent = 'Parou no meio: ' + (erro.message || erro);
@@ -721,6 +727,78 @@
         caixa.appendChild(criar('span', 'contagem', 'O navegador pode pedir permissão para baixar vários arquivos.'));
         return caixa;
     }
+
+    /* ===================== arquivos recentes ===================== */
+
+    async function guardarNoHistorico(pacotes) {
+        if (!Historico) return false;
+        try {
+            for (const pacote of pacotes) await Historico.guardar(pacote.arquivos, pacote.titulo);
+            return true;
+        } catch (erro) {
+            return false;
+        }
+    }
+
+    function tamanhoLegivel(bytes) {
+        if (bytes >= 1048576) return (bytes / 1048576).toFixed(1).replace('.', ',') + ' MB';
+        return Math.max(1, Math.round(bytes / 1024)) + ' KB';
+    }
+
+    const formatoData = new Intl.DateTimeFormat('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+
+    async function mostrarRecentes() {
+        const alvo = $('lista-recentes');
+        const contagem = $('contagem-recentes');
+        const apagarTodos = $('apagar-recentes');
+        let itens;
+        try {
+            itens = await Historico.listar();
+        } catch (erro) {
+            limpar(alvo);
+            contagem.textContent = 'Este navegador não deixou guardar arquivos (janela anônima ou armazenamento bloqueado).';
+            apagarTodos.hidden = true;
+            return;
+        }
+        limpar(alvo);
+        apagarTodos.hidden = !itens.length;
+        contagem.textContent = itens.length
+            ? itens.length + ' de ' + Historico.LIMITE + ' arquivos guardados.'
+            : 'Nenhum arquivo guardado ainda. Os próximos que você gerar aparecem aqui.';
+
+        itens.forEach(function (item) {
+            const cartao = criar('div', 'resultado');
+            const titulo = criar('div', 'resultado-titulo', item.rotulo);
+            titulo.appendChild(criar('small', null, item.titulo));
+            titulo.appendChild(criar('small', null, item.nome + ' · ' + tamanhoLegivel(item.tamanho)));
+            cartao.appendChild(titulo);
+            cartao.appendChild(criar('span', 'resultado-quando', formatoData.format(new Date(item.criadoEm))));
+
+            const baixar = criar('button', 'btn btn--pequeno', 'Baixar');
+            baixar.type = 'button';
+            baixar.addEventListener('click', async function () {
+                const completo = await Historico.obter(item.id);
+                if (completo) Saida.baixar(completo.nome, completo.bytes, completo.tipo);
+                else mostrarRecentes();
+            });
+            cartao.appendChild(baixar);
+
+            const apagar = criar('button', 'btn btn--pequeno btn--apagar', 'Apagar');
+            apagar.type = 'button';
+            apagar.addEventListener('click', async function () {
+                await Historico.apagar(item.id);
+                mostrarRecentes();
+            });
+            cartao.appendChild(apagar);
+            alvo.appendChild(cartao);
+        });
+    }
+
+    $('apagar-recentes').addEventListener('click', async function () {
+        if (!confirm('Apagar todos os arquivos recentes deste navegador? Não dá para desfazer.')) return;
+        await Historico.apagarTudo();
+        mostrarRecentes();
+    });
 
     /* ===================== conferência ===================== */
 

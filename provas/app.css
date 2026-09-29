@@ -252,6 +252,9 @@ label small { font-weight: 400; font-size: 12px; color: var(--ink-soft); line-he
 .resultado-titulo { font-size: 14px; font-weight: 700; flex: 1 1 220px; }
 .resultado-titulo small { display: block; font-weight: 500; font-size: 12.5px; color: var(--ink-soft); }
 
+.resultado-quando { font-size: 12.5px; color: var(--ink-soft); white-space: nowrap; }
+.btn--apagar { color: #b42318; }
+
 .conferencia { margin-top: 14px; }
 
 .conferencia-cartao { border-radius: var(--radius-sm); padding: 14px 16px; font-size: 14.5px; }

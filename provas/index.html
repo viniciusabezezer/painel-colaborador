@@ -3,11 +3,11 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Provas Identificadas — EEMTI Prof. Maria Luiza Saboia</title>
+    <title>Identificador de Provas da Malu — EEMTI Prof. Maria Luiza Saboia</title>
     <meta name="description" content="Gera a primeira página de cada prova já identificada com o nome do aluno, a turma e um código único com QR Code. Funciona no navegador, sem internet e sem enviar nada para fora.">
     <meta name="robots" content="noindex">
     <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='24' fill='%23166534'/%3E%3Crect x='24' y='24' width='22' height='22' fill='white'/%3E%3Crect x='54' y='24' width='22' height='22' fill='white'/%3E%3Crect x='24' y='54' width='22' height='22' fill='white'/%3E%3Crect x='56' y='56' width='8' height='8' fill='white'/%3E%3Crect x='68' y='68' width='8' height='8' fill='white'/%3E%3C/svg%3E">
-    <link rel="stylesheet" href="app.css?v=1">
+    <link rel="stylesheet" href="app.css?v=2">
 </head>
 <body>
 
@@ -26,13 +26,14 @@
     <div class="masthead">
         <img src="logo.png" alt="Logo EEMTI Maria Luiza Saboia">
         <div>
-            <h1>Provas Identificadas</h1>
+            <h1>Identificador de Provas da Malu</h1>
             <p>Suba a primeira página da prova, cole a lista dos alunos e receba uma via por aluno, cada uma com o nome, a turma, o número da lista e um código único com QR Code. Nada sai deste navegador.</p>
         </div>
     </div>
 
     <nav class="abas" id="abas">
         <button type="button" class="aba ativa" data-aba="gerar">Gerar as provas</button>
+        <button type="button" class="aba" data-aba="recentes">Arquivos recentes</button>
         <button type="button" class="aba" data-aba="conferir">Conferir um código</button>
         <button type="button" class="aba" data-aba="ajuda">Como funciona</button>
     </nav>
@@ -179,6 +180,19 @@
         </fieldset>
     </section>
 
+    <!-- ===================== RECENTES ===================== -->
+    <section class="painel" id="painel-recentes" hidden>
+        <fieldset class="passo">
+            <legend>Arquivos recentes</legend>
+            <p class="dica">Os <strong>60 últimos arquivos</strong> gerados ficam guardados <strong>neste navegador, neste aparelho</strong>, para baixar de novo sem refazer tudo. Quando chega um novo, o mais antigo sai. Nada vai para a internet; em outro computador ou em janela anônima a lista não aparece.</p>
+            <div class="acoes-lista">
+                <span class="contagem" id="contagem-recentes"></span>
+                <button type="button" class="btn btn--pequeno" id="apagar-recentes" hidden>Apagar todos</button>
+            </div>
+            <div id="lista-recentes" class="resultados"></div>
+        </fieldset>
+    </section>
+
     <!-- ===================== CONFERIR ===================== -->
     <section class="painel" id="painel-conferir" hidden>
         <fieldset class="passo">
@@ -226,7 +240,7 @@
             <p>Como o cabeçalho traz nome, série, turma e número, o campo <code>ALUNO (A):</code> e o <code>SÉRIE / TURMA</code> do cabeçalho do professor podem sair — no lugar deles, deixe a faixa em branco de uns 3 cm no alto da folha.</p>
 
             <h3>Onde ficam os dados</h3>
-            <p>Em nenhum servidor. O PDF que você envia, os nomes que você cola e os arquivos gerados existem só na memória desta aba: ao fechar, tudo desaparece. Por isso baixe a folha de conferência antes de sair.</p>
+            <p>Em nenhum servidor. O PDF que você envia e os nomes que você cola existem só na memória desta aba. Os <strong>60 últimos arquivos gerados</strong> ficam guardados neste navegador, neste aparelho, na aba <em>Arquivos recentes</em>, e podem ser apagados lá a qualquer momento. Em computador compartilhado, apague ao terminar.</p>
         </fieldset>
     </section>
 
@@ -243,7 +257,8 @@
 <script src="js/qr.js"></script>
 <script src="js/pdf.js"></script>
 <script src="js/saida.js"></script>
+<script src="js/historico.js"></script>
 <script src="js/previa.js"></script>
-<script src="js/app.js?v=1"></script>
+<script src="js/app.js?v=2"></script>
 </body>
 </html>
