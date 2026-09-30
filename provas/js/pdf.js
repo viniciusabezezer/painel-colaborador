@@ -588,10 +588,14 @@
                 corpoNome: cabecalho.corpoNome,
                 serieNome: opcoes.serieNome,
                 avaliacao: opcoes.avaliacao,
-                incluirCorrecao: true,
+                /* A capa da prova leva os quadros de acertos e pontos e um QR
+                   de 2 cm; o gabarito, que é bem menor, pede outra medida e
+                   dispensa os quadros — por isso vêm do cabeçalho. */
+                incluirCorrecao: cabecalho.incluirCorrecao !== false,
+                incluirData: cabecalho.incluirData !== false,
                 nomeEmUmaLinha: true,
-                ladoQrCm: 2,
-                ladoLogoCm: 1.9
+                ladoQrCm: cabecalho.ladoQrCm || 2,
+                ladoLogoCm: cabecalho.ladoLogoCm || 1.9
             });
 
             /* As páginas seguintes vêm logo atrás da capa, do jeito que foram
