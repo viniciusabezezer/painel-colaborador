@@ -99,11 +99,11 @@ try {
     conferir((await pagina.textContent('#contagem-lote')).includes('7 alunos'), 'conta os 7 alunos colados');
 
     /* --- passo 3: os arquivos --- */
-    const slots = await pagina.$$('.slot-serie');
+    const slots = await pagina.$$('#slots .slot-serie');
     conferir(slots.length === 2, 'aparecem os espaços das duas séries presentes');
 
     const prova = join(APP, 'test', 'prova-exemplo.pdf');
-    await pagina.setInputFiles('.slot-serie >> nth=0 >> .slot >> nth=1 >> input[type=file]', prova);
+    await pagina.setInputFiles('#slots .slot-serie >> nth=0 >> .slot >> nth=1 >> input[type=file]', prova);
     await pagina.waitForSelector('.slot.cheio');
     conferir(await pagina.isVisible('#previa-canvas'), 'a prévia da página aparece na tela');
     await pagina.waitForFunction(() => document.getElementById('previa-canvas').width >= 400, null, { timeout: 20000 })
@@ -146,7 +146,10 @@ try {
     /* --- passo 5: gerar --- */
     await pagina.click('#gerar');
     await pagina.waitForFunction(() => document.getElementById('estado-geracao').textContent.startsWith('pronto'), null, { timeout: 60000 });
-    const cartoes = await pagina.$$eval('.resultado', (nos) => nos.map((n) => n.querySelector('.resultado-titulo').textContent));
+    const cartoes = await pagina.$$eval('#resultados .resultado', (nos) => nos.map((n) => n.querySelector('.resultado-titulo').textContent));
+    /* A faixa de códigos de cada turma, para conferir depois que o gabarito
+       daquela turma recebe exatamente os mesmos códigos da prova. */
+    const codigosDaProva = await pagina.$$eval('#resultados .resultado small', (nos) => nos.map((n) => n.textContent));
     conferir(cartoes.length === 2, 'gera um conjunto por turma da série da prova enviada');
     conferir(cartoes[0].includes('1A') && cartoes[1].includes('1B'), 'os conjuntos saem para 1A e 1B');
 
@@ -184,6 +187,55 @@ try {
     conferir(await pagina.isVisible('.conferencia-cartao.invalida'), 'o mesmo código com outro nome é recusado');
 
     conferir(erros.length === 0, 'nenhum erro de JavaScript no caminho todo' + (erros.length ? ': ' + erros.join(' | ') : ''));
+
+    /* --- aba opcional de gabaritos --- */
+    await pagina.click('.aba[data-aba="gabaritos"]');
+    conferir(await pagina.isVisible('#painel-gabaritos'), 'a aba de gabaritos abre');
+    const seriesGabarito = await pagina.$$('#slots-gabarito .slot-serie');
+    conferir(seriesGabarito.length === 2, 'os espaços de gabarito saem das mesmas séries da lista');
+
+    /* Sem arquivo nenhum, a aba não produz nada e diz o porquê. */
+    await pagina.click('#gerar-gabaritos');
+    conferir((await pagina.textContent('#estado-gabaritos')).includes('Envie o gabarito'),
+        'sem gabarito enviado, a aba avisa em vez de gerar');
+
+    await pagina.setInputFiles('#slots-gabarito .slot-serie >> nth=0 >> .slot >> nth=1 >> input[type=file]', prova);
+    await pagina.waitForSelector('#slots-gabarito .slot.cheio');
+
+    /* O mesmo arquivo serve aos cinco componentes da série. */
+    await pagina.click('#slots-gabarito .slot-serie >> nth=0 >> button:has-text("Usar nos outros")');
+    await pagina.waitForFunction(() => document.querySelectorAll('#slots-gabarito .slot-serie')[0].querySelectorAll('.slot.cheio').length === 5);
+    conferir(true, 'o botão repete o gabarito nos cinco componentes da série');
+
+    /* Volta a um componente só, para o teste não gerar dez conjuntos. */
+    await pagina.evaluate(() => {
+        document.querySelectorAll('#slots-gabarito .slot-serie')[0]
+            .querySelectorAll('.slot input[type=file]').forEach((entrada, i) => {
+                if (i !== 1) entrada.dispatchEvent(new Event('change', { bubbles: true }));
+            });
+    });
+    await pagina.waitForFunction(() => document.querySelectorAll('#slots-gabarito .slot-serie')[0].querySelectorAll('.slot.cheio').length === 1);
+
+    await pagina.click('#gerar-gabaritos');
+    await pagina.waitForFunction(() => document.getElementById('estado-gabaritos').textContent.startsWith('pronto'), null, { timeout: 60000 });
+    const cartoesGabarito = await pagina.$$eval('#resultados-gabaritos .resultado', (nos) => nos.map((n) => n.querySelector('.resultado-titulo').textContent));
+    conferir(cartoesGabarito.length === 2, 'sai um conjunto de gabaritos por turma da série');
+    conferir(cartoesGabarito.every((c) => c.startsWith('Gabarito ·')), 'os conjuntos vêm marcados como gabarito');
+
+    const codigosDoGabarito = await pagina.$$eval('#resultados-gabaritos .resultado small', (nos) => nos.map((n) => n.textContent));
+    conferir(codigosDoGabarito.length === codigosDaProva.length && codigosDoGabarito.every((c, i) => c === codigosDaProva[i]),
+        'o gabarito de cada turma leva os mesmos códigos da prova: ' + (codigosDoGabarito[0] || ''));
+
+    const gabarito = await Promise.all([
+        pagina.waitForEvent('download'),
+        pagina.click('#resultados-gabaritos .resultado >> nth=0 >> button >> nth=0')
+    ]);
+    const caminhoGabarito = join(SAIDA, 'GABARITO-1A.pdf');
+    await gabarito[0].saveAs(caminhoGabarito);
+    conferir(gabarito[0].suggestedFilename().startsWith('GABARITO-'), 'o arquivo baixa com nome de gabarito: ' + gabarito[0].suggestedFilename());
+    conferir((await readFile(caminhoGabarito)).length > 5000, 'e com conteúdo');
+
+    await pagina.click('.aba[data-aba="gerar"]');
 
     /* --- o mesmo app servido como site próprio (Root Directory = provas) --- */
     const servidorProprio = await servir(APP, PORTA + 1, 'index.html');

@@ -302,6 +302,52 @@ test('o cabeçalho escreve nome, série, turma, número e código — e nada do 
     assert.ok(!/SABOIA|BIMESTRE/i.test(escrito), 'não repete escola nem bimestre');
 });
 
+test('o cabeçalho do gabarito cabe num quarto de folha A4', async () => {
+    /* A folha do gabarito é A6 (10,5 x 14,85 cm): o bloco da capa da prova, de
+       19 cm, não serve, e os quadros de acertos e a data ficam de fora. */
+    const prova = identificacao.identificar({
+        ano: '2026', bimestre: 'B3', turma: '3A', numero: 1, componente: 'HUM',
+        nome: 'Ana Beatriz Lima de Souza', chave: CHAVE
+    });
+
+    const pagina = paginaDeTeste();
+    const caixa = { x: 0.5 * pdf.CM, y: 12 * pdf.CM, largura: 9.5 * pdf.CM, altura: 1.6 * pdf.CM };
+    pdf.desenharCabecalho(pagina, FONTES_DE_TESTE, prova, caixa, {
+        serieNome: '3ª SÉRIE', incluirCorrecao: false, incluirData: false, ladoQrCm: 1.35
+    });
+
+    const escrito = pagina.escrito();
+    assert.match(escrito, /ANA BEATRIZ LIMA DE SOUZA/);
+    assert.match(escrito, /TURMA 3A/);
+    assert.ok(escrito.includes(prova.id), 'o código sai no gabarito');
+    assert.ok(!/ACERTOS|PONTOS/.test(escrito), 'sem os quadros de acertos, que são da capa da prova');
+    assert.ok(!/DATA/.test(escrito), 'sem a linha de data, que não cabe numa folha pequena');
+
+    /* Nada do bloco pode passar da folha: é o que garante que ele não invada as
+       marcas de alinhamento do lado de fora. */
+    pagina.textos.forEach(function (texto) {
+        assert.ok(texto.x >= caixa.x - 1 && texto.x <= caixa.x + caixa.largura,
+            'o texto "' + texto.texto.slice(0, 20) + '" fica dentro do bloco');
+    });
+    pagina.retangulos.forEach(function (r) {
+        assert.ok(r.x >= caixa.x - 1 && r.x + r.width <= caixa.x + caixa.largura + 1, 'desenho dentro da largura do bloco');
+        assert.ok(r.y >= caixa.y - 1 && r.y + r.height <= caixa.y + caixa.altura + 1, 'desenho dentro da altura do bloco');
+    });
+});
+
+test('a mesma prova e o mesmo gabarito de um aluno levam o mesmo código', () => {
+    /* É o que faz a folha de respostas e a prova se cruzarem: as duas saem da
+       mesma chamada, com os mesmos dados. */
+    const dados = {
+        ano: '2026', bimestre: 'B3', turma: '3A', componente: 'HUM', chave: CHAVE,
+        alunos: [{ nome: 'Ana Beatriz', numero: 1 }, { nome: 'Bruno Dias', numero: 2 }]
+    };
+    const naProva = identificacao.identificarTurma(dados);
+    const noGabarito = identificacao.identificarTurma(dados);
+    assert.deepEqual(noGabarito.map((p) => p.id), naProva.map((p) => p.id));
+    assert.deepEqual(noGabarito.map((p) => p.conteudoQr), naProva.map((p) => p.conteudoQr));
+});
+
 test('o nome é o maior elemento do cabeçalho', () => {
     const prova = identificacao.identificar({ ano: '2026', bimestre: 'B3', turma: '1A', numero: 3, componente: 'LIN', nome: 'Ana Lima', chave: CHAVE });
     const pagina = paginaDeTeste();

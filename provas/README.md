@@ -125,6 +125,35 @@ Medidas em centímetros, contadas da borda superior esquerda, como se mede numa
 folha impressa. Se a prova tiver sido reduzida para abrir espaço, uma marca
 colada sobre ela passa pela mesma redução sozinha.
 
+## Gabaritos identificados (aba própria, opcional)
+
+Para quando a folha de respostas vem separada da prova. O gabarito recebe a
+**mesma identificação** da prova daquele aluno — inclusive o **mesmo código e o
+mesmo QR** —, de modo que as duas folhas se cruzem e nenhuma sirva para outro
+aluno. Sai uma via por aluno, com **todas as páginas** do arquivo enviado e o
+cabeçalho na primeira, mais um gabarito reserva sem identificação.
+
+A aba anda sozinha: dá para gerar gabaritos sem enviar prova nenhuma, e provas
+sem gabarito nenhum. A única coisa que ela toma emprestado da aba *Gerar as
+provas* é a **lista de alunos do passo 2**, que é de onde sai a identificação.
+
+O cabeçalho do gabarito tem **medidas próprias**, porque a folha de respostas
+costuma ser bem menor que a prova — um quarto de uma folha A4, por exemplo, onde
+o bloco de 19 cm da capa não caberia. Quando um arquivo é enviado, largura,
+altura e posição se ajustam sozinhas ao tamanho real da folha, até a coordenação
+mexer nelas. Nesse formato reduzido o cabeçalho dispensa os quadros de acertos e
+pontos e a linha da data, que são da capa da prova, e o QR encolhe junto com o
+bloco.
+
+O gabarito **nunca é redimensionado**: ele é copiado em tamanho original e o
+cabeçalho é sobreposto, para as marcas quadradas de alinhamento da leitura
+óptica ficarem exatamente onde estavam. Por isso vale conferir na prévia que o
+retângulo não cobre nenhuma marca nem as bolhas; não havendo espaço livre, o
+caminho é deixar uma faixa em branco no gabarito antes de subir o arquivo.
+
+Um botão em cada arquivo enviado repete aquele gabarito nos cinco componentes da
+série, que é o caso comum de uma folha de respostas servir para todas as provas.
+
 ## Prova no Word
 
 O app precisa da página já desenhada, e um `.docx` só ganha desenho quando o
@@ -155,8 +184,8 @@ leve. O SHA-256 é implementação própria em `js/sha256.js`, porque o
 ## Testes
 
 ```bash
-node --test provas/test/provas.test.cjs   # 28 verificações: código, lista, QR, posição e PDF
-node provas/test/provas-browser.mjs       # 25 verificações na tela, com Chromium
+node --test provas/test/provas.test.cjs   # 37 verificações: código, lista, QR, posição e PDF
+node provas/test/provas-browser.mjs       # 34 verificações na tela, com Chromium
 ```
 
 O teste de navegador precisa do `playwright` instalado (global serve), sobe um

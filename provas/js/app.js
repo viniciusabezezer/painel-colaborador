@@ -22,6 +22,10 @@
         arquivos: Object.create(null),
         /* componentes marcados no modelo de etiquetas */
         etiquetas: Object.create(null),
+        /* 'serie|COMPONENTE' -> arquivo do gabarito, quando a coordenação
+           quiser identificar também a folha de respostas separada */
+        gabaritos: Object.create(null),
+        previaGabarito: { chave: null, medidas: null, medidasTocadas: false },
         previa: { chave: null, medidas: null },
         resultados: []
     };
@@ -57,10 +61,11 @@
         Array.prototype.forEach.call(document.querySelectorAll('.aba'), function (aba) {
             aba.classList.toggle('ativa', aba === botao);
         });
-        ['gerar', 'recentes', 'conferir', 'ajuda'].forEach(function (nome) {
+        ['gerar', 'gabaritos', 'recentes', 'conferir', 'ajuda'].forEach(function (nome) {
             $('painel-' + nome).hidden = nome !== botao.dataset.aba;
         });
         if (botao.dataset.aba === 'recentes') mostrarRecentes();
+        if (botao.dataset.aba === 'gabaritos') montarSlotsDeGabarito();
     });
 
     /* ===================== passo 2: a lista ===================== */
@@ -81,6 +86,7 @@
         mostrarTurmas();
         mostrarAvisosDaLista();
         montarSlots();
+        montarSlotsDeGabarito();
         atualizarPrevia();
     }
 
@@ -305,6 +311,437 @@
         };
         leitor.readAsArrayBuffer(arquivo);
     }
+
+    /* ===================== aba: gabaritos identificados =====================
+
+       Opcional, para quando a folha de respostas vem separada da prova. Reaproveita
+       a lista de alunos do passo 2 e o cabeçalho do passo 4: o gabarito recebe a
+       mesma identificação da prova daquele aluno — inclusive o mesmo código —,
+       de modo que as duas folhas se cruzem. */
+
+    function montarSlotsDeGabarito() {
+        const alvo = $('slots-gabarito');
+        if (!alvo) return;
+        limpar(alvo);
+
+        const series = seriesPresentes();
+        if (!series.length) {
+            alvo.appendChild(criar('p', 'dica', 'Cole a lista dos alunos no passo 2, na aba Gerar as provas, e os espaços para enviar os gabaritos aparecem aqui.'));
+            return;
+        }
+
+        series.forEach(function (codigo) {
+            const serie = Identificacao.serie(codigo);
+            const bloco = criar('div', 'slot-serie');
+            bloco.appendChild(criar('h4', null, serie ? serie.nome : codigo + 'ª série'));
+            bloco.appendChild(criar('p', 'turmas-da-serie',
+                'Turmas: ' + turmasDaSerie(codigo).map(function (t) { return t.turma + ' (' + t.alunos.length + ')'; }).join(' · ')));
+
+            const grade = criar('div', 'slot-grade');
+            Identificacao.COMPONENTES.forEach(function (componente) {
+                grade.appendChild(slotDeGabarito(codigo, componente));
+            });
+            bloco.appendChild(grade);
+            alvo.appendChild(bloco);
+        });
+    }
+
+    function slotDeGabarito(serie, componente) {
+        const chave = chaveSlot(serie, componente.codigo);
+        const guardado = estado.gabaritos[chave];
+
+        const slot = criar('div', 'slot' + (guardado ? ' cheio' : ''));
+        slot.appendChild(criar('label', 'slot-nome', componente.nome));
+
+        const entrada = criar('input');
+        entrada.type = 'file';
+        entrada.accept = '.pdf,.jpg,.jpeg,.png,application/pdf,image/jpeg,image/png';
+        entrada.addEventListener('change', function () {
+            receberGabarito(chave, entrada.files[0], slot, serie);
+        });
+        slot.appendChild(entrada);
+
+        slot.appendChild(criar('small', 'slot-estado', guardado
+            ? guardado.nome + (guardado.paginas ? ' · ' + guardado.paginas + ' página(s)' : '')
+            : 'nenhum arquivo'));
+
+        /* Quase sempre a mesma folha de respostas serve para os cinco
+           componentes da série; sem isto, seria enviar o mesmo arquivo cinco
+           vezes. */
+        if (guardado) {
+            const repetir = criar('button', 'btn btn--pequeno', 'Usar nos outros componentes');
+            repetir.type = 'button';
+            repetir.addEventListener('click', function () {
+                Identificacao.COMPONENTES.forEach(function (outro) {
+                    estado.gabaritos[chaveSlot(serie, outro.codigo)] = guardado;
+                });
+                montarSlotsDeGabarito();
+                atualizarListaDePreviaGabarito();
+            });
+            slot.appendChild(repetir);
+        }
+        return slot;
+    }
+
+    function receberGabarito(chave, arquivo, slot, serie) {
+        const estadoTexto = slot.querySelector('.slot-estado');
+
+        if (!arquivo) {
+            delete estado.gabaritos[chave];
+            slot.classList.remove('cheio');
+            estadoTexto.textContent = 'nenhum arquivo';
+            return;
+        }
+
+        const extensao = (arquivo.name.split('.').pop() || '').toLowerCase();
+
+        if (extensao === 'docx' || extensao === 'doc' || extensao === 'odt') {
+            delete estado.gabaritos[chave];
+            slot.classList.remove('cheio');
+            estadoTexto.textContent = 'Word não dá: abra no Word e use Arquivo → Salvar como → PDF.';
+            return;
+        }
+        if (['pdf', 'jpg', 'jpeg', 'png'].indexOf(extensao) === -1) {
+            estadoTexto.textContent = 'Formato não aceito: use PDF, JPG ou PNG.';
+            return;
+        }
+
+        estadoTexto.textContent = 'lendo…';
+        const leitor = new FileReader();
+        leitor.onload = function () {
+            estado.gabaritos[chave] = {
+                nome: arquivo.name,
+                tipo: extensao === 'jpeg' ? 'jpg' : extensao,
+                bytes: new Uint8Array(leitor.result),
+                paginas: null
+            };
+            montarSlotsDeGabarito();
+            atualizarListaDePreviaGabarito();
+            if (!estado.previaGabarito.chave) $('previa-gabarito-arquivo').value = chave;
+            atualizarPreviaGabarito();
+        };
+        leitor.onerror = function () {
+            estadoTexto.textContent = 'Não consegui ler o arquivo.';
+        };
+        leitor.readAsArrayBuffer(arquivo);
+    }
+
+    /* O cabeçalho do gabarito tem geometria própria: num quarto de folha A4 não
+       cabe o bloco de 19 cm da capa da prova. O estilo (código legível, moldura,
+       rótulo) acompanha o do passo 4, para as duas folhas do aluno terem a mesma
+       cara; os quadros de acertos e pontos ficam de fora, porque são da capa. */
+    function montarConfiguracaoGabarito() {
+        const daProva = montarConfiguracao().cabecalho;
+        const altura = numero('gab-altura', 1.6);
+        return {
+            cabecalho: {
+                xCm: numero('gab-x', 0.5),
+                yCm: numero('gab-y', 0.3),
+                larguraCm: numero('gab-largura', 9.5),
+                alturaCm: altura,
+                incluirQr: $('gab-qr').value !== 'sem',
+                qrNaEsquerda: $('gab-qr').value === 'esquerda',
+                incluirCodigo: $('gab-qr').value === 'sem' ? true : daProva.incluirCodigo,
+                moldura: daProva.moldura,
+                rotulo: daProva.rotulo,
+                incluirCorrecao: false,
+                /* Numa folha pequena a linha da data só rouba espaço do nome. */
+                incluirData: false,
+                /* O QR e o logo encolhem junto com a altura do bloco. */
+                ladoQrCm: Math.max(0.9, Math.min(2, altura - 0.25)),
+                ladoLogoCm: Math.max(0.8, Math.min(1.9, altura - 0.3))
+            },
+            /* O gabarito nunca é redimensionado: as marcas de alinhamento da
+               leitura óptica têm de ficar onde estão. */
+            espacoTopoCm: 0
+        };
+    }
+
+    async function gerarGabaritos() {
+        const alvo = $('resultados-gabaritos');
+        const estadoTexto = $('estado-gabaritos');
+        limpar(alvo);
+        const resultados = [];
+
+        if (!estado.lote.turmas.length) {
+            estadoTexto.textContent = 'Falta colar a lista dos alunos no passo 2, na aba Gerar as provas.';
+            return;
+        }
+
+        const tarefas = [];
+        seriesPresentes().forEach(function (serie) {
+            Identificacao.COMPONENTES.forEach(function (componente) {
+                const chave = chaveSlot(serie, componente.codigo);
+                if (!estado.gabaritos[chave]) return;
+                turmasDaSerie(serie).forEach(function (turma) {
+                    tarefas.push({ serie: serie, componente: componente, turma: turma, chave: chave });
+                });
+            });
+        });
+
+        if (!tarefas.length) {
+            estadoTexto.textContent = 'Envie o gabarito de pelo menos um componente aqui em cima.';
+            return;
+        }
+
+        $('gerar-gabaritos').disabled = true;
+        const configuracao = montarConfiguracaoGabarito();
+
+        try {
+            for (let i = 0; i < tarefas.length; i++) {
+                const tarefa = tarefas[i];
+                estadoTexto.textContent = 'gerando ' + (i + 1) + ' de ' + tarefas.length +
+                    ' — ' + tarefa.turma.turma + ' · ' + tarefa.componente.nome + '…';
+                await new Promise(function (resolve) { setTimeout(resolve, 0); });
+
+                const serieNome = (Identificacao.serie(tarefa.serie) || {}).nome;
+                /* Mesma chamada da prova: o aluno recebe no gabarito o código
+                   que já está na prova dele. */
+                const provas = Identificacao.identificarTurma({
+                    ano: $('ano').value,
+                    bimestre: $('bimestre').value,
+                    turma: tarefa.turma.turma,
+                    componente: tarefa.componente.codigo,
+                    alunos: tarefa.turma.alunos,
+                    chave: $('chave').value
+                });
+
+                const dados = {
+                    ano: $('ano').value,
+                    bimestre: $('bimestre').value,
+                    turma: tarefa.turma.turma,
+                    componente: tarefa.componente.codigo,
+                    serieNome: serieNome
+                };
+                const nomeAvaliacao = $('avaliacao').value.trim();
+                const subtitulo = 'Gabarito · ' + (nomeAvaliacao ? nomeAvaliacao + ' · ' : '') + serieNome +
+                    ' · Turma ' + tarefa.turma.turma + ' · ' + tarefa.componente.nome +
+                    ' · ' + $('bimestre').value.replace('B', '') + 'º bimestre de ' + $('ano').value;
+
+                const pacote = { titulo: subtitulo, dados: dados, provas: provas, arquivos: [] };
+
+                pacote.arquivos.push({
+                    rotulo: 'Gabaritos identificados (PDF)',
+                    nome: Saida.nomeArquivo('GABARITO', dados, 'pdf'),
+                    tipo: 'application/pdf',
+                    bytes: await Pdf.montarPrimeirasPaginas({
+                        arquivo: estado.gabaritos[tarefa.chave],
+                        identificacoes: provas,
+                        cabecalho: configuracao.cabecalho,
+                        espacoTopoCm: configuracao.espacoTopoCm,
+                        /* O gabarito é do aluno inteiro: saem todas as páginas
+                           do arquivo enviado, com o cabeçalho na primeira. */
+                        provaInteira: true,
+                        serieNome: serieNome,
+                        tituloArquivo: subtitulo,
+                        avaliacao: $('avaliacao').value,
+                        logo: await bytesDoLogo()
+                    })
+                });
+
+                pacote.arquivos.push({
+                    rotulo: 'Gabarito reserva, sem identificação (PDF)',
+                    nome: Saida.nomeArquivo('GABARITO-RESERVA', dados, 'pdf'),
+                    tipo: 'application/pdf',
+                    bytes: await Pdf.montarProvaGenerica({
+                        arquivo: estado.gabaritos[tarefa.chave],
+                        turma: tarefa.turma.turma,
+                        componente: tarefa.componente.codigo,
+                        cabecalho: configuracao.cabecalho,
+                        espacoTopoCm: configuracao.espacoTopoCm,
+                        provaInteira: true,
+                        serieNome: serieNome,
+                        tituloArquivo: 'Gabarito reserva · ' + subtitulo,
+                        avaliacao: $('avaliacao').value,
+                        logo: await bytesDoLogo()
+                    })
+                });
+
+                resultados.push(pacote);
+                alvo.appendChild(cartaoDeResultado(pacote));
+            }
+
+            estadoTexto.textContent = 'guardando nos arquivos recentes…';
+            const guardou = await guardarNoHistorico(resultados);
+            estadoTexto.textContent = 'pronto: ' + tarefas.length +
+                (tarefas.length === 1 ? ' gabarito gerado.' : ' conjuntos de gabarito gerados.') +
+                (guardou ? '' : ' (Não consegui guardar nos arquivos recentes: baixe agora.)');
+            alvo.appendChild(barraDeTudo(resultados));
+        } catch (erro) {
+            estadoTexto.textContent = 'Parou no meio: ' + (erro.message || erro);
+        } finally {
+            $('gerar-gabaritos').disabled = false;
+        }
+    }
+
+    /* --- prévia do gabarito: mesma mecânica da prévia da prova, sem a faixa,
+           porque o gabarito nunca é redimensionado. --- */
+
+    function atualizarListaDePreviaGabarito() {
+        const escolha = $('previa-gabarito-arquivo');
+        if (!escolha) return;
+        const anterior = escolha.value;
+        limpar(escolha);
+
+        const chaves = Object.keys(estado.gabaritos);
+        chaves.forEach(function (chave) {
+            const partes = chave.split('|');
+            const serie = Identificacao.serie(partes[0]);
+            const componente = Identificacao.COMPONENTES.filter(function (c) { return c.codigo === partes[1]; })[0];
+            const opcao = criar('option', null, (serie ? serie.nome : partes[0]) + ' · ' + (componente ? componente.nome : partes[1]));
+            opcao.value = chave;
+            escolha.appendChild(opcao);
+        });
+
+        if (chaves.indexOf(anterior) !== -1) escolha.value = anterior;
+        escolha.disabled = !chaves.length;
+    }
+
+    let desenhandoGabarito = false;
+    async function atualizarPreviaGabarito() {
+        const escolha = $('previa-gabarito-arquivo');
+        if (!escolha) return;
+        const chave = escolha.value;
+        const arquivo = chave ? estado.gabaritos[chave] : null;
+        const canvas = $('previa-gabarito-canvas');
+
+        if (!arquivo) {
+            canvas.hidden = true;
+            $('previa-gabarito-vazia').hidden = false;
+            $('marca-gabarito').hidden = true;
+            return;
+        }
+
+        $('previa-gabarito-vazia').hidden = true;
+        canvas.hidden = false;
+
+        if (estado.previaGabarito.chave !== chave && !desenhandoGabarito) {
+            desenhandoGabarito = true;
+            try {
+                estado.previaGabarito.medidas = await Previa.desenhar(canvas, arquivo, LARGURA_PREVIA);
+                estado.previaGabarito.chave = chave;
+                arquivo.paginas = estado.previaGabarito.medidas.paginas;
+                ajustarMedidasAoGabarito();
+            } catch (erro) {
+                $('previa-gabarito-vazia').hidden = false;
+                $('previa-gabarito-vazia').textContent = 'Não consegui desenhar a prévia: ' + (erro.message || erro);
+                canvas.hidden = true;
+            } finally {
+                desenhandoGabarito = false;
+            }
+        }
+
+        posicionarMarcaDoGabarito();
+    }
+
+    /* Enquanto a coordenação não mexer nas medidas, elas se ajustam ao tamanho
+       real da folha enviada — um quarto de A4 não comporta o bloco da capa. */
+    function ajustarMedidasAoGabarito() {
+        if (estado.previaGabarito.medidasTocadas) return;
+        const medidas = estado.previaGabarito.medidas;
+        if (!medidas) return;
+
+        const largura = Math.max(4, Math.round((medidas.larguraCm - 1) * 10) / 10);
+        $('gab-largura').value = largura.toFixed(1);
+        $('gab-altura').value = (medidas.larguraCm > 15 ? 2.5 : 1.6).toFixed(1);
+        $('gab-x').value = '0.5';
+        $('gab-y').value = '0.3';
+    }
+
+    function posicionarMarcaDoGabarito() {
+        const medidas = estado.previaGabarito.medidas;
+        if (!medidas) return;
+        const escala = $('previa-gabarito-canvas').clientWidth / medidas.larguraCm;
+        const cabecalho = montarConfiguracaoGabarito().cabecalho;
+        const caixa = $('marca-gabarito');
+        caixa.hidden = false;
+        caixa.style.left = (cabecalho.xCm * escala) + 'px';
+        caixa.style.top = (cabecalho.yCm * escala) + 'px';
+        caixa.style.width = (cabecalho.larguraCm * escala) + 'px';
+        caixa.style.height = (cabecalho.alturaCm * escala) + 'px';
+    }
+
+    function cmDoEventoGabarito(evento) {
+        const medidas = estado.previaGabarito.medidas;
+        const canvas = $('previa-gabarito-canvas');
+        if (!medidas || canvas.hidden) return null;
+        const area = canvas.getBoundingClientRect();
+        const escala = medidas.larguraCm / area.width;
+        return {
+            x: Math.max(0, (evento.clientX - area.left) * escala),
+            y: Math.max(0, (evento.clientY - area.top) * escala)
+        };
+    }
+
+    $('previa-gabarito-palco').addEventListener('mousemove', function (evento) {
+        const ponto = cmDoEventoGabarito(evento);
+        $('previa-gabarito-cursor').textContent = ponto ? ponto.x.toFixed(1) + ' cm × ' + ponto.y.toFixed(1) + ' cm' : '';
+    });
+    $('previa-gabarito-palco').addEventListener('mouseleave', function () {
+        $('previa-gabarito-cursor').textContent = '';
+    });
+    $('previa-gabarito-palco').addEventListener('click', function (evento) {
+        const ponto = cmDoEventoGabarito(evento);
+        if (!ponto) return;
+        estado.previaGabarito.medidasTocadas = true;
+        $('gab-x').value = (Math.round(ponto.x * 10) / 10).toFixed(1);
+        $('gab-y').value = (Math.round(ponto.y * 10) / 10).toFixed(1);
+        posicionarMarcaDoGabarito();
+    });
+
+    $('previa-gabarito-arquivo').addEventListener('change', function () {
+        estado.previaGabarito.chave = null;
+        atualizarPreviaGabarito();
+    });
+
+    ['gab-largura', 'gab-altura', 'gab-x', 'gab-y'].forEach(function (id) {
+        $(id).addEventListener('input', function () {
+            estado.previaGabarito.medidasTocadas = true;
+            posicionarMarcaDoGabarito();
+        });
+    });
+    $('gab-qr').addEventListener('change', posicionarMarcaDoGabarito);
+
+    $('ver-amostra-gabarito').addEventListener('click', async function () {
+        const chave = $('previa-gabarito-arquivo').value;
+        const arquivo = chave ? estado.gabaritos[chave] : null;
+        const aviso = $('aviso-amostra-gabarito');
+
+        if (!arquivo) { aviso.textContent = 'Envie um gabarito aqui em cima primeiro.'; return; }
+        if (!estado.lote.turmas.length) { aviso.textContent = 'Cole a lista dos alunos no passo 2 primeiro.'; return; }
+
+        const serie = chave.split('|')[0];
+        const turma = turmasDaSerie(serie)[0] || estado.lote.turmas[0];
+        aviso.textContent = 'montando…';
+
+        try {
+            const provas = Identificacao.identificarTurma({
+                ano: $('ano').value,
+                bimestre: $('bimestre').value,
+                turma: turma.turma,
+                componente: chave.split('|')[1],
+                alunos: turma.alunos.slice(0, 1),
+                chave: $('chave').value
+            });
+            const configuracao = montarConfiguracaoGabarito();
+            const bytes = await Pdf.montarPrimeirasPaginas({
+                arquivo: arquivo,
+                identificacoes: provas,
+                cabecalho: configuracao.cabecalho,
+                espacoTopoCm: 0,
+                provaInteira: true,
+                serieNome: (Identificacao.serie(serie) || {}).nome,
+                avaliacao: $('avaliacao').value,
+                logo: await bytesDoLogo()
+            });
+            const url = URL.createObjectURL(new Blob([bytes], { type: 'application/pdf' }));
+            window.open(url, '_blank');
+            setTimeout(function () { URL.revokeObjectURL(url); }, 20000);
+            aviso.textContent = 'abri numa aba nova.';
+        } catch (erro) {
+            aviso.textContent = 'Não deu: ' + (erro.message || erro);
+        }
+    });
 
     /* ===================== passo 4: o cabeçalho ===================== */
 
@@ -709,12 +1146,14 @@
         return cartao;
     }
 
-    function barraDeTudo() {
+    /* Serve às duas abas: recebe a lista de pacotes que acabou de ser gerada. */
+    function barraDeTudo(pacotes) {
+        const lista = pacotes || estado.resultados;
         const caixa = criar('div', 'acoes-lista');
         const botao = criar('button', 'btn btn--primary', 'Baixar tudo, um arquivo atrás do outro');
         botao.type = 'button';
         botao.addEventListener('click', async function () {
-            for (const pacote of estado.resultados) {
+            for (const pacote of lista) {
                 for (const arquivo of pacote.arquivos) {
                     Saida.baixar(arquivo.nome, arquivo.bytes, arquivo.tipo);
                     /* Um intervalo entre os downloads, senão o navegador
@@ -842,9 +1281,13 @@
         alvo.appendChild(cartao);
     });
 
+    $('gerar-gabaritos').addEventListener('click', gerarGabaritos);
+
     /* ===================== partida ===================== */
 
     aoTrocarModelo();
     montarSlots();
+    montarSlotsDeGabarito();
     atualizarListaDePrevia();
+    atualizarListaDePreviaGabarito();
 })();
