@@ -319,94 +319,101 @@
        mesma identificação da prova daquele aluno — inclusive o mesmo código —,
        de modo que as duas folhas se cruzem. */
 
-    function montarSlotsDeGabarito() {
-        const alvo = $('slots-gabarito');
-        if (!alvo) return;
-        limpar(alvo);
+    /* Os gabaritos carregados, um por série e componente. O envio não depende da
+       lista de alunos: a folha de respostas é arquivo separado e pode ser
+       carregada antes de qualquer coisa. A lista só faz falta na hora de gerar,
+       porque é dela que sai a identificação. */
+    function montarSeletoresDeGabarito() {
+        const serie = $('gab-serie');
+        const componente = $('gab-componente');
+        if (!serie || serie.options.length) return;
 
-        const series = seriesPresentes();
-        if (!series.length) {
-            alvo.appendChild(criar('p', 'dica', 'Cole a lista dos alunos no passo 2, na aba Gerar as provas, e os espaços para enviar os gabaritos aparecem aqui.'));
-            return;
-        }
-
-        series.forEach(function (codigo) {
-            const serie = Identificacao.serie(codigo);
-            const bloco = criar('div', 'slot-serie');
-            bloco.appendChild(criar('h4', null, serie ? serie.nome : codigo + 'ª série'));
-            bloco.appendChild(criar('p', 'turmas-da-serie',
-                'Turmas: ' + turmasDaSerie(codigo).map(function (t) { return t.turma + ' (' + t.alunos.length + ')'; }).join(' · ')));
-
-            const grade = criar('div', 'slot-grade');
-            Identificacao.COMPONENTES.forEach(function (componente) {
-                grade.appendChild(slotDeGabarito(codigo, componente));
-            });
-            bloco.appendChild(grade);
-            alvo.appendChild(bloco);
+        Identificacao.SERIES.forEach(function (s) {
+            const opcao = criar('option', null, s.nome);
+            opcao.value = s.codigo;
+            serie.appendChild(opcao);
+        });
+        Identificacao.COMPONENTES.forEach(function (c) {
+            const opcao = criar('option', null, c.nome);
+            opcao.value = c.codigo;
+            componente.appendChild(opcao);
         });
     }
 
-    function slotDeGabarito(serie, componente) {
-        const chave = chaveSlot(serie, componente.codigo);
-        const guardado = estado.gabaritos[chave];
+    function montarSlotsDeGabarito() {
+        const alvo = $('slots-gabarito');
+        if (!alvo) return;
+        montarSeletoresDeGabarito();
+        limpar(alvo);
 
-        const slot = criar('div', 'slot' + (guardado ? ' cheio' : ''));
-        slot.appendChild(criar('label', 'slot-nome', componente.nome));
+        const chaves = Object.keys(estado.gabaritos);
+        if (!chaves.length) {
+            alvo.appendChild(criar('p', 'dica', 'Nenhum gabarito carregado ainda. Escolha a série e o componente acima e envie o arquivo.'));
+            return;
+        }
 
-        const entrada = criar('input');
-        entrada.type = 'file';
-        entrada.accept = '.pdf,.jpg,.jpeg,.png,application/pdf,image/jpeg,image/png';
-        entrada.addEventListener('change', function () {
-            receberGabarito(chave, entrada.files[0], slot, serie);
-        });
-        slot.appendChild(entrada);
+        chaves.sort().forEach(function (chave) {
+            const partes = chave.split('|');
+            const serie = Identificacao.serie(partes[0]);
+            const componente = Identificacao.COMPONENTES.filter(function (c) { return c.codigo === partes[1]; })[0];
+            const guardado = estado.gabaritos[chave];
 
-        slot.appendChild(criar('small', 'slot-estado', guardado
-            ? guardado.nome + (guardado.paginas ? ' · ' + guardado.paginas + ' página(s)' : '')
-            : 'nenhum arquivo'));
+            const linha = criar('div', 'gabarito-carregado');
+            const qual = criar('div', 'qual', (serie ? serie.nome : partes[0]) + ' · ' + (componente ? componente.nome : partes[1]));
+            qual.appendChild(criar('small', null, guardado.nome +
+                (guardado.paginas ? ' · ' + guardado.paginas + ' página(s)' : '') +
+                ' · turmas: ' + (turmasDaSerie(partes[0]).map(function (t) { return t.turma; }).join(', ') || 'a lista do passo 2 ainda não tem turma desta série')));
+            linha.appendChild(qual);
 
-        /* Quase sempre a mesma folha de respostas serve para os cinco
-           componentes da série; sem isto, seria enviar o mesmo arquivo cinco
-           vezes. */
-        if (guardado) {
+            /* Quase sempre a mesma folha de respostas serve para os cinco
+               componentes da série. */
             const repetir = criar('button', 'btn btn--pequeno', 'Usar nos outros componentes');
             repetir.type = 'button';
             repetir.addEventListener('click', function () {
                 Identificacao.COMPONENTES.forEach(function (outro) {
-                    estado.gabaritos[chaveSlot(serie, outro.codigo)] = guardado;
+                    estado.gabaritos[chaveSlot(partes[0], outro.codigo)] = guardado;
                 });
                 montarSlotsDeGabarito();
                 atualizarListaDePreviaGabarito();
             });
-            slot.appendChild(repetir);
-        }
-        return slot;
+            linha.appendChild(repetir);
+
+            const remover = criar('button', 'btn btn--pequeno', 'Remover');
+            remover.type = 'button';
+            remover.addEventListener('click', function () {
+                delete estado.gabaritos[chave];
+                if (estado.previaGabarito.chave === chave) estado.previaGabarito.chave = null;
+                montarSlotsDeGabarito();
+                atualizarListaDePreviaGabarito();
+                atualizarPreviaGabarito();
+            });
+            linha.appendChild(remover);
+
+            alvo.appendChild(linha);
+        });
     }
 
-    function receberGabarito(chave, arquivo, slot, serie) {
-        const estadoTexto = slot.querySelector('.slot-estado');
+    $('gab-arquivo').addEventListener('change', function () {
+        const entrada = $('gab-arquivo');
+        receberGabarito(chaveSlot($('gab-serie').value, $('gab-componente').value), entrada.files[0]);
+        entrada.value = '';
+    });
 
-        if (!arquivo) {
-            delete estado.gabaritos[chave];
-            slot.classList.remove('cheio');
-            estadoTexto.textContent = 'nenhum arquivo';
-            return;
-        }
+    function receberGabarito(chave, arquivo) {
+        const aviso = $('aviso-gab-arquivo');
+        if (!arquivo) return;
 
         const extensao = (arquivo.name.split('.').pop() || '').toLowerCase();
-
         if (extensao === 'docx' || extensao === 'doc' || extensao === 'odt') {
-            delete estado.gabaritos[chave];
-            slot.classList.remove('cheio');
-            estadoTexto.textContent = 'Word não dá: abra no Word e use Arquivo → Salvar como → PDF.';
+            aviso.textContent = 'Word não dá: abra no Word e use Arquivo → Salvar como → PDF.';
             return;
         }
         if (['pdf', 'jpg', 'jpeg', 'png'].indexOf(extensao) === -1) {
-            estadoTexto.textContent = 'Formato não aceito: use PDF, JPG ou PNG.';
+            aviso.textContent = 'Formato não aceito: use PDF, JPG ou PNG.';
             return;
         }
 
-        estadoTexto.textContent = 'lendo…';
+        aviso.textContent = 'lendo…';
         const leitor = new FileReader();
         leitor.onload = function () {
             estado.gabaritos[chave] = {
@@ -415,13 +422,14 @@
                 bytes: new Uint8Array(leitor.result),
                 paginas: null
             };
+            aviso.textContent = arquivo.name + ' carregado.';
             montarSlotsDeGabarito();
             atualizarListaDePreviaGabarito();
             if (!estado.previaGabarito.chave) $('previa-gabarito-arquivo').value = chave;
             atualizarPreviaGabarito();
         };
         leitor.onerror = function () {
-            estadoTexto.textContent = 'Não consegui ler o arquivo.';
+            aviso.textContent = 'Não consegui ler o arquivo.';
         };
         leitor.readAsArrayBuffer(arquivo);
     }
@@ -453,7 +461,8 @@
             },
             /* O gabarito nunca é redimensionado: as marcas de alinhamento da
                leitura óptica têm de ficar onde estão. */
-            espacoTopoCm: 0
+            espacoTopoCm: 0,
+            quatroPorFolha: $('gab-quatro').checked
         };
     }
 
@@ -469,18 +478,24 @@
         }
 
         const tarefas = [];
-        seriesPresentes().forEach(function (serie) {
-            Identificacao.COMPONENTES.forEach(function (componente) {
-                const chave = chaveSlot(serie, componente.codigo);
-                if (!estado.gabaritos[chave]) return;
-                turmasDaSerie(serie).forEach(function (turma) {
-                    tarefas.push({ serie: serie, componente: componente, turma: turma, chave: chave });
-                });
+        const semTurma = [];
+        Object.keys(estado.gabaritos).sort().forEach(function (chave) {
+            const partes = chave.split('|');
+            const componente = Identificacao.COMPONENTES.filter(function (c) { return c.codigo === partes[1]; })[0];
+            const turmas = turmasDaSerie(partes[0]);
+            if (!turmas.length) {
+                semTurma.push((Identificacao.serie(partes[0]) || {}).nome || partes[0]);
+                return;
+            }
+            turmas.forEach(function (turma) {
+                tarefas.push({ serie: partes[0], componente: componente, turma: turma, chave: chave });
             });
         });
 
         if (!tarefas.length) {
-            estadoTexto.textContent = 'Envie o gabarito de pelo menos um componente aqui em cima.';
+            estadoTexto.textContent = semTurma.length
+                ? 'A lista do passo 2 não tem turma da ' + semTurma[0] + ', que é a série do gabarito carregado.'
+                : 'Carregue o arquivo de pelo menos um gabarito aqui em cima.';
             return;
         }
 
@@ -520,42 +535,64 @@
 
                 const pacote = { titulo: subtitulo, dados: dados, provas: provas, arquivos: [] };
 
-                pacote.arquivos.push({
-                    rotulo: 'Gabaritos identificados (PDF)',
-                    nome: Saida.nomeArquivo('GABARITO', dados, 'pdf'),
-                    tipo: 'application/pdf',
-                    bytes: await Pdf.montarPrimeirasPaginas({
-                        arquivo: estado.gabaritos[tarefa.chave],
-                        identificacoes: provas,
-                        cabecalho: configuracao.cabecalho,
-                        espacoTopoCm: configuracao.espacoTopoCm,
-                        /* O gabarito é do aluno inteiro: saem todas as páginas
-                           do arquivo enviado, com o cabeçalho na primeira. */
-                        provaInteira: true,
-                        serieNome: serieNome,
-                        tituloArquivo: subtitulo,
-                        avaliacao: $('avaliacao').value,
-                        logo: await bytesDoLogo()
-                    })
-                });
+                const comum = {
+                    arquivo: estado.gabaritos[tarefa.chave],
+                    cabecalho: configuracao.cabecalho,
+                    serieNome: serieNome,
+                    avaliacao: $('avaliacao').value,
+                    logo: await bytesDoLogo()
+                };
 
-                pacote.arquivos.push({
-                    rotulo: 'Gabarito reserva, sem identificação (PDF)',
-                    nome: Saida.nomeArquivo('GABARITO-RESERVA', dados, 'pdf'),
-                    tipo: 'application/pdf',
-                    bytes: await Pdf.montarProvaGenerica({
-                        arquivo: estado.gabaritos[tarefa.chave],
-                        turma: tarefa.turma.turma,
-                        componente: tarefa.componente.codigo,
-                        cabecalho: configuracao.cabecalho,
-                        espacoTopoCm: configuracao.espacoTopoCm,
-                        provaInteira: true,
-                        serieNome: serieNome,
-                        tituloArquivo: 'Gabarito reserva · ' + subtitulo,
-                        avaliacao: $('avaliacao').value,
-                        logo: await bytesDoLogo()
-                    })
-                });
+                if (configuracao.quatroPorFolha) {
+                    const bytes = await Pdf.montarGabaritosEmQuartos(Object.assign({}, comum, {
+                        identificacoes: provas,
+                        tituloArquivo: subtitulo
+                    }));
+                    /* Arquivo maior que um quarto de A4 entra reduzido; quem
+                       lê gabarito por leitura óptica precisa saber disso. */
+                    const encolheu = bytes.escalaUsada && bytes.escalaUsada < 0.99;
+                    pacote.arquivos.push({
+                        rotulo: 'Gabaritos identificados, quatro por folha A4 (PDF)' +
+                            (encolheu ? ' — reduzido a ' + Math.round(bytes.escalaUsada * 100) + '%' : ''),
+                        nome: Saida.nomeArquivo('GABARITO', dados, 'pdf'),
+                        tipo: 'application/pdf',
+                        bytes: bytes
+                    });
+                    pacote.arquivos.push({
+                        rotulo: 'Gabarito reserva, sem identificação (PDF)',
+                        nome: Saida.nomeArquivo('GABARITO-RESERVA', dados, 'pdf'),
+                        tipo: 'application/pdf',
+                        bytes: await Pdf.montarGabaritosEmQuartos(Object.assign({}, comum, {
+                            copiasEmBranco: 4,
+                            tituloArquivo: 'Gabarito reserva · ' + subtitulo
+                        }))
+                    });
+                } else {
+                    pacote.arquivos.push({
+                        rotulo: 'Gabaritos identificados (PDF)',
+                        nome: Saida.nomeArquivo('GABARITO', dados, 'pdf'),
+                        tipo: 'application/pdf',
+                        bytes: await Pdf.montarPrimeirasPaginas(Object.assign({}, comum, {
+                            identificacoes: provas,
+                            espacoTopoCm: configuracao.espacoTopoCm,
+                            /* Uma via por aluno com todas as páginas do arquivo. */
+                            provaInteira: true,
+                            tituloArquivo: subtitulo
+                        }))
+                    });
+                    pacote.arquivos.push({
+                        rotulo: 'Gabarito reserva, sem identificação (PDF)',
+                        nome: Saida.nomeArquivo('GABARITO-RESERVA', dados, 'pdf'),
+                        tipo: 'application/pdf',
+                        bytes: await Pdf.montarProvaGenerica(Object.assign({}, comum, {
+                            turma: tarefa.turma.turma,
+                            componente: tarefa.componente.codigo,
+                            espacoTopoCm: configuracao.espacoTopoCm,
+                            provaInteira: true,
+                            tituloArquivo: 'Gabarito reserva · ' + subtitulo
+                        }))
+                    });
+                }
 
                 resultados.push(pacote);
                 alvo.appendChild(cartaoDeResultado(pacote));
@@ -701,6 +738,7 @@
         });
     });
     $('gab-qr').addEventListener('change', posicionarMarcaDoGabarito);
+    $('gab-quatro').addEventListener('change', function () { $('aviso-amostra-gabarito').textContent = ''; });
 
     $('ver-amostra-gabarito').addEventListener('click', async function () {
         const chave = $('previa-gabarito-arquivo').value;
@@ -724,16 +762,18 @@
                 chave: $('chave').value
             });
             const configuracao = montarConfiguracaoGabarito();
-            const bytes = await Pdf.montarPrimeirasPaginas({
+            const comum = {
                 arquivo: arquivo,
                 identificacoes: provas,
                 cabecalho: configuracao.cabecalho,
-                espacoTopoCm: 0,
-                provaInteira: true,
                 serieNome: (Identificacao.serie(serie) || {}).nome,
                 avaliacao: $('avaliacao').value,
                 logo: await bytesDoLogo()
-            });
+            };
+            /* A amostra sai do mesmo jeito que a impressão vai sair. */
+            const bytes = configuracao.quatroPorFolha
+                ? await Pdf.montarGabaritosEmQuartos(comum)
+                : await Pdf.montarPrimeirasPaginas(Object.assign({}, comum, { espacoTopoCm: 0, provaInteira: true }));
             const url = URL.createObjectURL(new Blob([bytes], { type: 'application/pdf' }));
             window.open(url, '_blank');
             setTimeout(function () { URL.revokeObjectURL(url); }, 20000);

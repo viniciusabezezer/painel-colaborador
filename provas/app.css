@@ -157,6 +157,24 @@ label small { font-weight: 400; font-size: 12px; color: var(--ink-soft); line-he
 
 /* ===== Slots das provas ===== */
 
+/* O envio do gabarito não depende da lista de alunos: fica sempre à mão. */
+.envio-gabarito {
+    display: flex; flex-wrap: wrap; gap: 14px; align-items: flex-end;
+    border: 1px solid var(--line); border-radius: var(--radius-sm);
+    padding: 13px 15px; background: #fcfbf7; margin-bottom: 14px;
+}
+.envio-gabarito > label { display: flex; flex-direction: column; gap: 5px; }
+.envio-gabarito .campo-arquivo { flex: 1 1 260px; }
+.envio-gabarito input[type="file"] { font-size: 12.5px; padding: 4px; background: none; border: none; }
+
+.gabarito-carregado {
+    display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
+    border: 1px solid #c6e0cc; background: #f4faf5;
+    border-radius: var(--radius-sm); padding: 10px 13px;
+}
+.gabarito-carregado .qual { font-size: 14px; font-weight: 700; flex: 1 1 220px; }
+.gabarito-carregado .qual small { display: block; font-weight: 500; font-size: 12.5px; color: var(--ink-soft); word-break: break-all; }
+
 .slots { display: flex; flex-direction: column; gap: 14px; }
 
 .slot-serie { border: 1px solid var(--line); border-radius: var(--radius-sm); padding: 12px 14px; }
