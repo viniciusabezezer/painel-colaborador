@@ -540,6 +540,106 @@
         };
     }
 
+    /* O que o desenho do cabeçalho recebe. A capa da prova leva os quadros de
+       acertos e pontos e um QR de 2 cm; o gabarito, que é bem menor, pede outra
+       medida e dispensa os quadros — por isso tudo isso vem do cabeçalho. */
+    function opcoesDoCabecalho(cabecalho, opcoes) {
+        return {
+            incluirQr: cabecalho.incluirQr,
+            incluirCodigo: cabecalho.incluirCodigo,
+            qrNaEsquerda: cabecalho.qrNaEsquerda,
+            moldura: cabecalho.moldura,
+            rotulo: cabecalho.rotulo,
+            corpoNome: cabecalho.corpoNome,
+            serieNome: opcoes.serieNome,
+            avaliacao: opcoes.avaliacao,
+            incluirCorrecao: cabecalho.incluirCorrecao !== false,
+            incluirData: cabecalho.incluirData !== false,
+            nomeEmUmaLinha: true,
+            ladoQrCm: cabecalho.ladoQrCm || 2,
+            ladoLogoCm: cabecalho.ladoLogoCm || 1.9
+        };
+    }
+
+    /* Marcas de corte no meio da folha: traços curtos nas bordas, que não
+       passam por cima de nada do que foi impresso. */
+    function desenharGuiasDeCorte(folha) {
+        const traco = 0.5 * CM;
+        const meioX = A4[0] / 2;
+        const meioY = A4[1] / 2;
+        const cinza = rgb(0.65, 0.65, 0.65);
+        [[meioX, 0, meioX, traco], [meioX, A4[1] - traco, meioX, A4[1]],
+         [0, meioY, traco, meioY], [A4[0] - traco, meioY, A4[0], meioY]].forEach(function (l) {
+            folha.drawLine({ start: { x: l[0], y: l[1] }, end: { x: l[2], y: l[3] }, thickness: 0.5, color: cinza });
+        });
+    }
+
+    /* QUATRO POR FOLHA A4.
+       O gabarito ocupa um quarto da folha, em pé, e a coordenação corta depois.
+       Entra a primeira página do arquivo enviado, em tamanho original sempre que
+       couber no quadrante; arquivo maior que um quarto de A4 é reduzido para
+       caber, e quem chama fica sabendo pela escala devolvida. */
+    async function montarGabaritosEmQuartos(opcoes) {
+        const provas = opcoes.identificacoes || [];
+        const copiasEmBranco = opcoes.copiasEmBranco || 0;
+        if (!provas.length && !copiasEmBranco) throw new Error('Nenhum aluno para identificar.');
+
+        const cabecalho = opcoes.cabecalho || {};
+        const destino = await PDFDocument.create();
+        const fontes = await carregarFontes(destino, opcoes.logo);
+        const fonte = await prepararFonte(destino, opcoes.arquivo, false);
+
+        const larguraQuadrante = A4[0] / 2;
+        const alturaQuadrante = A4[1] / 2;
+        const escala = Math.min(1, larguraQuadrante / fonte.largura, alturaQuadrante / fonte.altura);
+
+        const larguraCaixa = Math.min(fonte.largura - 4, (cabecalho.larguraCm || PADRAO.larguraCm) * CM);
+        const alturaCaixa = Math.min(fonte.altura - 4, (cabecalho.alturaCm || PADRAO.alturaCm) * CM);
+        const total = provas.length || copiasEmBranco;
+
+        destino.setTitle(textoSeguro(opcoes.tituloArquivo || 'Gabaritos identificados'));
+        destino.setCreator('Identificador de Provas da Malu — Painel do Colaborador');
+        destino.setProducer('Identificador de Provas da Malu — Painel do Colaborador');
+
+        let folha = null;
+        for (let i = 0; i < total; i++) {
+            const posicao = i % 4;
+            if (posicao === 0) {
+                folha = destino.addPage(A4);
+                desenharGuiasDeCorte(folha);
+            }
+            const coluna = posicao % 2;
+            const linha = Math.floor(posicao / 2);
+            const dx = coluna * larguraQuadrante + (larguraQuadrante - fonte.largura * escala) / 2;
+            const dy = A4[1] - (linha + 1) * alturaQuadrante + (alturaQuadrante - fonte.altura * escala) / 2;
+
+            fonte.desenhar(folha, {
+                x: dx, y: dy,
+                largura: fonte.largura * escala,
+                altura: fonte.altura * escala,
+                alinhar: 'centro'
+            });
+
+            if (provas.length) {
+                /* As medidas do cabeçalho são as da folha original; aqui elas
+                   entram no quadrante, encolhendo junto com ela. */
+                desenharCabecalho(folha, fontes, provas[i], {
+                    x: dx + (cabecalho.xCm || 0) * CM * escala,
+                    y: dy + (fonte.altura - (cabecalho.yCm || 0) * CM - alturaCaixa) * escala,
+                    largura: larguraCaixa * escala,
+                    altura: alturaCaixa * escala,
+                    escala: escala
+                }, opcoesDoCabecalho(cabecalho, opcoes));
+            }
+
+            if (opcoes.aoProgresso) opcoes.aoProgresso(i + 1, total);
+        }
+
+        const bytes = await destino.save();
+        bytes.escalaUsada = escala;
+        return bytes;
+    }
+
     /* Uma via por aluno: a capa com o cabeçalho de identificação e, logo
        atrás, sem cabeçalho, o verso ou (com `provaInteira`) o resto da prova. */
     async function montarPrimeirasPaginas(opcoes) {
@@ -579,24 +679,8 @@
         for (let i = 0; i < provas.length; i++) {
             const folha = destino.addPage([fonte.largura, fonte.altura]);
             fonte.desenhar(folha, area);
-            desenharCabecalho(folha, fontes, provas[i], resolverCaixa(marca, fonte.largura, fonte.altura, transformacao), {
-                incluirQr: cabecalho.incluirQr,
-                incluirCodigo: cabecalho.incluirCodigo,
-                qrNaEsquerda: cabecalho.qrNaEsquerda,
-                moldura: cabecalho.moldura,
-                rotulo: cabecalho.rotulo,
-                corpoNome: cabecalho.corpoNome,
-                serieNome: opcoes.serieNome,
-                avaliacao: opcoes.avaliacao,
-                /* A capa da prova leva os quadros de acertos e pontos e um QR
-                   de 2 cm; o gabarito, que é bem menor, pede outra medida e
-                   dispensa os quadros — por isso vêm do cabeçalho. */
-                incluirCorrecao: cabecalho.incluirCorrecao !== false,
-                incluirData: cabecalho.incluirData !== false,
-                nomeEmUmaLinha: true,
-                ladoQrCm: cabecalho.ladoQrCm || 2,
-                ladoLogoCm: cabecalho.ladoLogoCm || 1.9
-            });
+            desenharCabecalho(folha, fontes, provas[i], resolverCaixa(marca, fonte.largura, fonte.altura, transformacao),
+                opcoesDoCabecalho(cabecalho, opcoes));
 
             /* As páginas seguintes vêm logo atrás da capa, do jeito que foram
                enviadas e sem cabeçalho. */
@@ -753,6 +837,7 @@
         resolverCaixa: resolverCaixa,
         desenharCabecalho: desenharCabecalho,
         montarPrimeirasPaginas: montarPrimeirasPaginas,
+        montarGabaritosEmQuartos: montarGabaritosEmQuartos,
         montarProvaGenerica: montarProvaGenerica,
         montarEtiquetas: montarEtiquetas,
         montarFolhaConferencia: montarFolhaConferencia

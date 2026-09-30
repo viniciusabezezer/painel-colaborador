@@ -103,6 +103,7 @@ try {
     conferir(slots.length === 2, 'aparecem os espaços das duas séries presentes');
 
     const prova = join(APP, 'test', 'prova-exemplo.pdf');
+    const gabaritoQuarto = join(APP, 'test', 'gabarito-exemplo.pdf');
     await pagina.setInputFiles('#slots .slot-serie >> nth=0 >> .slot >> nth=1 >> input[type=file]', prova);
     await pagina.waitForSelector('.slot.cheio');
     conferir(await pagina.isVisible('#previa-canvas'), 'a prévia da página aparece na tela');
@@ -191,36 +192,49 @@ try {
     /* --- aba opcional de gabaritos --- */
     await pagina.click('.aba[data-aba="gabaritos"]');
     conferir(await pagina.isVisible('#painel-gabaritos'), 'a aba de gabaritos abre');
-    const seriesGabarito = await pagina.$$('#slots-gabarito .slot-serie');
-    conferir(seriesGabarito.length === 2, 'os espaços de gabarito saem das mesmas séries da lista');
 
-    /* Sem arquivo nenhum, a aba não produz nada e diz o porquê. */
-    await pagina.click('#gerar-gabaritos');
-    conferir((await pagina.textContent('#estado-gabaritos')).includes('Envie o gabarito'),
-        'sem gabarito enviado, a aba avisa em vez de gerar');
+    /* O envio não pode depender da lista de alunos: a folha de respostas é
+       arquivo separado e pode ser carregada antes de qualquer coisa. */
+    conferir(await pagina.isVisible('#gab-arquivo'), 'o campo de carregar o gabarito fica sempre à vista');
+    conferir((await pagina.$$eval('#gab-serie option', (nos) => nos.length)) === 3,
+        'as três séries são oferecidas na hora de carregar');
 
-    await pagina.setInputFiles('#slots-gabarito .slot-serie >> nth=0 >> .slot >> nth=1 >> input[type=file]', prova);
-    await pagina.waitForSelector('#slots-gabarito .slot.cheio');
+    await pagina.selectOption('#gab-serie', '1');
+    await pagina.selectOption('#gab-componente', 'LIN');
+    await pagina.setInputFiles('#gab-arquivo', gabaritoQuarto);
+    await pagina.waitForSelector('.gabarito-carregado');
+    const carregado = await pagina.textContent('.gabarito-carregado .qual');
+    conferir(carregado.includes('1ª SÉRIE') && carregado.includes('Linguagens'),
+        'o gabarito carregado aparece com a série e o componente');
+
+    /* As medidas se ajustam sozinhas ao tamanho real da folha enviada. */
+    await pagina.waitForFunction(() => document.getElementById('previa-gabarito-canvas').width >= 200, null, { timeout: 20000 });
+    const largura = parseFloat(await pagina.inputValue('#gab-largura'));
+    conferir(largura > 9 && largura < 10,
+        'as medidas do cabeçalho se ajustam ao quarto de A4: ' + largura + ' cm de largura');
 
     /* O mesmo arquivo serve aos cinco componentes da série. */
-    await pagina.click('#slots-gabarito .slot-serie >> nth=0 >> button:has-text("Usar nos outros")');
-    await pagina.waitForFunction(() => document.querySelectorAll('#slots-gabarito .slot-serie')[0].querySelectorAll('.slot.cheio').length === 5);
+    await pagina.click('.gabarito-carregado >> nth=0 >> button:has-text("Usar nos outros")');
+    await pagina.waitForFunction(() => document.querySelectorAll('.gabarito-carregado').length === 5);
     conferir(true, 'o botão repete o gabarito nos cinco componentes da série');
 
     /* Volta a um componente só, para o teste não gerar dez conjuntos. */
-    await pagina.evaluate(() => {
-        document.querySelectorAll('#slots-gabarito .slot-serie')[0]
-            .querySelectorAll('.slot input[type=file]').forEach((entrada, i) => {
-                if (i !== 1) entrada.dispatchEvent(new Event('change', { bubbles: true }));
-            });
-    });
-    await pagina.waitForFunction(() => document.querySelectorAll('#slots-gabarito .slot-serie')[0].querySelectorAll('.slot.cheio').length === 1);
+    for (const componente of ['Redação', 'Ciências da Natureza', 'Ciências Humanas', 'Matemática']) {
+        await pagina.click(`.gabarito-carregado:has-text("${componente}") >> button:has-text("Remover")`);
+    }
+    await pagina.waitForFunction(() => document.querySelectorAll('.gabarito-carregado').length === 1);
+
+    conferir(await pagina.isChecked('#gab-quatro'), 'quatro por folha A4 vem marcado, que é o formato do gabarito');
 
     await pagina.click('#gerar-gabaritos');
     await pagina.waitForFunction(() => document.getElementById('estado-gabaritos').textContent.startsWith('pronto'), null, { timeout: 60000 });
     const cartoesGabarito = await pagina.$$eval('#resultados-gabaritos .resultado', (nos) => nos.map((n) => n.querySelector('.resultado-titulo').textContent));
     conferir(cartoesGabarito.length === 2, 'sai um conjunto de gabaritos por turma da série');
     conferir(cartoesGabarito.every((c) => c.startsWith('Gabarito ·')), 'os conjuntos vêm marcados como gabarito');
+
+    const rotulos = await pagina.$$eval('#resultados-gabaritos .resultado >> nth=0 >> button', (nos) => nos.map((n) => n.textContent));
+    conferir(rotulos[0].includes('quatro por folha A4') && !rotulos[0].includes('reduzido'),
+        'o arquivo sai em quatro por folha, sem redução: ' + rotulos[0]);
 
     const codigosDoGabarito = await pagina.$$eval('#resultados-gabaritos .resultado small', (nos) => nos.map((n) => n.textContent));
     conferir(codigosDoGabarito.length === codigosDaProva.length && codigosDoGabarito.every((c, i) => c === codigosDaProva[i]),

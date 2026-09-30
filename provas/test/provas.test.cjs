@@ -489,6 +489,67 @@ test('a prova reserva sai com capa e verso, sem nome, sem QR e sem código', asy
     assert.ok(pagina.retangulos.length < 5, 'sem QR');
 });
 
+test('quatro gabaritos por folha A4, sem reduzir a folha de um quarto', async () => {
+    /* Um quarto de A4 é 10,5 x 14,85 cm: quatro cabem numa A4 em tamanho
+       original, que é o que preserva as marcas da leitura óptica. */
+    const original = await global.PDFLib.PDFDocument.create();
+    const folha = original.addPage([10.5 * pdf.CM, 14.85 * pdf.CM]);
+    folha.drawText('GABARITO', { x: 20, y: 380, size: 8 });
+    const bytes = await original.save();
+
+    const alunos = [];
+    for (let i = 1; i <= 6; i++) alunos.push({ nome: 'ALUNO ' + i, numero: i });
+    const provas = identificacao.identificarTurma({
+        ano: '2026', bimestre: 'B3', turma: '3A', componente: 'HUM', chave: CHAVE, alunos: alunos
+    });
+
+    const gerado = await pdf.montarGabaritosEmQuartos({
+        arquivo: { bytes: bytes, tipo: 'pdf' },
+        identificacoes: provas,
+        serieNome: '3ª SÉRIE',
+        cabecalho: { xCm: 0.5, yCm: 0.3, larguraCm: 9.5, alturaCm: 1.6, incluirCorrecao: false, incluirData: false, ladoQrCm: 1.35 }
+    });
+
+    assert.ok(gerado.escalaUsada > 0.99, 'a folha entra em tamanho original (escala ' + gerado.escalaUsada.toFixed(3) + ')');
+
+    const documento = await global.PDFLib.PDFDocument.load(gerado);
+    assert.equal(documento.getPageCount(), 2, 'seis alunos dão duas folhas de quatro');
+    const tamanho = documento.getPage(0).getSize();
+    assert.ok(Math.abs(tamanho.width - 21 * pdf.CM) < 0.5 && Math.abs(tamanho.height - 29.7 * pdf.CM) < 0.5, 'a folha é A4');
+});
+
+test('o gabarito reserva sai com quatro cópias sem identificação', async () => {
+    const original = await global.PDFLib.PDFDocument.create();
+    const folha = original.addPage([10.5 * pdf.CM, 14.85 * pdf.CM]);
+    folha.drawText('GABARITO', { x: 20, y: 380, size: 8 });
+    const bytes = await original.save();
+
+    const gerado = await pdf.montarGabaritosEmQuartos({
+        arquivo: { bytes: bytes, tipo: 'pdf' },
+        copiasEmBranco: 4,
+        cabecalho: { larguraCm: 9.5, alturaCm: 1.6 }
+    });
+    const documento = await global.PDFLib.PDFDocument.load(gerado);
+    assert.equal(documento.getPageCount(), 1, 'as quatro cópias cabem numa folha só');
+});
+
+test('folha maior que um quarto de A4 é reduzida, e a escala avisa', async () => {
+    const original = await global.PDFLib.PDFDocument.create();
+    const folha = original.addPage([21 * pdf.CM, 29.7 * pdf.CM]);
+    folha.drawText('GABARITO GRANDE', { x: 60, y: 700, size: 10 });
+    const bytes = await original.save();
+
+    const provas = identificacao.identificarTurma({
+        ano: '2026', bimestre: 'B3', turma: '3A', componente: 'HUM', chave: CHAVE, alunos: ['Ana Lima']
+    });
+    const gerado = await pdf.montarGabaritosEmQuartos({
+        arquivo: { bytes: bytes, tipo: 'pdf' }, identificacoes: provas, serieNome: '3ª SÉRIE',
+        cabecalho: { xCm: 1, yCm: 0.6, larguraCm: 19, alturaCm: 2.5 }
+    });
+    /* Uma A4 inteira num quarto de A4 cai para metade. */
+    assert.ok(Math.abs(gerado.escalaUsada - 0.5) < 0.01, 'escala de ' + gerado.escalaUsada.toFixed(2) + ' devolvida para quem chama avisar');
+});
+
 test('a folha de etiquetas quebra de 14 em 14', async () => {
     const alunos = [];
     for (let i = 1; i <= 15; i++) alunos.push({ nome: 'ALUNO ' + i, numero: i });

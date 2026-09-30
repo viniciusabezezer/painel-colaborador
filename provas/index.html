@@ -189,6 +189,19 @@
             <p class="dica">Esta aba <strong>anda sozinha</strong>: dá para gerar gabaritos sem enviar prova nenhuma, e provas sem gabarito nenhum. A única coisa que ela pede da aba <em>Gerar as provas</em> é a <strong>lista de alunos do passo 2</strong> — é dela que sai a identificação. As medidas do cabeçalho aqui são próprias, porque o gabarito costuma ser bem menor que a prova: um quarto de uma folha A4, por exemplo.</p>
             <p class="dica">Do gabarito saem <strong>todas as páginas</strong> do arquivo enviado, com o cabeçalho na primeira — uma via por aluno.</p>
 
+            <div class="envio-gabarito">
+                <label>Série
+                    <select id="gab-serie"></select>
+                </label>
+                <label>Componente
+                    <select id="gab-componente"></select>
+                </label>
+                <label class="campo-arquivo">Arquivo do gabarito (PDF, JPG ou PNG)
+                    <input type="file" id="gab-arquivo" accept=".pdf,.jpg,.jpeg,.png,application/pdf,image/jpeg,image/png">
+                </label>
+                <span class="contagem" id="aviso-gab-arquivo"></span>
+            </div>
+
             <div id="slots-gabarito" class="slots"></div>
 
             <div class="opcoes" id="opcoes-gabarito">
@@ -211,6 +224,7 @@
                         <option value="sem">sem QR, só o código</option>
                     </select>
                 </label>
+                <label class="caixa-check"><input type="checkbox" id="gab-quatro" checked> Juntar <strong>quatro por folha A4</strong>, para recortar <small>(cada gabarito ocupa um quarto da folha, em pé; desmarque para sair um por página, no tamanho do arquivo enviado)</small></label>
             </div>
 
             <div class="previa">

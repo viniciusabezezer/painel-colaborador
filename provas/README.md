@@ -133,9 +133,18 @@ mesmo QR** —, de modo que as duas folhas se cruzem e nenhuma sirva para outro
 aluno. Sai uma via por aluno, com **todas as páginas** do arquivo enviado e o
 cabeçalho na primeira, mais um gabarito reserva sem identificação.
 
-A aba anda sozinha: dá para gerar gabaritos sem enviar prova nenhuma, e provas
-sem gabarito nenhum. A única coisa que ela toma emprestado da aba *Gerar as
-provas* é a **lista de alunos do passo 2**, que é de onde sai a identificação.
+A aba anda sozinha: o campo de carregar o arquivo fica sempre à vista — escolhe-se
+a série e o componente e envia-se o PDF, sem precisar de prova nenhuma nem de
+lista colada. A lista de alunos do **passo 2** só faz falta na hora de gerar,
+porque é dela que sai a identificação.
+
+Sai **quatro gabaritos por folha A4**, cada um ocupando um quarto da folha, em
+pé, para recortar — é o formato usual da folha de respostas da escola. Marcas de
+corte curtas nas bordas do meio mostram onde cortar, sem passar por cima de
+nada impresso. Uma folha de até um quarto de A4 entra em **tamanho original**;
+maior que isso, é reduzida para caber, e o rótulo do arquivo diz em quanto
+ficou, porque redução mexe com a leitura óptica. Desmarcando a opção, sai um
+gabarito por página, no tamanho do arquivo enviado.
 
 O cabeçalho do gabarito tem **medidas próprias**, porque a folha de respostas
 costuma ser bem menor que a prova — um quarto de uma folha A4, por exemplo, onde
@@ -184,8 +193,8 @@ leve. O SHA-256 é implementação própria em `js/sha256.js`, porque o
 ## Testes
 
 ```bash
-node --test provas/test/provas.test.cjs   # 37 verificações: código, lista, QR, posição e PDF
-node provas/test/provas-browser.mjs       # 34 verificações na tela, com Chromium
+node --test provas/test/provas.test.cjs   # 40 verificações: código, lista, QR, posição e PDF
+node provas/test/provas-browser.mjs       # 38 verificações na tela, com Chromium
 ```
 
 O teste de navegador precisa do `playwright` instalado (global serve), sobe um
