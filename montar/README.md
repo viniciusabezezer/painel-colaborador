@@ -6,9 +6,78 @@ PDF — a prova já no formato da escola. A paginação, as colunas, o quadro de
 instruções e o gabarito ficam por conta do app, que procura sempre **a prova
 mais curta que continua fácil de ler**, porque papel e tinta são contados.
 
-Roda inteiro no navegador, **também sem internet**, e nada é enviado para
-servidor. As provas se salvam sozinhas a cada alteração e os **últimos arquivos
-gerados** ficam guardados no aparelho.
+As **provas pessoais** rodam inteiras no navegador, **também sem internet**, e
+não saem dele: se salvam sozinhas e os **últimos arquivos gerados** ficam
+guardados no aparelho. As **provas da área**, montadas por vários professores,
+ficam no servidor da escola (Supabase) — veja abaixo.
+
+## Provas da área — montadas a várias mãos
+
+Além das provas pessoais (que ficam só no navegador), o Montador tem as
+**provas da área**: uma mesma prova — por exemplo, a Avaliação Bimestral de
+Ciências da Natureza da 2ª série — montada por todos os professores da área,
+cada um com o seu login.
+
+**Papéis** (definidos pela gestão, na tela *Professores*):
+
+| Papel | O que faz |
+| --- | --- |
+| **Gestão** | Cadastra, edita, desativa e exclui contas; vê e coordena todas as provas. |
+| **PCA** | Cria as provas da sua área e distribui as seções; mexe no formato, nas instruções e no gabarito; escreve as suas questões; **edita qualquer questão** da área; **comenta, devolve e aprova** cada seção; **trava** a prova para impressão. |
+| **Professor** | Escreve as questões das seções atribuídas a ele; vê a prova inteira (as seções dos colegas ficam só para leitura); comenta; marca a sua seção como **pronta para revisão**. |
+
+**O caminho de uma prova da área**
+
+1. O PCA clica em **+ Nova prova da área**: escolhe o modelo, a série, o
+   bimestre e o prazo. As seções nascem das disciplinas da área, com o
+   professor de cada disciplina já sugerido como responsável.
+2. Cada professor entra, abre a prova e escreve (ou cola, ou traz do banco) as
+   questões da sua seção. Tudo vai sozinho para o servidor; o selo ☁ na barra
+   diz se está salvo. Terminando, **✔ Marcar como pronta**, com um recado.
+3. O PCA acompanha no painel da prova (seção, responsável, questões, situação,
+   prazo) e na prévia, que mostra a prova inteira em tempo real. Ele pode
+   corrigir uma questão diretamente, **Devolver com comentário** (a seção volta
+   ao professor, com o recado em destaque) ou **Aprovar**.
+4. Com tudo aprovado, **🔒 Travar para impressão**: ninguém altera mais até o
+   PCA destravar. A impressão, o gabarito do professor e a folha de respostas
+   saem como nas provas pessoais.
+
+**Detalhes que importam**
+
+- As mudanças dos colegas chegam **em tempo real**; quem está digitando não
+  perde o cursor (a prova se atualiza quando a pessoa para de digitar).
+- **Sem internet**, o professor continua montando: as alterações ficam
+  guardadas no aparelho (o selo mostra "Sem conexão (n)") e vão sozinhas quando
+  a conexão volta.
+- Cada questão guarda **quem criou e quem alterou por último**; cada seção tem
+  o seu **histórico de comentários** (pronta, devolvida, aprovada).
+- As **imagens** das questões vão para um armazenamento privado, numa pasta da
+  prova: só quem pode ver a prova vê as imagens.
+- Quem decide o que cada um pode fazer é o **banco** (regras RLS), não a tela:
+  mesmo forçando pelo navegador, um professor não grava na seção do colega.
+
+**Primeiro acesso e senhas.** Na primeira vez, em *Entrar*, aparece o
+**Primeiro acesso da gestão**: quem o usa cria a primeira conta da gestão e,
+com ela, cadastra os demais. Essa opção some assim que existe uma conta da
+gestão. Esqueceu a senha? A gestão define uma nova em *Professores → Editar*;
+cada um troca a própria em *Trocar senha*. Conta desativada não entra, mas as
+questões dela continuam nas provas.
+
+**Onde ficam os dados.** No projeto Supabase **MapaDeAulas** (o plano gratuito
+só permite dois projetos ativos), em tabelas próprias com o prefixo
+`montador_`, separadas de tudo o que é do MapaDeAulas. O esquema, as regras e
+a função que cria as contas estão em `supabase/`:
+
+| Arquivo | O que é |
+| --- | --- |
+| `supabase/001_montador.sql` | tabelas, regras de acesso (RLS), gatilhos, armazenamento das imagens, tempo real |
+| `supabase/002_funcoes_privadas.sql` | as funções das regras fora da API |
+| `supabase/003_ver_prova_pela_linha.sql` | ajuste da regra de leitura das provas |
+| `supabase/functions/montador-usuarios/` | a função que cria e altera contas (só a gestão a usa) |
+| `supabase/teste_permissoes.sql` | 25 verificações das regras, para rodar no SQL Editor (não grava nada) |
+
+O endereço e a chave publicável do Supabase estão em `js/config.js` — a chave
+publicável é feita para ir no navegador; os dados ficam protegidos pelas regras.
 
 ## Os modelos
 
@@ -234,7 +303,10 @@ HTML, CSS e JavaScript sem framework, sem build e sem biblioteca de fora.
 | `js/importar.js` | leitura das várias questões coladas |
 | `js/colar.js` | texto formatado e imagens da área de transferência |
 | `js/paginar.js` | as folhas A4: blocos, colunas, quebras, alternativas, folha de correção |
-| `js/armazem.js` | provas e últimos arquivos gerados (IndexedDB) |
+| `js/armazem.js` | provas, últimos arquivos gerados e imagens das provas da área (IndexedDB) |
+| `js/nuvem.js` | login, cadastro e provas da área: envio por diferença, mudanças dos colegas, imagens, comentários |
+| `js/config.js` | endereço e chave publicável do Supabase |
+| `vendor/supabase.js` | cliente do Supabase (MIT), servido do próprio site |
 | `js/app.js` | as telas |
 | `sw.js`, `manifest.webmanifest` | funcionamento sem internet e instalação |
 | `folha.css` | a folha impressa |
@@ -245,6 +317,7 @@ HTML, CSS e JavaScript sem framework, sem build e sem biblioteca de fora.
 ```bash
 node --test montar/test/montar.test.cjs   # 24 testes: marcação, modelos, ícones, versão B, gabarito, colagem
 node montar/test/montar-browser.mjs        # 80 verificações na tela, com Chromium
+node montar/test/area-browser.mjs          # 52 verificações da prova da área, com cinco navegadores
 ```
 
 O teste de navegador precisa do `playwright` (global serve). Ele monta uma
@@ -255,3 +328,13 @@ a linha entre as colunas, colagem de texto do Word e de imagem, tamanho e posiç
 apoio, desfazer, economia de papel, versão B, os últimos arquivos gerados, gera
 o PDF como a impressão do navegador gera e, por fim, **corta a internet e abre
 o app de novo**. Os PDFs e uma captura da tela ficam em `test/saida/`.
+
+O teste da prova da área (`area-browser.mjs`) abre um navegador para cada
+pessoa — gestão, PCA, professores de Biologia, Física e História — sobre um
+Supabase de mentira (`test/supabase-falso.mjs` e `test/cliente-falso.js`) que
+aplica as mesmas regras do banco. Ele percorre o caminho inteiro: primeiro
+acesso, cadastro, criação da prova, seções só para leitura, imagem no storage,
+pronta, edição e devolução pelo PCA, ajuste, trabalho sem internet, tentativa
+de gravar na seção do colega, aprovação, trava, professor de outra área e conta
+desativada. As regras do banco de verdade são conferidas à parte por
+`supabase/teste_permissoes.sql`.

@@ -18,20 +18,22 @@
     const BANCO = 'montador-provas-malu';
     const PROVAS = 'provas';
     const ARQUIVOS = 'arquivos';
+    const IMAGENS = 'imagens'; /* imagens das provas da área, para abrir sem internet */
     const LIMITE_ARQUIVOS = 40;
 
     let bancoPromessa = null;
-    const memoria = { provas: new Map(), arquivos: new Map() };
+    const memoria = { provas: new Map(), arquivos: new Map(), imagens: new Map() };
 
     function abrir() {
         if (!bancoPromessa) {
             bancoPromessa = new Promise(function (resolve, reject) {
                 if (!global.indexedDB) { reject(new Error('sem IndexedDB')); return; }
-                const pedido = global.indexedDB.open(BANCO, 2);
+                const pedido = global.indexedDB.open(BANCO, 3);
                 pedido.onupgradeneeded = function () {
                     const banco = pedido.result;
                     if (!banco.objectStoreNames.contains(PROVAS)) banco.createObjectStore(PROVAS, { keyPath: 'id' });
                     if (!banco.objectStoreNames.contains(ARQUIVOS)) banco.createObjectStore(ARQUIVOS, { keyPath: 'id' });
+                    if (!banco.objectStoreNames.contains(IMAGENS)) banco.createObjectStore(IMAGENS, { keyPath: 'id' });
                 };
                 pedido.onsuccess = function () { resolve(pedido.result); };
                 pedido.onerror = function () { reject(pedido.error); };
@@ -131,6 +133,16 @@
     function obterArquivo(id) { return um(ARQUIVOS, id); }
     function apagarArquivo(id) { return remover(ARQUIVOS, id); }
 
+    /* ----- imagens das provas da área ----- */
+
+    function obterImagem(caminho) {
+        return um(IMAGENS, caminho).then(function (r) { return r ? r.src : null; });
+    }
+
+    function guardarImagem(caminho, src) {
+        return gravar(IMAGENS, { id: caminho, src: src });
+    }
+
     /* ----- persistência ----- */
 
     let pedido = false;
@@ -149,6 +161,7 @@
     const api = {
         listar: listar, obter: obter, salvar: salvar, apagar: apagar,
         guardarArquivo: guardarArquivo, listarArquivos: listarArquivos, obterArquivo: obterArquivo, apagarArquivo: apagarArquivo,
+        obterImagem: obterImagem, guardarImagem: guardarImagem,
         persistente: persistente, LIMITE_ARQUIVOS: LIMITE_ARQUIVOS
     };
     global.MontarArmazem = api;
