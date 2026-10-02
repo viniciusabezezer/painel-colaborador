@@ -96,7 +96,7 @@ code { font-family: ui-monospace, 'SFMono-Regular', Menlo, Consolas, monospace; 
 
 label { font-size: 13px; font-weight: 600; color: var(--ink-soft); }
 
-input[type="text"], input[type="number"], select, textarea {
+input[type="text"], input[type="number"], input[type="email"], input[type="password"], input[type="search"], input[type="date"], select, textarea {
     font: inherit; font-size: 14.5px; color: var(--ink);
     background: #fcfbf7; border: 1px solid var(--line); border-radius: var(--radius-sm);
     padding: 8px 10px; width: 100%;
@@ -288,7 +288,7 @@ body[data-tela="editor"], body[data-tela="modelo"] { overflow: hidden; }
 
 .dica--pequena { font-size: 12.5px; margin: 6px 0 0; }
 .selo-offline { margin-top: 6px; font-size: 13px !important; font-weight: 600; color: var(--green) !important; }
-.busca { margin: 4px 0 10px; }
+.busca { margin: 4px 0 10px; max-width: 360px; }
 .btn--verde { border-color: hsl(130, 40%, 60%); color: var(--green-dark); background: #eef7f0; }
 
 .campo-texto { display: flex; flex-direction: column; gap: 4px; }
@@ -382,6 +382,66 @@ body[data-tela="editor"], body[data-tela="modelo"] { overflow: hidden; }
 .banco-texto { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .banco-texto small { color: var(--ink-soft); }
 
+/* ===== Conta, login e administração ===== */
+
+.conta { display: flex; justify-content: flex-end; align-items: center; gap: 8px; flex-wrap: wrap; min-height: 34px; margin: -6px 0 6px; }
+.conta-nome { font-size: 13.5px; font-weight: 600; color: var(--ink); }
+.conta-nome small { display: block; font-weight: 500; color: var(--ink-soft); font-size: 12px; }
+.wrap--estreito { max-width: 560px; }
+.com-botao { display: flex; gap: 8px; align-items: center; }
+.dialogo--estreito { width: min(440px, 94vw); }
+.bloco--area { background: #f1f8f2; border: 1px solid #cfe3d3; border-radius: var(--radius); padding: 16px 18px; }
+
+.prova-linha .selo { margin-right: 4px; }
+.situacao { display: inline-block; font-size: 11.5px; font-weight: 700; border-radius: 999px; padding: 2px 9px; white-space: nowrap; background: #eceade; color: var(--ink-soft); }
+.situacao--rascunho { background: #eceade; color: #56655c; }
+.situacao--pronta { background: #e3effa; color: #174a7c; }
+.situacao--devolvida { background: #fdeceb; color: #7d211a; }
+.situacao--aprovada { background: #e1f1e4; color: #1c5027; }
+.situacao--travada { background: #2d3a31; color: #fff; }
+.situacao--aberta { background: #fff6e6; color: #6b4a06; }
+.minhas-secoes { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 4px; }
+
+.area-secoes { display: flex; flex-direction: column; gap: 8px; margin: 6px 0 8px; }
+.area-secao { display: flex; gap: 8px; align-items: center; }
+.area-secao input { flex: 1 1 40%; }
+.area-secao select { flex: 1 1 50%; }
+
+.selo--nuvem { background: #e3effa; color: #174a7c; }
+.selo--nuvem.pendente { background: #fff6e6; color: #6b4a06; }
+.selo--nuvem.erro { background: #fdeceb; color: #7d211a; }
+
+/* painel de andamento da prova da área */
+.area-painel { border: 1px solid #cfe3d3; background: #f6fbf7; border-radius: var(--radius-sm); padding: 10px 12px; margin-bottom: 12px; font-size: 13.5px; }
+.area-painel table { width: 100%; border-collapse: collapse; margin-top: 6px; }
+.area-painel td, .area-painel th { text-align: left; padding: 5px 6px; border-bottom: 1px solid #e2eee5; font-size: 13px; vertical-align: middle; }
+.area-painel th { font-size: 12px; color: var(--ink-soft); font-weight: 600; }
+.area-painel .prazo { font-weight: 600; }
+.area-painel .prazo.vencido { color: var(--danger); }
+
+/* seção na prova da área */
+.secao-dono { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin: -2px 0 8px; font-size: 13px; color: var(--ink-soft); }
+.secao-dono strong { color: var(--ink); }
+.secao-dono select { width: auto; padding: 4px 8px; font-size: 12.5px; }
+.secao--leitura { background: #f4f3ee; }
+.secao--leitura .q-corpo fieldset { border: 0; padding: 0; margin: 0; min-width: 0; }
+.secao--leitura .q-corpo fieldset[disabled] textarea,
+.secao--leitura .q-corpo fieldset[disabled] input,
+.secao--leitura .q-corpo fieldset[disabled] select { background: #f7f6f1; color: var(--ink); }
+.so-leitura-aviso { font-size: 12.5px; color: var(--ink-soft); font-style: italic; margin: 0 0 6px; }
+.fluxo { display: flex; gap: 6px; flex-wrap: wrap; }
+.comentarios { margin-top: 8px; border-top: 1px dashed var(--line); padding-top: 8px; }
+.comentarios summary { cursor: pointer; font-size: 13px; font-weight: 600; color: var(--ink-soft); }
+.comentario { font-size: 13px; padding: 6px 8px; border-radius: 8px; background: #fff; border: 1px solid var(--line); margin: 6px 0; }
+.comentario--devolucao { border-color: #f2c4c0; background: #fff8f7; }
+.comentario--aprovacao { border-color: #c6e0cc; background: #f6fbf7; }
+.comentario--pronta { border-color: #c7dcf0; background: #f6f9fd; }
+.comentario small { color: var(--ink-soft); display: block; margin-bottom: 2px; }
+.comentar { display: flex; gap: 6px; margin-top: 6px; }
+.comentar input { flex: 1; }
+fieldset.passo[disabled] { opacity: .75; }
+.trava-aviso { font-size: 12.5px; color: var(--ink-soft); margin: -4px 0 8px; }
+
 /* ===== Telas e celular ===== */
 
 @media (max-width: 900px) {
@@ -396,7 +456,7 @@ body[data-tela="editor"], body[data-tela="modelo"] { overflow: hidden; }
 
 @media print {
     body { overflow: visible !important; }
-    #tela-inicio, #tela-modelo, .barra, .editor, .previa-ferramentas, .proposta, .simulacao, .dialogo { display: none !important; }
+    #tela-inicio, #tela-modelo, #tela-entrar, #tela-admin, .barra, .editor, .previa-ferramentas, .proposta, .simulacao, .dialogo { display: none !important; }
     .grade-editor { display: block !important; height: auto !important; }
     .previa { overflow: visible !important; padding: 0 !important; background: none !important; }
     .previa-escala { width: auto !important; height: auto !important; margin: 0 !important; }

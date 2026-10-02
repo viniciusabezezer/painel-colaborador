@@ -12,6 +12,7 @@
     const Gabarito = window.MontarGabarito;
     const Icones = window.MontarIcones;
     const Colar = window.MontarColar;
+    const Nuvem = window.MontarNuvem;
 
     const $ = function (id) { return document.getElementById(id); };
     const esc = Texto.escapar;
@@ -68,14 +69,22 @@
     /* ===================== telas ===================== */
 
     function mostrar(tela) {
-        ['inicio', 'editor', 'modelo'].forEach(function (t) { $('tela-' + t).hidden = t !== tela; });
+        ['inicio', 'editor', 'modelo', 'entrar', 'admin'].forEach(function (t) { $('tela-' + t).hidden = t !== tela; });
         document.body.dataset.tela = tela;
         window.scrollTo(0, 0);
     }
 
     async function rota() {
         if (prova) salvar.agora();
+        fecharNuvem();
         const partes = location.hash.replace(/^#\/?/, '').split('/');
+        if (partes[0] === 'area' && partes[1]) {
+            prova = null;
+            abrirProvaNuvem(decodeURIComponent(partes[1]));
+            return;
+        }
+        if (partes[0] === 'entrar') { prova = null; abrirEntrar(); return; }
+        if (partes[0] === 'admin') { prova = null; abrirAdmin(); return; }
         if (partes[0] === 'prova' && partes[1]) {
             const achada = await Armazem.obter(decodeURIComponent(partes[1]));
             if (!achada) { location.hash = '#/'; return; }
@@ -134,7 +143,9 @@
             '<h3>+ Criar um modelo</h3><p>Um formato próprio — recuperação, simulado, lista de exercícios — para reaproveitar sempre que quiser.</p>' +
             '<div class="cartao-acoes"><a class="btn btn--pequeno" href="#/modelo">Criar modelo</a></div>'));
 
-        provasDoInicio = await Armazem.listar();
+        desenharConta();
+        desenharArea();
+        provasDoInicio = (await Armazem.listar()).filter(function (p) { return !p.nuvem; });
         $('busca-provas').hidden = provasDoInicio.length < 6;
         desenharListaProvas();
         desenharArquivos();
@@ -205,6 +216,7 @@
 
     async function copiaComoNova(p, titulo) {
         const copia = Modelos.normalizarProva(Modelos.copiar(p));
+        delete copia.nuvem;
         copia.id = Modelos.novoId('prova');
         copia.titulo = titulo;
         copia.criadaEm = Date.now();
@@ -350,8 +362,14 @@
 
     const salvar = debounce(function () {
         if (!prova) return;
-        $('ed-status').textContent = 'Salvando…';
         const alvo = prova;
+        if (alvo.nuvem) {
+            /* prova da área: cópia local (para abrir sem internet) e envio ao servidor */
+            Armazem.salvar(alvo).catch(function () {});
+            enviarNuvem();
+            return;
+        }
+        $('ed-status').textContent = 'Salvando…';
         Armazem.salvar(alvo).then(function () {
             if (prova === alvo) $('ed-status').textContent = 'Salvo neste navegador';
         });
@@ -360,7 +378,8 @@
     const paginar = debounce(repaginar, 250);
 
     function mudou() {
-        $('ed-status').textContent = 'Alterado';
+        /* na prova da área, quem diz o estado é o selo da nuvem */
+        $('ed-status').textContent = prova.nuvem ? '' : 'Alterado';
         salvar();
         paginar();
         $('ed-titulo').textContent = prova.titulo || 'Prova sem título';
@@ -384,7 +403,10 @@
         /* a foto tirada ao entrar no campo pode ser igual ao estado atual */
         while (anterior === atual && historico.length) anterior = historico.pop();
         if (anterior === atual) { $('ed-desfazer').disabled = true; return; }
+        const nuvemAtual = prova.nuvem;
         prova = JSON.parse(anterior);
+        /* o que já foi para o servidor não volta atrás: só o conteúdo */
+        if (nuvemAtual) prova.nuvem = nuvemAtual;
         $('ed-desfazer').disabled = !historico.length;
         redesenharTudo();
         mudou();
@@ -411,7 +433,7 @@
         historico = [];
         $('ed-desfazer').disabled = true;
         $('proposta').hidden = true;
-        if (!Modelos.questoesNumeradas(p).length && !p.secoes.some(function (s) { return s.questoes.length; })) {
+        if (!p.nuvem && !Modelos.questoesNumeradas(p).length && !p.secoes.some(function (s) { return s.questoes.length; })) {
             /* prova nova: a primeira seção já ganha uma questão aberta */
             const q = Modelos.novaQuestao('objetiva', 5);
             p.secoes[0].questoes.push(q);
@@ -420,7 +442,7 @@
         mostrar('editor');
         $('ed-modelo').textContent = (p.fixo ? '🔒 ' : '') + p.modeloNome;
         $('ed-modelo').className = 'selo' + (p.fixo ? ' selo--fixo' : '');
-        $('ed-status').textContent = 'Salvo neste navegador';
+        $('ed-status').textContent = p.nuvem ? '' : 'Salvo neste navegador';
         document.title = (p.titulo || 'Prova') + ' — Montador de Provas da Malu';
         $('copias').value = guardado('copias', '35');
         zoom = 'ajustar';
@@ -430,6 +452,7 @@
 
     function redesenharTudo() {
         $('ed-titulo').textContent = prova.titulo || 'Prova sem título';
+        aplicarPermissoes();
         preencherDados();
         preencherAparencia();
         preencherInstrucoes();
@@ -715,7 +738,7 @@
             '<button type="button" class="btn btn--pequeno" data-acao="img-escolher">Escolher imagem…</button></div>';
     }
 
-    function questaoHtml(q, numero, layout) {
+    function questaoHtml(q, numero, layout, leitura) {
         const r = resumo(q);
         const texto = q.tipo === 'texto';
         if (q.tipo === 'objetiva') while (q.alternativas.length < 5) q.alternativas.push('');
@@ -756,6 +779,10 @@
             '<button type="button" class="btn btn--pequeno" data-acao="q-duplicar">Duplicar</button>' +
             '<button type="button" class="btn btn--pequeno" data-acao="q-apagar">Apagar</button></div>';
 
+        if (leitura) {
+            /* seção de outro professor: dá para ler tudo, não dá para mexer */
+            corpo = '<fieldset disabled>' + corpo.replace(/contenteditable="true"/g, 'contenteditable="false"') + '</fieldset>';
+        }
         const rotulo = texto ? '<span class="q-numero q-numero--texto">T</span>' : '<span class="q-numero">' + (numero < 10 ? '0' : '') + numero + '</span>';
         return '<details class="questao' + (texto ? ' questao--texto' : '') + '" data-q="' + q.id + '"' + (abertas.has(q.id) ? ' open' : '') + '>' +
             '<summary>' + rotulo +
@@ -776,23 +803,32 @@
         const caixa = $('secoes');
         const rolagem = $('editor').scrollTop;
         let n = 0;
+        const formata = Nuvem.podeFormatar(prova);
         caixa.innerHTML = prova.secoes.map(function (s, i) {
             const icone = Icones.resolver(s.icone, s.titulo);
-            return '<div class="secao" data-s="' + s.id + '">' +
+            const escreve = Nuvem.podeEscrever(prova, s);
+            const travaSecao = formata ? '' : ' disabled';
+            return '<div class="secao' + (escreve ? '' : ' secao--leitura') + '" data-s="' + s.id + '">' +
                 '<div class="secao-cab"><span class="secao-icone">' + (icone ? Icones.svg(icone, 'icone-ui') : '') + '</span>' +
-                '<input type="text" data-campo="secao-titulo" value="' + esc(s.titulo || '') + '" placeholder="Título da seção (ex.: BIOLOGIA) — opcional">' +
-                '<button type="button" class="icone" data-acao="secao-subir" title="Subir a seção"' + (i === 0 ? ' disabled' : '') + '>↑</button>' +
-                '<button type="button" class="icone" data-acao="secao-descer" title="Descer a seção"' + (i === prova.secoes.length - 1 ? ' disabled' : '') + '>↓</button>' +
-                '<button type="button" class="icone icone--perigo" data-acao="secao-apagar" title="Apagar a seção">✕</button></div>' +
-                '<div class="secao-icone-escolha"><select data-campo="secao-icone" aria-label="Ícone da seção">' + opcoesIcone(s) + '</select></div>' +
+                '<input type="text" data-campo="secao-titulo" value="' + esc(s.titulo || '') + '" placeholder="Título da seção (ex.: BIOLOGIA) — opcional"' + travaSecao + '>' +
+                (formata ?
+                    '<button type="button" class="icone" data-acao="secao-subir" title="Subir a seção"' + (i === 0 ? ' disabled' : '') + '>↑</button>' +
+                    '<button type="button" class="icone" data-acao="secao-descer" title="Descer a seção"' + (i === prova.secoes.length - 1 ? ' disabled' : '') + '>↓</button>' +
+                    '<button type="button" class="icone icone--perigo" data-acao="secao-apagar" title="Apagar a seção">✕</button>' : '') + '</div>' +
+                '<div class="secao-icone-escolha"><select data-campo="secao-icone" aria-label="Ícone da seção"' + travaSecao + '>' + opcoesIcone(s) + '</select></div>' +
+                (prova.nuvem ? donoDaSecao(s, escreve) : '') +
                 s.questoes.map(function (q) {
                     if (q.tipo !== 'texto') n++;
-                    return questaoHtml(q, n, layout);
+                    return questaoHtml(q, n, layout, !escreve);
                 }).join('') +
-                '<div class="secao-acoes"><button type="button" class="btn btn--pequeno" data-acao="add-objetiva">+ Objetiva</button>' +
-                '<button type="button" class="btn btn--pequeno" data-acao="add-discursiva">+ Discursiva</button>' +
-                '<button type="button" class="btn btn--pequeno" data-acao="add-texto">+ Texto de apoio</button></div></div>';
+                (escreve ?
+                    '<div class="secao-acoes"><button type="button" class="btn btn--pequeno" data-acao="add-objetiva">+ Objetiva</button>' +
+                    '<button type="button" class="btn btn--pequeno" data-acao="add-discursiva">+ Discursiva</button>' +
+                    '<button type="button" class="btn btn--pequeno" data-acao="add-texto">+ Texto de apoio</button></div>' : '') +
+                (prova.nuvem ? comentariosDaSecao(s) : '') +
+                '</div>';
         }).join('');
+        if (prova.nuvem) desenharPainelArea();
         $('editor').scrollTop = rolagem;
         ajustarAlturas(caixa);
         mostrarDisposicoes();
@@ -1089,6 +1125,13 @@
         const qel = botao.closest('[data-q]');
         const achado = qel && acharQuestao(qel.dataset.q);
 
+        if (/^nv-/.test(acao)) { acaoDaArea(acao, secao, botao); return; }
+        if (prova.nuvem) {
+            /* o banco recusaria; a tela nem tenta */
+            if (/^secao-/.test(acao) && !Nuvem.podeFormatar(prova)) return;
+            if (secao && !/^secao-/.test(acao) && !Nuvem.podeEscrever(prova, secao)) return;
+        }
+
         if (acao === 'img-escolher') { escolherImagem({ qid: qel.dataset.q }); return; }
         if (acao === 'alt-img') { escolherImagem({ qid: qel.dataset.q, alt: Number(botao.closest('[data-i]').dataset.i) }); return; }
 
@@ -1148,17 +1191,21 @@
             lista.splice(destino, 0, achado.questao);
             return;
         }
-        /* passou da borda: vai para a seção vizinha */
+        /* passou da borda: vai para a seção vizinha (se a pessoa puder escrever nela) */
         const vizinha = secoes[si + passo];
-        if (!vizinha) return;
+        if (!vizinha || !Nuvem.podeEscrever(prova, vizinha)) return;
         achado.secao.questoes.splice(achado.indice, 1);
         if (passo < 0) vizinha.questoes.push(achado.questao);
         else vizinha.questoes.unshift(achado.questao);
     }
 
     $('add-secao').onclick = function () {
+        if (!Nuvem.podeFormatar(prova)) return;
         marcar();
-        prova.secoes.push(Modelos.novaSecao(''));
+        const nova = Modelos.novaSecao('');
+        /* na prova da área a seção nasce com o id que vai para o banco */
+        if (prova.nuvem) nova.id = Nuvem.uuid();
+        prova.secoes.push(nova);
         desenharSecoes();
         const inputs = caixaSecoes.querySelectorAll('[data-campo="secao-titulo"]');
         inputs[inputs.length - 1].focus();
@@ -1392,6 +1439,8 @@
         if (!confirm('Criar uma cópia desta prova com as alternativas em outra ordem (Tipo B)? A resposta certa acompanha, e o gabarito do professor da versão B sai certo. Esta prova não muda.')) return;
         salvar.agora();
         const r = Modelos.versaoEmbaralhada(prova, 'B');
+        delete r.prova.nuvem;
+        r.prova.id = Modelos.novoId('prova');
         await Armazem.salvar(r.prova);
         if (r.presas.length) alert('Ficaram na ordem original as questões ' + r.presas.join(', ') + ', porque têm alternativas como "todas as anteriores" ou "a e b".');
         location.hash = '#/prova/' + encodeURIComponent(r.prova.id);
@@ -1443,21 +1492,30 @@
        título, na última seção. */
     function acrescentar(grupos) {
         marcar();
+        const minhas = prova.secoes.filter(function (s) { return Nuvem.podeEscrever(prova, s); });
+        if (!minhas.length) { alert('Você não tem nenhuma seção para escrever nesta prova.'); return; }
         grupos.forEach(function (grupo) {
             let alvo = null;
-            if (grupo.titulo) {
+            if (prova.nuvem && !Nuvem.podeFormatar(prova)) {
+                /* o professor só põe questões nas seções dele */
+                alvo = minhas.find(function (s) { return normalizar(s.titulo) === normalizar(grupo.titulo); }) || minhas[0];
+            } else if (grupo.titulo) {
                 alvo = prova.secoes.find(function (s) { return normalizar(s.titulo) === normalizar(grupo.titulo); });
                 if (!alvo) {
                     alvo = prova.secoes.find(function (s) { return !String(s.titulo || '').trim() && !s.questoes.some(temConteudo); });
                     if (alvo) alvo.titulo = grupo.titulo;
                 }
-                if (!alvo) { alvo = Modelos.novaSecao(grupo.titulo); prova.secoes.push(alvo); }
+                if (!alvo) {
+                    alvo = Modelos.novaSecao(grupo.titulo);
+                    if (prova.nuvem) alvo.id = Nuvem.uuid();
+                    prova.secoes.push(alvo);
+                }
             } else {
                 alvo = prova.secoes[prova.secoes.length - 1];
             }
             alvo.questoes = alvo.questoes.filter(temConteudo).concat(grupo.questoes);
         });
-        prova.secoes.forEach(function (s) { s.questoes = s.questoes.filter(temConteudo); });
+        prova.secoes.forEach(function (s) { if (Nuvem.podeEscrever(prova, s)) s.questoes = s.questoes.filter(temConteudo); });
         abertas.clear();
         desenharSecoes();
         mudou();
@@ -1536,6 +1594,699 @@
         acrescentar(grupos);
         $('dialogo-banco').close();
     };
+
+    /* ===================== provas da área (montadas a várias mãos) ===================== */
+
+    const NOMES_PAPEL = { gestao: 'Gestão', pca: 'PCA', professor: 'Professor(a)' };
+    const NOMES_SITUACAO = { rascunho: 'em andamento', pronta: 'pronta para revisão', devolvida: 'devolvida', aprovada: 'aprovada', nova: 'nova (ainda não enviada)' };
+    const NOMES_AREA = { LIN: 'Linguagens e Códigos', NAT: 'Ciências da Natureza', HUM: 'Ciências Humanas', MAT: 'Matemática', RED: 'Redação' };
+
+    let comentariosNuvem = [];
+    let perfisNuvem = [];
+    let pararAssinatura = null;
+    let esperandoParaReceber = false;
+    let relogioNuvem = null;
+    const comentariosAbertos = new Set();
+
+    function situacaoHtml(situacao, texto) {
+        return '<span class="situacao situacao--' + esc(situacao) + '">' + esc(texto || NOMES_SITUACAO[situacao] || situacao) + '</span>';
+    }
+
+    function nomeDe(id) {
+        if (!id) return 'ninguém';
+        const p = perfisNuvem.find(function (x) { return x.id === id; });
+        return (p && p.nome) || (prova && prova.nuvem && prova.nuvem.nomes[id]) || 'professor';
+    }
+
+    function dataCurta(iso) {
+        if (!iso) return '';
+        const p = String(iso).slice(0, 10).split('-');
+        return p.length === 3 ? p[2] + '/' + p[1] : iso;
+    }
+
+    function euNuvem() { return Nuvem.perfil() || {}; }
+    function coordenoEsta() { return !!(prova && prova.nuvem && Nuvem.coordena(prova.nuvem.componente)); }
+
+    function donoDaSecao(s, escreve) {
+        const n = prova.nuvem;
+        const meta = n.secoes[s.id];
+        const situacao = meta ? meta.situacao : 'nova';
+        const aberta = n.situacao === 'aberta';
+        const coord = coordenoEsta();
+        const minha = meta && meta.responsavel === euNuvem().id;
+        let html = '<div class="secao-dono">';
+        if (coord && aberta) {
+            const opcoes = [['', '— sem responsável —']].concat(perfisNuvem.filter(function (p) {
+                return p.ativo && (p.area === n.componente || p.papel === 'gestao' || p.id === s.responsavel);
+            }).map(function (p) { return [p.id, p.nome + (p.papel === 'pca' ? ' (PCA)' : '')]; }));
+            html += 'Responsável <select data-campo="secao-responsavel">' + opcoesHtml(opcoes, s.responsavel || '') + '</select>';
+        } else {
+            html += 'Responsável: <strong>' + esc(nomeDe(s.responsavel)) + '</strong>';
+        }
+        html += situacaoHtml(situacao);
+        html += '<span class="fluxo">';
+        if (aberta && meta) {
+            if (minha && (situacao === 'rascunho' || situacao === 'devolvida')) html += '<button type="button" class="btn btn--pequeno btn--verde" data-acao="nv-pronta">✔ Marcar como pronta</button>';
+            if (minha && situacao === 'pronta' && !coord) html += '<button type="button" class="btn btn--pequeno" data-acao="nv-editar">Voltar a editar</button>';
+            if (coord && situacao !== 'aprovada') html += '<button type="button" class="btn btn--pequeno btn--verde" data-acao="nv-aprovar">Aprovar</button>';
+            if (coord && situacao !== 'devolvida') html += '<button type="button" class="btn btn--pequeno" data-acao="nv-devolver">Devolver com comentário</button>';
+            if (coord && situacao === 'aprovada') html += '<button type="button" class="btn btn--pequeno" data-acao="nv-reabrir">Reabrir</button>';
+        }
+        html += '</span></div>';
+        if (!escreve) {
+            html += '<p class="so-leitura-aviso">' + (n.situacao !== 'aberta' ? 'Prova travada para impressão: ninguém altera até o PCA destravar.'
+                : situacao === 'aprovada' && minha ? 'Seção aprovada pelo PCA: para mudar algo, peça que ele a reabra.'
+                    : 'Seção de ' + esc(nomeDe(s.responsavel)) + ': você lê, mas só o responsável e o PCA alteram.') + '</p>';
+        }
+        return html;
+    }
+
+    function comentariosDaSecao(s) {
+        const lista = comentariosNuvem.filter(function (c) { return c.secao_id === s.id; });
+        const abertos = comentariosAbertos.has(s.id) || lista.some(function (c) { return c.tipo === 'devolucao' && !c.resolvido; });
+        return '<details class="comentarios" data-comentarios="' + s.id + '"' + (abertos ? ' open' : '') + '>' +
+            '<summary>💬 Comentários e histórico (' + lista.length + ')</summary>' +
+            lista.map(function (c) {
+                return '<div class="comentario comentario--' + esc(c.tipo) + '"><small>' + esc(nomeDe(c.autor)) + ' · ' +
+                    new Date(c.criado_em).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }) +
+                    (c.tipo === 'devolucao' ? ' · devolveu a seção' : c.tipo === 'aprovacao' ? ' · aprovou' : c.tipo === 'pronta' ? ' · marcou como pronta' : '') +
+                    '</small>' + esc(c.texto) + '</div>';
+            }).join('') +
+            '<div class="comentar"><input type="text" data-comentar placeholder="Escreva um comentário para o PCA e os colegas…" maxlength="1000">' +
+            '<button type="button" class="btn btn--pequeno" data-acao="nv-comentar">Enviar</button></div></details>';
+    }
+
+    function desenharPainelArea() {
+        const n = prova.nuvem;
+        const caixa = $('area-painel');
+        const hoje = new Date().toISOString().slice(0, 10);
+        const linhas = prova.secoes.map(function (s) {
+            const meta = n.secoes[s.id];
+            const total = s.questoes.filter(function (q) { return q.tipo !== 'texto'; }).length;
+            return '<tr><td>' + esc(s.titulo || '(sem título)') + '</td><td>' + esc(nomeDe(s.responsavel)) + '</td><td>' + total +
+                '</td><td>' + situacaoHtml(meta ? meta.situacao : 'nova') + '</td></tr>';
+        }).join('');
+        const prontas = prova.secoes.filter(function (s) { const m = n.secoes[s.id]; return m && (m.situacao === 'pronta' || m.situacao === 'aprovada'); }).length;
+        const prazo = n.prazo ? '<span class="prazo' + (n.prazo < hoje && n.situacao === 'aberta' ? ' vencido' : '') + '">Prazo: ' + dataCurta(n.prazo) + '</span> · ' : '';
+        caixa.innerHTML = '<strong>Prova da área — ' + esc(NOMES_AREA[n.componente] || n.componente) + '</strong> · ' + prazo +
+            prontas + ' de ' + prova.secoes.length + ' seções prontas · ' +
+            situacaoHtml(n.situacao, n.situacao === 'travada' ? '🔒 travada para impressão' : 'aberta para edição') +
+            (coordenoEsta() && n.situacao === 'aberta' ? ' · <label class="prazo-editar">mudar prazo <input type="date" id="nv-prazo" value="' + esc(n.prazo || '') + '"></label>' : '') +
+            '<table><tr><th>Seção</th><th>Responsável</th><th>Questões</th><th>Situação</th></tr>' + linhas + '</table>';
+        caixa.hidden = false;
+        const campoPrazo = $('nv-prazo');
+        if (campoPrazo) campoPrazo.onchange = async function () {
+            try { await Nuvem.mudarPrazo(n.id, this.value); n.prazo = this.value || null; desenharPainelArea(); }
+            catch (e) { alert(Nuvem.mensagem(e)); }
+        };
+    }
+
+    /* Na prova da área, o casco (dados, aparência, instruções, formato) é do
+       PCA; o professor vê tudo, mas os campos ficam travados. */
+    function aplicarPermissoes() {
+        const formata = !prova || Nuvem.podeFormatar(prova);
+        const passos = document.querySelectorAll('#editor fieldset.passo');
+        for (let i = 0; i < 4 && i < passos.length; i++) {
+            passos[i].disabled = !formata;
+            let aviso = passos[i].querySelector('.trava-aviso');
+            if (!formata && !aviso) {
+                aviso = el('p', 'trava-aviso', prova.nuvem.situacao === 'travada' ? '🔒 Prova travada para impressão.' : '🔒 Só o PCA da área altera esta parte.');
+                passos[i].insertBefore(aviso, passos[i].children[1] || null);
+            }
+            if (formata && aviso) aviso.remove();
+        }
+        const nuvem = !!(prova && prova.nuvem);
+        const componente = document.querySelector('#editor [data-p="componente"]');
+        if (componente) componente.disabled = nuvem || !formata;
+        $('add-secao').hidden = !formata;
+        const algumaMinha = !prova || prova.secoes.some(function (s) { return Nuvem.podeEscrever(prova, s); });
+        $('add-colar').hidden = !algumaMinha;
+        $('add-banco').hidden = !algumaMinha;
+        $('area-painel').hidden = !nuvem;
+        $('ed-nuvem').hidden = !nuvem;
+        $('ed-travar').hidden = !(nuvem && coordenoEsta());
+        if (nuvem) {
+            $('ed-travar').textContent = prova.nuvem.situacao === 'travada' ? '🔓 Destravar' : '🔒 Travar para impressão';
+            $('ed-modelo').textContent = 'Prova da área · ' + (prova.fixo ? '🔒 ' : '') + prova.modeloNome;
+        }
+    }
+
+    function atualizarChipNuvem(estado) {
+        if (!prova || !prova.nuvem) return;
+        const chip = $('ed-nuvem');
+        const pendentes = Nuvem.pendencias(prova);
+        chip.classList.remove('pendente', 'erro');
+        let curto;
+        let longo;
+        if (prova.nuvem.erro) {
+            curto = '⚠ Erro ao salvar';
+            longo = prova.nuvem.erro;
+            chip.classList.add('erro');
+        } else if (estado === 'enviando') {
+            curto = '☁ Enviando…';
+            longo = 'Enviando as alterações ao servidor.';
+            chip.classList.add('pendente');
+        } else if (pendentes && (prova.nuvem.offline || !navigator.onLine)) {
+            curto = '☁ Sem conexão (' + pendentes + ')';
+            longo = 'Sem conexão: ' + pendentes + (pendentes === 1 ? ' alteração guardada' : ' alterações guardadas') + ' neste aparelho. Vão sozinhas quando a internet voltar.';
+            chip.classList.add('pendente');
+        } else if (pendentes) {
+            curto = '☁ ' + pendentes + ' a enviar';
+            longo = pendentes + (pendentes === 1 ? ' alteração' : ' alterações') + ' esperando para ir ao servidor.';
+            chip.classList.add('pendente');
+        } else {
+            curto = '☁ Salvo';
+            longo = 'Tudo salvo no servidor: os colegas já veem esta versão.';
+        }
+        chip.textContent = curto;
+        chip.title = longo;
+        chip.setAttribute('aria-label', longo);
+    }
+
+    async function enviarNuvem() {
+        if (!prova || !prova.nuvem) return;
+        const alvo = prova;
+        atualizarChipNuvem('enviando');
+        const r = await Nuvem.sincronizar(alvo);
+        if (prova !== alvo) return;
+        Armazem.salvar(alvo).catch(function () {});
+        atualizarChipNuvem();
+        if (r.erro) $('ed-status').textContent = '';
+    }
+
+    /* o cursor volta ao mesmo campo (e à mesma posição) depois de redesenhar */
+    function lembrarFoco() {
+        const a = document.activeElement;
+        if (!a || !$('editor').contains(a)) return null;
+        const q = a.closest('[data-q]');
+        const s = a.closest('[data-s]');
+        return { q: q && q.dataset.q, s: s && s.dataset.s, campo: a.dataset.campo, i: a.dataset.i, p: a.dataset.p, inicio: a.selectionStart, fim: a.selectionEnd, rolagem: $('editor').scrollTop };
+    }
+    function devolverFoco(f) {
+        if (!f) return;
+        let seletor = f.p ? '[data-p="' + f.p + '"]' : '[data-campo="' + f.campo + '"]' + (f.i != null ? '[data-i="' + f.i + '"]' : '');
+        if (f.q) seletor = '[data-q="' + f.q + '"] ' + seletor;
+        else if (f.s) seletor = '[data-s="' + f.s + '"] ' + seletor;
+        const campo = document.querySelector('#editor ' + seletor);
+        if (!campo || campo.disabled) return;
+        campo.focus({ preventScroll: true });
+        try { if (f.inicio != null) campo.setSelectionRange(f.inicio, f.fim); } catch (e) { /* campo sem seleção */ }
+        $('editor').scrollTop = f.rolagem;
+    }
+
+    /* Redesenhar a prova no meio de uma frase tiraria o cursor do lugar:
+       enquanto a pessoa digita, as mudanças dos colegas esperam um pouco. */
+    let ultimaDigitacao = 0;
+    $('editor').addEventListener('input', function () { ultimaDigitacao = Date.now(); });
+    function digitando() {
+        const a = document.activeElement;
+        return !!a && $('editor').contains(a) && (a.tagName === 'TEXTAREA' || (a.tagName === 'INPUT' && /^(text|search|number|date)$/.test(a.type))) &&
+            Date.now() - ultimaDigitacao < 3000;
+    }
+
+    const receberMudancas = debounce(async function () {
+        if (!prova || !prova.nuvem) return;
+        if (digitando()) {
+            esperandoParaReceber = true;
+            setTimeout(function () { if (esperandoParaReceber) receberMudancas(); }, 3200);
+            return;
+        }
+        esperandoParaReceber = false;
+        const alvo = prova;
+        try {
+            const r = await Nuvem.atualizarDoServidor(alvo);
+            if (prova !== alvo) return;
+            if (r.apagada) { alert('Esta prova foi apagada pelo PCA.'); location.hash = '#/'; return; }
+            comentariosNuvem = await Nuvem.comentarios(alvo.nuvem.id).catch(function () { return comentariosNuvem; });
+            if (prova !== alvo) return;
+            const foco = lembrarFoco();
+            redesenharTudo();
+            devolverFoco(foco);
+            paginar();
+            Armazem.salvar(alvo).catch(function () {});
+            atualizarChipNuvem();
+        } catch (e) { /* sem rede: tenta de novo na próxima mudança */ }
+    }, 700);
+
+    $('editor').addEventListener('focusout', function () {
+        if (esperandoParaReceber) setTimeout(function () { if (!digitando()) receberMudancas(); }, 400);
+    });
+    window.addEventListener('online', function () { if (prova && prova.nuvem) { enviarNuvem().then(receberMudancas); } });
+    window.addEventListener('offline', function () { if (prova && prova.nuvem) { prova.nuvem.offline = true; atualizarChipNuvem(); } });
+
+    async function abrirProvaNuvem(id) {
+        if (!Nuvem.perfil()) { location.hash = '#/entrar'; return; }
+        mostrar('editor');
+        $('ed-titulo').textContent = 'Abrindo a prova da área…';
+        $('secoes').innerHTML = '<p class="vazio">Carregando…</p>';
+        const cache = await Armazem.obter('nuvem:' + id).catch(function () { return null; });
+        let p = null;
+        try {
+            p = await Nuvem.carregarProva(id);
+            if (!p) { alert('Esta prova não existe mais ou você não tem acesso a ela.'); location.hash = '#/'; return; }
+            if (cache && cache.nuvem && Nuvem.pendencias(cache) > 0) {
+                /* havia alterações feitas sem internet: elas valem e vão agora */
+                p = cache;
+            }
+        } catch (erro) {
+            if (!cache) { alert('Sem conexão, e esta prova ainda não foi aberta neste aparelho.'); location.hash = '#/'; return; }
+            p = cache;
+            p.nuvem.offline = true;
+        }
+        perfisNuvem = await Nuvem.perfis().catch(function () { return perfisNuvem; });
+        comentariosNuvem = await Nuvem.comentarios(p.nuvem.id).catch(function () { return []; });
+        abrirProva(p);
+        Armazem.salvar(p).catch(function () {});
+        atualizarChipNuvem();
+        if (Nuvem.pendencias(p) > 0) enviarNuvem().then(receberMudancas);
+        pararAssinatura = Nuvem.assinar(id, function () { receberMudancas(); });
+        /* rede de segurança: se o tempo real cair, confere de tempos em tempos */
+        relogioNuvem = setInterval(function () {
+            if (!prova || !prova.nuvem) return;
+            if (Nuvem.pendencias(prova) > 0) enviarNuvem();
+            receberMudancas();
+        }, 45000);
+    }
+
+    function fecharNuvem() {
+        if (prova && prova.nuvem && Nuvem.pendencias(prova) > 0) Nuvem.sincronizar(prova);
+        if (pararAssinatura) { pararAssinatura(); pararAssinatura = null; }
+        if (relogioNuvem) { clearInterval(relogioNuvem); relogioNuvem = null; }
+        comentariosNuvem = [];
+    }
+
+    async function acaoDaArea(acao, secao, botao) {
+        const n = prova.nuvem;
+        try {
+            if (acao === 'nv-comentar') {
+                const campo = botao.closest('.comentar').querySelector('[data-comentar]');
+                const texto = campo.value.trim();
+                if (!texto) return;
+                await Nuvem.comentar(n.id, secao.id, texto);
+                comentariosAbertos.add(secao.id);
+                campo.value = '';
+            } else if (acao === 'nv-pronta') {
+                await enviarNuvem();
+                if (Nuvem.pendencias(prova) > 0) { alert('Ainda há alterações que não chegaram ao servidor. Confira a conexão e tente de novo.'); return; }
+                const nota = prompt('Recado para o PCA (opcional):', '');
+                if (nota === null) return;
+                await Nuvem.marcarSecao(secao.id, true, nota);
+            } else if (acao === 'nv-editar') {
+                await Nuvem.marcarSecao(secao.id, false);
+            } else if (acao === 'nv-aprovar') {
+                await enviarNuvem();
+                await Nuvem.decidirSecao(n.id, secao.id, 'aprovada', '');
+            } else if (acao === 'nv-reabrir') {
+                await Nuvem.decidirSecao(n.id, secao.id, 'rascunho', 'Seção reaberta para ajustes.');
+            } else if (acao === 'nv-devolver') {
+                const texto = prompt('O que precisa ser ajustado? (vai para o professor, junto com a seção)', '');
+                if (texto === null) return;
+                if (!texto.trim()) { alert('Escreva o que precisa ser ajustado.'); return; }
+                await Nuvem.decidirSecao(n.id, secao.id, 'devolvida', texto);
+                comentariosAbertos.add(secao.id);
+            }
+            receberMudancas.agora();
+        } catch (erro) {
+            alert(Nuvem.mensagem(erro));
+        }
+    }
+
+    caixaSecoes.addEventListener('change', function (e) {
+        if (e.target.dataset.campo !== 'secao-responsavel') return;
+        const secao = prova.secoes.find(function (s) { return s.id === e.target.closest('[data-s]').dataset.s; });
+        marcar();
+        secao.responsavel = e.target.value || null;
+        mudou();
+    });
+    caixaSecoes.addEventListener('keydown', function (e) {
+        if (e.key === 'Enter' && e.target.matches && e.target.matches('[data-comentar]')) {
+            e.preventDefault();
+            e.target.closest('.comentar').querySelector('[data-acao="nv-comentar"]').click();
+        }
+    });
+    caixaSecoes.addEventListener('toggle', function (e) {
+        const d = e.target;
+        if (!d.dataset || !d.dataset.comentarios) return;
+        if (d.open) comentariosAbertos.add(d.dataset.comentarios); else comentariosAbertos.delete(d.dataset.comentarios);
+    }, true);
+
+    $('ed-travar').onclick = async function () {
+        const n = prova.nuvem;
+        const travar = n.situacao !== 'travada';
+        if (travar) {
+            await enviarNuvem();
+            const faltam = prova.secoes.filter(function (s) { const m = n.secoes[s.id]; return !m || m.situacao !== 'aprovada'; });
+            const aviso = faltam.length ? '\n\nAinda não aprovadas: ' + faltam.map(function (s) { return s.titulo || '(sem título)'; }).join(', ') + '.' : '';
+            if (!confirm('Travar a prova para impressão? Ninguém mais altera até você destravar.' + aviso)) return;
+        }
+        try {
+            await Nuvem.travar(n.id, travar);
+            n.situacao = travar ? 'travada' : 'aberta';
+            redesenharTudo();
+            receberMudancas();
+        } catch (e) { alert(Nuvem.mensagem(e)); }
+    };
+
+    /* ----- início: conta e provas da área ----- */
+
+    function desenharConta() {
+        const caixa = $('conta');
+        if (!Nuvem.disponivel()) { caixa.innerHTML = ''; return; }
+        const p = Nuvem.perfil();
+        if (!p) {
+            caixa.innerHTML = '<a class="btn btn--pequeno" href="#/entrar">Entrar para as provas da área</a>';
+            return;
+        }
+        caixa.innerHTML = '<span class="conta-nome">' + esc(p.nome) + '<small>' + esc(NOMES_PAPEL[p.papel] || p.papel) +
+            (p.area ? ' · ' + esc(NOMES_AREA[p.area] || p.area) : '') + '</small></span>' +
+            (p.papel === 'gestao' ? '<a class="btn btn--pequeno" href="#/admin">Professores</a>' : '') +
+            '<button type="button" class="btn btn--pequeno" id="conta-senha">Trocar senha</button>' +
+            '<button type="button" class="btn btn--pequeno" id="conta-sair">Sair</button>';
+        $('conta-sair').onclick = async function () { await Nuvem.sair(); desenharInicio(); };
+        $('conta-senha').onclick = function () {
+            $('senha-nova').value = '';
+            $('senha-nova2').value = '';
+            $('senha-erro').hidden = true;
+            $('dialogo-senha').showModal();
+        };
+    }
+
+    $('senha-salvar').onclick = async function () {
+        const a = $('senha-nova').value;
+        const b = $('senha-nova2').value;
+        const erro = $('senha-erro');
+        erro.hidden = true;
+        if (a !== b) { erro.textContent = 'As duas senhas não são iguais.'; erro.hidden = false; return; }
+        try {
+            await Nuvem.trocarSenha(a);
+            $('dialogo-senha').close();
+            alert('Senha trocada.');
+        } catch (e) { erro.textContent = e.message; erro.hidden = false; }
+    };
+
+    async function desenharArea() {
+        const bloco = $('bloco-area');
+        const p = Nuvem.perfil();
+        bloco.hidden = !p;
+        if (!p) return;
+        const coordenaAlguma = p.papel === 'gestao' || p.papel === 'pca';
+        $('nova-prova-area').hidden = !coordenaAlguma;
+        const destino = $('lista-area');
+        let provas;
+        let local = false;
+        try {
+            provas = await Nuvem.listarProvas();
+        } catch (e) {
+            /* sem internet: as que já foram abertas neste aparelho */
+            local = true;
+            provas = (await Armazem.listar()).filter(function (x) { return x.nuvem; }).map(function (x) {
+                return { id: x.nuvem.id, titulo: x.titulo, serie: x.serie, bimestre: x.bimestre, ano: x.ano, componente: x.nuvem.componente,
+                    situacao: x.nuvem.situacao, prazo: x.nuvem.prazo, secoes: x.secoes.map(function (s) {
+                        return { id: s.id, titulo: s.titulo, responsavel: s.responsavel, situacao: (x.nuvem.secoes[s.id] || {}).situacao || 'rascunho', total: s.questoes.length };
+                    }) };
+            });
+        }
+        destino.innerHTML = '';
+        if (local) destino.appendChild(el('p', 'aviso', 'Sem conexão: mostrando as provas da área já abertas neste aparelho.'));
+        if (!provas.length) {
+            destino.appendChild(el('p', 'vazio', coordenaAlguma ? 'Nenhuma prova da área ainda. Crie a primeira em "+ Nova prova da área".'
+                : 'Nenhuma prova da área para você ainda. Quando o PCA criar uma com uma seção sua, ela aparece aqui.'));
+            return;
+        }
+        provas.forEach(function (x) {
+            const minhas = x.secoes.filter(function (s) { return s.responsavel === p.id; });
+            const prontas = x.secoes.filter(function (s) { return s.situacao === 'pronta' || s.situacao === 'aprovada'; }).length;
+            const coord = Nuvem.coordena(x.componente);
+            const meta = [NOMES_AREA[x.componente] || x.componente, x.serie ? x.serie + 'ª série' : '', x.bimestre ? x.bimestre.replace('B', '') + 'º bim.' : '',
+                prontas + '/' + x.secoes.length + ' seções prontas', x.prazo ? 'prazo ' + dataCurta(x.prazo) : ''].filter(Boolean).join(' · ');
+            destino.appendChild(el('div', 'prova-linha',
+                '<div class="info"><strong>' + situacaoHtml(x.situacao === 'travada' ? 'travada' : 'aberta', x.situacao === 'travada' ? '🔒 travada' : 'aberta') + ' ' +
+                esc(x.titulo || 'Prova da área') + '</strong><span class="meta">' + esc(meta) + '</span>' +
+                (minhas.length ? '<div class="minhas-secoes">' + minhas.map(function (s) {
+                    return '<span class="situacao situacao--' + esc(s.situacao) + '">' + esc((s.titulo || 'Seção') + ': ' + s.total + ' questões · ' + (NOMES_SITUACAO[s.situacao] || s.situacao)) + '</span>';
+                }).join('') + '</div>' : '') + '</div>' +
+                '<div class="acoes"><a class="btn btn--primary btn--pequeno" href="#/area/' + encodeURIComponent(x.id) + '">Abrir</a>' +
+                (coord && !local ? '<button type="button" class="btn btn--pequeno" data-apagar-area="' + esc(x.id) + '">Apagar</button>' : '') + '</div>'));
+        });
+    }
+
+    $('lista-area').addEventListener('click', async function (e) {
+        const b = e.target.closest('[data-apagar-area]');
+        if (!b) return;
+        if (!confirm('Apagar esta prova da área para todos os professores? As questões dela somem junto. Não dá para desfazer.')) return;
+        try { await Nuvem.apagarProva(b.dataset.apagarArea); desenharArea(); }
+        catch (erro) { alert(Nuvem.mensagem(erro)); }
+    });
+
+    /* ----- nova prova da área ----- */
+
+    function linhaSecaoArea(titulo, responsavel, componente) {
+        const opcoes = [['', '— escolher depois —']].concat(perfisNuvem.filter(function (p) {
+            return p.ativo && (p.area === componente || p.papel === 'gestao');
+        }).map(function (p) { return [p.id, p.nome + (p.papel === 'pca' ? ' (PCA)' : '') + (p.disciplinas && p.disciplinas.length ? ' — ' + p.disciplinas.join(', ') : '')]; }));
+        const linha = el('div', 'area-secao',
+            '<input type="text" data-area-titulo value="' + esc(titulo) + '" placeholder="Título da seção">' +
+            '<select data-area-resp>' + opcoesHtml(opcoes, responsavel || '') + '</select>' +
+            '<button type="button" class="icone icone--perigo" data-area-tirar title="Tirar a seção">✕</button>');
+        return linha;
+    }
+
+    /* o professor cuja disciplina tem o nome da seção é o responsável sugerido */
+    function responsavelSugerido(titulo, componente) {
+        const alvo = normalizar(titulo);
+        const achado = perfisNuvem.find(function (p) {
+            return p.ativo && p.area === componente && (p.disciplinas || []).some(function (d) {
+                const nd = normalizar(d);
+                return nd && (alvo.indexOf(nd) !== -1 || nd.indexOf(alvo) !== -1);
+            });
+        });
+        return achado ? achado.id : '';
+    }
+
+    function preencherSecoesArea() {
+        const componente = $('area-componente').value;
+        const caixa = $('area-secoes');
+        caixa.innerHTML = '';
+        const comp = Modelos.COMPONENTES[componente];
+        (comp ? comp.secoes : ['']).forEach(function (t) {
+            caixa.appendChild(linhaSecaoArea(t, responsavelSugerido(t, componente), componente));
+        });
+    }
+
+    $('nova-prova-area').onclick = async function () {
+        const p = Nuvem.perfil();
+        perfisNuvem = await Nuvem.perfis().catch(function () { return perfisNuvem; });
+        $('area-modelo').innerHTML = opcoesHtml(Modelos.listar().map(function (m) { return [m.id, m.nome]; }), Modelos.FIXO_ID);
+        $('area-componente').value = p.area || 'NAT';
+        $('area-componente').disabled = p.papel !== 'gestao';
+        $('area-serie').value = '1';
+        $('area-bimestre').value = 'B' + Math.min(4, Math.max(1, Math.ceil((new Date().getMonth() + 1 - 1) / 3)));
+        $('area-ano').value = String(new Date().getFullYear());
+        $('area-prazo').value = '';
+        $('area-erro').hidden = true;
+        preencherSecoesArea();
+        $('dialogo-area').showModal();
+    };
+    $('area-componente').addEventListener('change', preencherSecoesArea);
+    $('area-mais').onclick = function () { $('area-secoes').appendChild(linhaSecaoArea('', '', $('area-componente').value)); };
+    $('area-secoes').addEventListener('click', function (e) {
+        const b = e.target.closest('[data-area-tirar]');
+        if (b) b.closest('.area-secao').remove();
+    });
+    $('area-criar').onclick = async function () {
+        const erro = $('area-erro');
+        erro.hidden = true;
+        const secoes = Array.from($('area-secoes').querySelectorAll('.area-secao')).map(function (l) {
+            return { titulo: l.querySelector('[data-area-titulo]').value.trim().toUpperCase(), responsavel: l.querySelector('[data-area-resp]').value || null };
+        }).filter(function (s) { return s.titulo; });
+        if (!secoes.length) { erro.textContent = 'Crie pelo menos uma seção.'; erro.hidden = false; return; }
+        $('area-criar').disabled = true;
+        try {
+            const id = await Nuvem.criarProva({
+                modeloId: $('area-modelo').value, componente: $('area-componente').value, serie: $('area-serie').value,
+                bimestre: $('area-bimestre').value, ano: $('area-ano').value, prazo: $('area-prazo').value || null, secoes: secoes
+            });
+            $('dialogo-area').close();
+            location.hash = '#/area/' + encodeURIComponent(id);
+        } catch (e) {
+            erro.textContent = Nuvem.mensagem(e);
+            erro.hidden = false;
+        } finally {
+            $('area-criar').disabled = false;
+        }
+    };
+
+    /* ----- entrar ----- */
+
+    async function abrirEntrar() {
+        mostrar('entrar');
+        document.title = 'Entrar — Montador de Provas da Malu';
+        $('entrar-erro').hidden = true;
+        $('form-primeiro').hidden = true;
+        if (Nuvem.perfil()) { location.hash = '#/'; return; }
+        $('form-primeiro').hidden = !(await Nuvem.primeiroAcessoAberto());
+    }
+
+    $('form-entrar').addEventListener('submit', async function (e) {
+        e.preventDefault();
+        const erro = $('entrar-erro');
+        erro.hidden = true;
+        $('entrar-botao').disabled = true;
+        try {
+            await Nuvem.entrar($('entrar-email').value, $('entrar-senha').value);
+            $('entrar-senha').value = '';
+            location.hash = '#/';
+        } catch (falha) {
+            erro.textContent = falha.message;
+            erro.hidden = false;
+        } finally {
+            $('entrar-botao').disabled = false;
+        }
+    });
+
+    $('form-primeiro').addEventListener('submit', async function (e) {
+        e.preventDefault();
+        const erro = $('primeiro-erro');
+        erro.hidden = true;
+        if ($('primeiro-senha').value !== $('primeiro-senha2').value) { erro.textContent = 'As duas senhas não são iguais.'; erro.hidden = false; return; }
+        $('primeiro-botao').disabled = true;
+        try {
+            await Nuvem.primeiroAcesso({ nome: $('primeiro-nome').value, email: $('primeiro-email').value, senha: $('primeiro-senha').value });
+            location.hash = '#/admin';
+        } catch (falha) {
+            erro.textContent = falha.message;
+            erro.hidden = false;
+        } finally {
+            $('primeiro-botao').disabled = false;
+        }
+    });
+
+    /* ----- administração (gestão) ----- */
+
+    let professoresAdmin = [];
+
+    async function abrirAdmin() {
+        const p = Nuvem.perfil();
+        if (!p) { location.hash = '#/entrar'; return; }
+        if (p.papel !== 'gestao') { location.hash = '#/'; return; }
+        mostrar('admin');
+        document.title = 'Professores — Montador de Provas da Malu';
+        limparFormProfessor();
+        await desenharProfessores();
+    }
+
+    async function desenharProfessores() {
+        const destino = $('lista-prof');
+        try {
+            professoresAdmin = await Nuvem.perfis();
+        } catch (e) {
+            destino.innerHTML = '<p class="aviso aviso--erro">' + esc(Nuvem.mensagem(e)) + '</p>';
+            return;
+        }
+        const termo = normalizar($('busca-prof').value);
+        destino.innerHTML = '';
+        const lista = professoresAdmin.filter(function (x) {
+            return !termo || normalizar([x.nome, x.email, NOMES_AREA[x.area], (x.disciplinas || []).join(' ')].join(' ')).indexOf(termo) !== -1;
+        });
+        if (!lista.length) destino.appendChild(el('p', 'vazio', 'Ninguém cadastrado ainda.'));
+        lista.forEach(function (x) {
+            const meta = [NOMES_PAPEL[x.papel], NOMES_AREA[x.area], (x.disciplinas || []).join(', '), x.email].filter(Boolean).join(' · ');
+            destino.appendChild(el('div', 'prova-linha',
+                '<div class="info"><strong>' + esc(x.nome) + (x.ativo ? '' : ' ' + situacaoHtml('devolvida', 'desativado')) + '</strong><span class="meta">' + esc(meta) + '</span></div>' +
+                '<div class="acoes">' +
+                '<button type="button" class="btn btn--pequeno" data-prof-editar="' + esc(x.id) + '">Editar</button>' +
+                '<button type="button" class="btn btn--pequeno" data-prof-ativo="' + esc(x.id) + '">' + (x.ativo ? 'Desativar' : 'Reativar') + '</button>' +
+                (x.id === Nuvem.perfil().id ? '' : '<button type="button" class="btn btn--pequeno" data-prof-excluir="' + esc(x.id) + '">Excluir</button>') +
+                '</div>'));
+        });
+    }
+    $('busca-prof').addEventListener('input', desenharProfessores);
+
+    function limparFormProfessor() {
+        $('prof-id').value = '';
+        ['prof-nome', 'prof-email', 'prof-disciplinas', 'prof-senha'].forEach(function (id) { $(id).value = ''; });
+        $('prof-papel').value = 'professor';
+        $('prof-area').value = '';
+        $('form-professor-titulo').textContent = 'Cadastrar professor';
+        $('prof-senha-rotulo').textContent = 'Senha provisória (mín. 8)';
+        $('prof-salvar').textContent = 'Cadastrar';
+        $('prof-cancelar').hidden = true;
+        $('prof-erro').hidden = true;
+    }
+
+    function senhaAleatoria() {
+        const letras = 'abcdefghjkmnpqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+        const n = new Uint32Array(10);
+        (window.crypto || {}).getRandomValues ? crypto.getRandomValues(n) : n.forEach(function (_, i) { n[i] = Math.random() * 1e9; });
+        return Array.from(n).map(function (v) { return letras[v % letras.length]; }).join('');
+    }
+    $('prof-gerar').onclick = function () { $('prof-senha').value = senhaAleatoria(); };
+    $('prof-cancelar').onclick = limparFormProfessor;
+
+    $('form-professor').addEventListener('submit', async function (e) {
+        e.preventDefault();
+        const erro = $('prof-erro');
+        const ok = $('prof-ok');
+        erro.hidden = true;
+        ok.hidden = true;
+        const id = $('prof-id').value;
+        const dados = {
+            nome: $('prof-nome').value.trim(), email: $('prof-email').value.trim(), papel: $('prof-papel').value,
+            area: $('prof-area').value || null, disciplinas: $('prof-disciplinas').value
+        };
+        const senha = $('prof-senha').value;
+        if (senha) dados.senha = senha;
+        if (!id && !senha) { erro.textContent = 'Defina a senha provisória (o botão Gerar cria uma).'; erro.hidden = false; return; }
+        $('prof-salvar').disabled = true;
+        try {
+            if (id) await Nuvem.atualizarProfessor(id, dados);
+            else await Nuvem.criarProfessor(dados);
+            ok.textContent = (id ? 'Alterações salvas: ' : 'Cadastrado: ') + dados.nome + (senha ? ' — senha: ' + senha + ' (anote e passe ao professor)' : '') + '.';
+            ok.hidden = false;
+            limparFormProfessor();
+            await desenharProfessores();
+        } catch (falha) {
+            erro.textContent = falha.message;
+            erro.hidden = false;
+        } finally {
+            $('prof-salvar').disabled = false;
+        }
+    });
+
+    $('lista-prof').addEventListener('click', async function (e) {
+        const b = e.target.closest('button');
+        if (!b) return;
+        const id = b.dataset.profEditar || b.dataset.profAtivo || b.dataset.profExcluir;
+        const x = professoresAdmin.find(function (y) { return y.id === id; });
+        if (!x) return;
+        try {
+            if (b.dataset.profEditar) {
+                $('prof-id').value = x.id;
+                $('prof-nome').value = x.nome;
+                $('prof-email').value = x.email;
+                $('prof-papel').value = x.papel;
+                $('prof-area').value = x.area || '';
+                $('prof-disciplinas').value = (x.disciplinas || []).join(', ');
+                $('prof-senha').value = '';
+                $('form-professor-titulo').textContent = 'Editar ' + x.nome;
+                $('prof-senha-rotulo').textContent = 'Nova senha (deixe vazio para manter a atual)';
+                $('prof-salvar').textContent = 'Salvar alterações';
+                $('prof-cancelar').hidden = false;
+                $('prof-ok').hidden = true;
+                window.scrollTo(0, 0);
+                $('prof-nome').focus();
+            } else if (b.dataset.profAtivo) {
+                if (x.ativo && !confirm('Desativar ' + x.nome + '? A pessoa não consegue mais entrar; as questões dela continuam nas provas.')) return;
+                await Nuvem.atualizarProfessor(x.id, { ativo: !x.ativo });
+                await desenharProfessores();
+            } else if (b.dataset.profExcluir) {
+                if (!confirm('Excluir a conta de ' + x.nome + '? As questões dela continuam nas provas, sem o nome. Para só impedir o acesso, use Desativar.')) return;
+                await Nuvem.excluirProfessor(x.id);
+                await desenharProfessores();
+            }
+        } catch (falha) { alert(falha.message); }
+    });
+
 
     /* ===================== editor de modelo ===================== */
 
@@ -1629,5 +2380,6 @@
     window.addEventListener('hashchange', rota);
     window.addEventListener('beforeunload', function () { if (prova && salvar.pendente()) salvar.agora(); });
     window.MontadorProvas = { estado: function () { return prova; }, repaginar: repaginar, resultado: function () { return ultimoResultado; } };
-    rota();
+    /* a sessão (se houver) é lida antes da primeira tela; sem internet vale a última */
+    (Nuvem.disponivel() ? Nuvem.iniciar().catch(function () { return null; }) : Promise.resolve(null)).then(rota);
 })();

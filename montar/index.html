@@ -28,14 +28,25 @@
         }
     </script>
 
+    <div class="conta" id="conta"></div>
+
     <div class="masthead">
         <img src="logo.png" alt="Brasão da EEMTI Maria Luiza Saboia">
         <div>
             <h1>Montador de Provas da Malu</h1>
-            <p>Escolha um modelo, escreva ou cole as questões e imprima a prova já no formato da escola — enxuta, legível e gastando o mínimo de papel e tinta. Funciona sem internet, e nada sai deste navegador.</p>
+            <p>Escolha um modelo, escreva ou cole as questões e imprima a prova já no formato da escola — enxuta, legível e gastando o mínimo de papel e tinta. As provas pessoais funcionam sem internet e não saem deste navegador; as provas da área, montadas com os colegas, ficam guardadas no servidor da escola.</p>
             <p class="selo-offline" id="selo-offline" hidden>✓ Pronto para usar sem internet neste aparelho</p>
         </div>
     </div>
+
+    <section class="bloco bloco--area" id="bloco-area" hidden>
+        <div class="bloco-cab">
+            <h2>Provas da área</h2>
+            <button type="button" class="btn btn--primary btn--pequeno" id="nova-prova-area" hidden>+ Nova prova da área</button>
+        </div>
+        <p class="dica" id="dica-area">Provas montadas a várias mãos: cada professor escreve as questões da sua disciplina e o PCA revisa e fecha a prova.</p>
+        <div id="lista-area" class="provas-lista"></div>
+    </section>
 
     <section class="bloco">
         <h2>Nova prova</h2>
@@ -62,6 +73,106 @@
     </section>
 </div>
 
+<!-- ===================== ENTRAR ===================== -->
+<div class="wrap wrap--estreito" id="tela-entrar" hidden>
+    <a class="back-link" href="#/">&larr; Início</a>
+    <div class="masthead">
+        <img src="logo.png" alt="">
+        <div>
+            <h1>Entrar</h1>
+            <p>Para montar as provas da área com os colegas. As provas pessoais continuam funcionando sem login.</p>
+        </div>
+    </div>
+    <form class="passo" id="form-entrar" autocomplete="on">
+        <div class="linha-campos"><label class="campo-largo">E-mail
+            <input type="email" id="entrar-email" autocomplete="username" required></label></div>
+        <div class="linha-campos"><label class="campo-largo">Senha
+            <input type="password" id="entrar-senha" autocomplete="current-password" required></label></div>
+        <p class="aviso aviso--erro" id="entrar-erro" hidden></p>
+        <div class="acoes-lista">
+            <button type="submit" class="btn btn--primary" id="entrar-botao">Entrar</button>
+            <span class="dica dica--pequena">Esqueceu a senha? Peça uma nova à gestão.</span>
+        </div>
+    </form>
+    <form class="passo" id="form-primeiro" hidden autocomplete="off">
+        <h2>Primeiro acesso da gestão</h2>
+        <p class="dica">Ainda não há nenhuma conta da gestão. Crie a sua: com ela você cadastra a diretora, os PCAs e os professores. Esta opção some assim que a primeira conta é criada.</p>
+        <div class="linha-campos"><label class="campo-largo">Seu nome
+            <input type="text" id="primeiro-nome" required></label></div>
+        <div class="linha-campos"><label class="campo-largo">E-mail
+            <input type="email" id="primeiro-email" autocomplete="username" required></label></div>
+        <div class="linha-campos">
+            <label class="campo-largo">Senha (mín. 8 caracteres)
+                <input type="password" id="primeiro-senha" autocomplete="new-password" minlength="8" required></label>
+            <label class="campo-largo">Repita a senha
+                <input type="password" id="primeiro-senha2" autocomplete="new-password" minlength="8" required></label>
+        </div>
+        <p class="aviso aviso--erro" id="primeiro-erro" hidden></p>
+        <button type="submit" class="btn btn--primary" id="primeiro-botao">Criar a conta da gestão</button>
+    </form>
+</div>
+
+<!-- ===================== ADMINISTRAÇÃO ===================== -->
+<div class="wrap" id="tela-admin" hidden>
+    <a class="back-link" href="#/">&larr; Início</a>
+    <div class="masthead">
+        <img src="logo.png" alt="">
+        <div>
+            <h1>Professores</h1>
+            <p>Quem pode entrar no Montador e o que pode fazer. O <strong>PCA</strong> coordena as provas da sua área; o <strong>professor</strong> escreve as questões da sua disciplina; a <strong>gestão</strong> cadastra e vê tudo.</p>
+        </div>
+    </div>
+    <form class="passo" id="form-professor" autocomplete="off">
+        <h2 id="form-professor-titulo">Cadastrar professor</h2>
+        <input type="hidden" id="prof-id">
+        <div class="linha-campos">
+            <label class="campo-largo">Nome<input type="text" id="prof-nome" required></label>
+            <label class="campo-largo">E-mail<input type="email" id="prof-email" required></label>
+        </div>
+        <div class="linha-campos">
+            <label>Papel
+                <select id="prof-papel">
+                    <option value="professor">Professor</option>
+                    <option value="pca">PCA (coordenador de área)</option>
+                    <option value="gestao">Gestão</option>
+                </select>
+            </label>
+            <label>Área
+                <select id="prof-area">
+                    <option value="">—</option>
+                    <option value="LIN">Linguagens e Códigos</option>
+                    <option value="NAT">Ciências da Natureza</option>
+                    <option value="HUM">Ciências Humanas</option>
+                    <option value="MAT">Matemática</option>
+                    <option value="RED">Redação</option>
+                </select>
+            </label>
+            <label class="campo-largo">Disciplinas <small>(separadas por vírgula)</small>
+                <input type="text" id="prof-disciplinas" placeholder="Ex.: Biologia, Química"></label>
+        </div>
+        <div class="linha-campos">
+            <label class="campo-largo"><span id="prof-senha-rotulo">Senha provisória (mín. 8)</span>
+                <span class="com-botao"><input type="text" id="prof-senha" autocomplete="off" minlength="8">
+                <button type="button" class="btn btn--pequeno" id="prof-gerar">Gerar</button></span>
+                <small>Passe a senha ao professor; ele pode trocá-la depois de entrar.</small>
+            </label>
+        </div>
+        <p class="aviso aviso--erro" id="prof-erro" hidden></p>
+        <p class="aviso aviso--ok" id="prof-ok" hidden></p>
+        <div class="acoes-lista">
+            <button type="submit" class="btn btn--primary" id="prof-salvar">Cadastrar</button>
+            <button type="button" class="btn" id="prof-cancelar" hidden>Cancelar a edição</button>
+        </div>
+    </form>
+    <section class="bloco">
+        <div class="bloco-cab">
+            <h2>Cadastrados</h2>
+            <input type="search" id="busca-prof" class="busca" placeholder="Procurar por nome, e-mail ou área…">
+        </div>
+        <div id="lista-prof" class="provas-lista"></div>
+    </section>
+</div>
+
 <!-- ===================== EDITOR DA PROVA ===================== -->
 <div id="tela-editor" hidden>
     <header class="barra">
@@ -70,8 +181,10 @@
             <strong id="ed-titulo">Prova</strong>
             <span id="ed-modelo" class="selo"></span>
             <span id="ed-status" class="status"></span>
+            <span id="ed-nuvem" class="selo selo--nuvem" hidden></span>
         </div>
         <div class="barra-acoes">
+            <button type="button" class="btn btn--pequeno" id="ed-travar" hidden></button>
             <button type="button" class="btn btn--pequeno" id="ed-desfazer" title="Desfazer (Ctrl+Z fora das caixas de texto)" disabled>↶ Desfazer</button>
             <button type="button" class="btn btn--pequeno" id="ed-versaob" title="Cópia da prova com as alternativas em outra ordem, para turmas grandes">Versão B</button>
             <button type="button" class="btn btn--pequeno" id="ed-chave">Gabarito do professor</button>
@@ -230,6 +343,7 @@
             <fieldset class="passo">
                 <legend><span class="num">5</span> As questões</legend>
                 <p class="dica">Escreva aqui ou <strong>cole</strong> do Word, de um PDF ou de um site — negrito, itálico, índices e expoentes vêm junto. Imagens: cole (Ctrl+V), arraste para a questão ou use o botão. Cada linha do enunciado é um parágrafo.</p>
+                <div id="area-painel" class="area-painel" hidden></div>
                 <div id="secoes"></div>
                 <div class="acoes-lista">
                     <button type="button" class="btn" id="add-secao">+ Nova seção</button>
@@ -353,6 +467,56 @@
     </form>
 </dialog>
 
+<dialog id="dialogo-area" class="dialogo">
+    <form method="dialog" id="form-area">
+        <h2>Nova prova da área</h2>
+        <p class="dica">Cada seção vai para um professor, que escreve as questões dela. Você, como PCA, revisa, pode editar qualquer questão e fecha a prova no fim.</p>
+        <div class="linha-campos">
+            <label class="campo-largo">Modelo<select id="area-modelo"></select></label>
+            <label>Área<select id="area-componente">
+                <option value="LIN">Linguagens e Códigos</option>
+                <option value="NAT">Ciências da Natureza</option>
+                <option value="HUM">Ciências Humanas</option>
+                <option value="MAT">Matemática</option>
+                <option value="RED">Redação</option>
+            </select></label>
+        </div>
+        <div class="linha-campos">
+            <label>Série<select id="area-serie">
+                <option value="1">1ª série</option><option value="2">2ª série</option><option value="3">3ª série</option>
+            </select></label>
+            <label>Bimestre<select id="area-bimestre">
+                <option value="B1">1º</option><option value="B2">2º</option><option value="B3">3º</option><option value="B4">4º</option>
+            </select></label>
+            <label>Ano<input type="number" id="area-ano" min="2020" max="2100"></label>
+            <label>Prazo para os professores<input type="date" id="area-prazo"></label>
+        </div>
+        <h3>Seções e responsáveis</h3>
+        <div id="area-secoes" class="area-secoes"></div>
+        <button type="button" class="btn btn--pequeno" id="area-mais">+ Seção</button>
+        <p class="aviso aviso--erro" id="area-erro" hidden></p>
+        <div class="acoes-lista">
+            <button type="button" class="btn btn--primary" id="area-criar">Criar a prova</button>
+            <button type="submit" class="btn">Cancelar</button>
+        </div>
+    </form>
+</dialog>
+
+<dialog id="dialogo-senha" class="dialogo dialogo--estreito">
+    <form method="dialog" id="form-senha">
+        <h2>Trocar a minha senha</h2>
+        <div class="linha-campos"><label class="campo-largo">Nova senha (mín. 8)
+            <input type="password" id="senha-nova" autocomplete="new-password" minlength="8"></label></div>
+        <div class="linha-campos"><label class="campo-largo">Repita a nova senha
+            <input type="password" id="senha-nova2" autocomplete="new-password" minlength="8"></label></div>
+        <p class="aviso aviso--erro" id="senha-erro" hidden></p>
+        <div class="acoes-lista">
+            <button type="button" class="btn btn--primary" id="senha-salvar">Trocar</button>
+            <button type="submit" class="btn">Cancelar</button>
+        </div>
+    </form>
+</dialog>
+
 <input type="file" id="arquivo-imagem" accept="image/*" multiple hidden>
 <input type="file" id="arquivo-gabarito" accept="image/*" hidden>
 
@@ -364,6 +528,9 @@
 <script src="js/colar.js"></script>
 <script src="js/paginar.js"></script>
 <script src="js/armazem.js"></script>
+<script src="vendor/supabase.js"></script>
+<script src="js/config.js"></script>
+<script src="js/nuvem.js"></script>
 <script src="js/app.js"></script>
 <script>
     /* Em endereço próprio (montador-provas-malu.vercel.app) a pasta do app é a

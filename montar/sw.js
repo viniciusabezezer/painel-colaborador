@@ -6,7 +6,7 @@
    Estratégia: responde do que está guardado (rápido e sem rede) e, quando há
    internet, busca a versão nova por trás e guarda para a próxima abertura.
    Mudou um arquivo do app? Suba VERSAO para limpar os guardados antigos. */
-const VERSAO = 'montador-v7';
+const VERSAO = 'montador-v8';
 const ARQUIVOS = [
     './',
     './index.html',
@@ -22,6 +22,9 @@ const ARQUIVOS = [
     './js/colar.js',
     './js/paginar.js',
     './js/armazem.js',
+    './vendor/supabase.js',
+    './js/config.js',
+    './js/nuvem.js',
     './js/app.js'
 ];
 
@@ -42,6 +45,8 @@ self.addEventListener('fetch', (evento) => {
     if (pedido.method !== 'GET') return;
     const url = new URL(pedido.url);
     const daqui = url.origin === self.location.origin;
+    /* o servidor das provas da área (Supabase) nunca vem do guardado */
+    if (/supabase\.co$/.test(url.hostname)) return;
     /* a fonte da interface (Outfit) também fica guardada, quando vier */
     const fonte = /fonts\.(googleapis|gstatic)\.com$/.test(url.hostname);
     if (!daqui && !fonte) return;
