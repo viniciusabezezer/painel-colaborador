@@ -1,0 +1,352 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Montador de Provas da Malu — EEMTI Prof. Maria Luiza Saboia</title>
+    <meta name="description" content="Monta a prova pronta para imprimir, no formato da avaliação bimestral da escola ou em modelos próprios. Funciona no navegador e sem internet, sem enviar nada para fora.">
+    <meta name="robots" content="noindex">
+    <meta name="theme-color" content="#166534">
+    <link rel="manifest" href="manifest.webmanifest">
+    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='24' fill='%23166534'/%3E%3Crect x='28' y='20' width='44' height='60' rx='4' fill='white'/%3E%3Crect x='36' y='32' width='28' height='4' fill='%23166534'/%3E%3Crect x='36' y='44' width='28' height='4' fill='%23166534'/%3E%3Crect x='36' y='56' width='18' height='4' fill='%23166534'/%3E%3C/svg%3E">
+    <link rel="apple-touch-icon" href="logo.png">
+    <link rel="stylesheet" href="app.css">
+    <link rel="stylesheet" href="folha.css">
+</head>
+<body data-tela="inicio">
+
+<!-- ===================== INÍCIO ===================== -->
+<div class="wrap" id="tela-inicio">
+    <a class="back-link" id="voltar-ao-painel" href="../index.html">&larr; Voltar ao Painel do Colaborador</a>
+    <script>
+        /* Na raiz de um domínio próprio não há painel acima: o link sai. */
+        if (/^\/(index\.html)?$/.test(location.pathname)) {
+            document.getElementById('voltar-ao-painel').remove();
+        }
+    </script>
+
+    <div class="masthead">
+        <img src="logo.png" alt="Brasão da EEMTI Maria Luiza Saboia">
+        <div>
+            <h1>Montador de Provas da Malu</h1>
+            <p>Escolha um modelo, escreva ou cole as questões e imprima a prova já no formato da escola — enxuta, legível e gastando o mínimo de papel e tinta. Funciona sem internet, e nada sai deste navegador.</p>
+            <p class="selo-offline" id="selo-offline" hidden>✓ Pronto para usar sem internet neste aparelho</p>
+        </div>
+    </div>
+
+    <section class="bloco">
+        <h2>Nova prova</h2>
+        <p class="dica">O modelo decide o formato; as questões são suas. A <strong>Avaliação Bimestral Malu</strong> é fixa — sai sempre igual à prova padrão da escola. Em qualquer modelo você escolhe a fonte, o tamanho da letra e se a prova leva o gabarito.</p>
+        <div class="cartoes" id="lista-modelos"></div>
+    </section>
+
+    <section class="bloco">
+        <div class="bloco-cab">
+            <h2>Minhas provas</h2>
+            <label class="btn btn--pequeno">Importar prova (.json)
+                <input type="file" id="importar-prova" accept=".json,application/json" hidden>
+            </label>
+        </div>
+        <p class="aviso" id="aviso-armazem" hidden>Este navegador não está deixando guardar as provas (janela anônima?). Elas ficam só enquanto a aba estiver aberta — exporte antes de fechar.</p>
+        <input type="search" id="busca-provas" class="busca" placeholder="Procurar prova por nome, série ou área…" hidden>
+        <div id="lista-provas" class="provas-lista"></div>
+    </section>
+
+    <section class="bloco">
+        <h2>Últimos arquivos gerados</h2>
+        <p class="dica">Cada vez que uma prova é impressa ou salva em PDF, a versão daquele momento fica guardada aqui (as <span id="limite-arquivos">40</span> últimas). Se a prova mudar depois, você ainda tem a que foi para a impressão.</p>
+        <div id="lista-arquivos" class="provas-lista"></div>
+    </section>
+</div>
+
+<!-- ===================== EDITOR DA PROVA ===================== -->
+<div id="tela-editor" hidden>
+    <header class="barra">
+        <a class="btn btn--pequeno" href="#/">&larr; Início</a>
+        <div class="barra-titulo">
+            <strong id="ed-titulo">Prova</strong>
+            <span id="ed-modelo" class="selo"></span>
+            <span id="ed-status" class="status"></span>
+        </div>
+        <div class="barra-acoes">
+            <button type="button" class="btn btn--pequeno" id="ed-desfazer" title="Desfazer (Ctrl+Z fora das caixas de texto)" disabled>↶ Desfazer</button>
+            <button type="button" class="btn btn--pequeno" id="ed-versaob" title="Cópia da prova com as alternativas em outra ordem, para turmas grandes">Versão B</button>
+            <button type="button" class="btn btn--pequeno" id="ed-chave">Gabarito do professor</button>
+            <button type="button" class="btn btn--pequeno" id="ed-exportar">Exportar</button>
+            <button type="button" class="btn btn--primary" id="ed-imprimir">Imprimir / salvar PDF</button>
+        </div>
+    </header>
+
+    <div class="grade-editor">
+        <aside class="editor" id="editor">
+            <fieldset class="passo">
+                <legend><span class="num">1</span> A avaliação</legend>
+                <div class="linha-campos">
+                    <label class="campo-largo">Nome da avaliação
+                        <input type="text" data-p="titulo" placeholder="Ex.: Avaliação Bimestral de Ciências da Natureza">
+                    </label>
+                </div>
+                <div class="linha-campos">
+                    <label>Série
+                        <select data-p="serie">
+                            <option value="">—</option>
+                            <option value="1">1ª série</option>
+                            <option value="2">2ª série</option>
+                            <option value="3">3ª série</option>
+                        </select>
+                    </label>
+                    <label>Área
+                        <select data-p="componente">
+                            <option value="">—</option>
+                            <option value="LIN">Linguagens e Códigos</option>
+                            <option value="NAT">Ciências da Natureza</option>
+                            <option value="HUM">Ciências Humanas</option>
+                            <option value="MAT">Matemática</option>
+                            <option value="RED">Redação</option>
+                        </select>
+                    </label>
+                    <label>Bimestre
+                        <select data-p="bimestre">
+                            <option value="B1">1º</option>
+                            <option value="B2">2º</option>
+                            <option value="B3">3º</option>
+                            <option value="B4">4º</option>
+                        </select>
+                    </label>
+                    <label>Ano
+                        <input type="number" data-p="ano" min="2020" max="2100" step="1">
+                    </label>
+                </div>
+                <div class="linha-campos" data-so-completo>
+                    <label class="campo-largo">Disciplina
+                        <input type="text" data-p="disciplina" placeholder="Ex.: Biologia">
+                    </label>
+                    <label class="campo-largo">Professor(a)
+                        <input type="text" data-p="professor">
+                    </label>
+                </div>
+                <div class="linha-campos" data-so-completo>
+                    <label>Turma
+                        <input type="text" data-p="turma" placeholder="Ex.: B" maxlength="4">
+                    </label>
+                    <label>Data
+                        <input type="date" data-p="data">
+                    </label>
+                    <label>Valor
+                        <input type="text" data-p="valor" placeholder="Ex.: 3,0 pontos">
+                    </label>
+                </div>
+                <p class="dica" data-so-faixa>A primeira página sai com a <strong>faixa em branco</strong> no alto. O brasão da escola, o nome do aluno, a turma, a data e o QR entram depois, pelo <a href="../provas/">Identificador de Provas</a> — a prévia mostra uma simulação.</p>
+            </fieldset>
+
+            <fieldset class="passo">
+                <legend><span class="num">2</span> Aparência</legend>
+                <div class="linha-campos">
+                    <label class="campo-largo">Fonte
+                        <select data-a="fonte" id="ap-fonte"></select>
+                    </label>
+                    <label>Tamanho
+                        <select data-a="corpoPt" data-num id="ap-corpo"></select>
+                    </label>
+                    <label>Espaçamento
+                        <select data-a="espacamento">
+                            <option value="compacto">Compacto</option>
+                            <option value="normal">Normal</option>
+                            <option value="amplo">Amplo</option>
+                        </select>
+                    </label>
+                </div>
+                <label class="opcao"><input type="checkbox" data-a="linhaColunas"> Linha entre as colunas</label>
+                <label class="opcao"><input type="checkbox" data-a="icones"> Ícone da disciplina ao lado do título de cada seção</label>
+                <label class="opcao"><input type="checkbox" data-a="imagensCinza"> Imagens em tons de cinza <small>(economiza tinta)</small></label>
+                <p class="dica dica--pequena">Padrão da escola: Times New Roman 10, espaçamento normal, linha entre as colunas. A fonte precisa estar instalada no computador que imprime (o Windows tem todas).</p>
+
+                <div class="gabarito-opcoes">
+                    <label class="opcao"><input type="checkbox" data-a="gabarito"> <strong>Gabarito</strong> (folha de respostas do aluno)</label>
+                    <div data-se-gabarito>
+                        <div class="linha-campos">
+                            <label class="campo-largo">Como
+                                <select data-a="gabaritoOrigem">
+                                    <option value="gerado">Gerado pelo app, com as questões da prova</option>
+                                    <option value="imagem">Imagem enviada por mim</option>
+                                </select>
+                            </label>
+                            <label class="campo-largo">Onde
+                                <select data-a="gabaritoLocal">
+                                    <option value="prova">Na 1ª página da prova</option>
+                                    <option value="separado">Em folha à parte, 4 por folha A4</option>
+                                </select>
+                            </label>
+                        </div>
+                        <div class="gab-imagem" data-se-gabarito-imagem>
+                            <img id="gab-miniatura" alt="" hidden>
+                            <div class="zona-colar" contenteditable="true" spellcheck="false" id="gab-zona" aria-label="Área para colar a imagem do gabarito"></div>
+                            <button type="button" class="btn btn--pequeno" id="gab-escolher">Escolher imagem…</button>
+                            <button type="button" class="btn btn--pequeno" id="gab-tirar" hidden>Tirar</button>
+                        </div>
+                        <p class="dica dica--pequena" data-se-gabarito-imagem>Foto, print ou digitalização da folha de respostas que você já usa. Para a leitura óptica, prefira o arquivo digital ao celular.</p>
+                        <div class="acoes-lista" data-se-gabarito-separado>
+                            <button type="button" class="btn btn--pequeno btn--verde" id="gab-imprimir4">Imprimir gabaritos (4 por folha)</button>
+                            <button type="button" class="btn btn--pequeno" id="gab-imprimir1" title="Uma folha de respostas por página de 10,5 × 14,85 cm: o formato que a aba Gabaritos do Identificador recebe">Salvar 1 por página (para o Identificador)</button>
+                        </div>
+                    </div>
+                </div>
+            </fieldset>
+
+            <fieldset class="passo">
+                <legend><span class="num">3</span> O formato</legend>
+                <div id="formato"></div>
+            </fieldset>
+
+            <fieldset class="passo">
+                <legend><span class="num">4</span> As questões</legend>
+                <p class="dica">Escreva aqui ou <strong>cole</strong> do Word, de um PDF ou de um site — negrito, itálico, índices e expoentes vêm junto. Imagens: cole (Ctrl+V), arraste para a questão ou use o botão. Cada linha do enunciado é um parágrafo.</p>
+                <div id="secoes"></div>
+                <div class="acoes-lista">
+                    <button type="button" class="btn" id="add-secao">+ Nova seção</button>
+                    <button type="button" class="btn" id="add-colar">Colar várias questões</button>
+                    <button type="button" class="btn" id="add-banco">Trazer de outra prova</button>
+                </div>
+                <div class="acoes-lista">
+                    <button type="button" class="btn btn--pequeno" id="abrir-todas">Abrir todas</button>
+                    <button type="button" class="btn btn--pequeno" id="fechar-todas">Fechar todas</button>
+                </div>
+            </fieldset>
+
+            <div id="avisos" class="avisos" hidden></div>
+        </aside>
+
+        <main class="previa" id="previa">
+            <div class="previa-ferramentas">
+                <div class="economia">
+                    <span id="previa-info">—</span>
+                    <label class="copias">× <input type="number" id="copias" min="1" max="2000" value="35"> alunos = <strong id="folhas-total">—</strong></label>
+                    <button type="button" class="btn btn--pequeno btn--verde" id="economizar">Economizar papel</button>
+                </div>
+                <span class="zoom">
+                    <button type="button" class="btn btn--pequeno" data-zoom="-" title="Diminuir">−</button>
+                    <button type="button" class="btn btn--pequeno" data-zoom="ajustar">Ajustar</button>
+                    <button type="button" class="btn btn--pequeno" data-zoom="+" title="Aumentar">+</button>
+                </span>
+            </div>
+            <div id="proposta" class="proposta" hidden></div>
+            <div class="previa-escala" id="previa-escala"><div id="paginas"></div></div>
+            <div id="previa-gabaritos" class="previa-gabaritos" hidden>
+                <h3>Folha de respostas — impressa à parte, 4 por folha A4</h3>
+                <div class="previa-escala" id="previa-gab-escala"><div id="paginas-gabaritos"></div></div>
+            </div>
+        </main>
+    </div>
+    <!-- onde o app mede, fora da vista, as alternativas de economia -->
+    <div id="simulacao" class="simulacao" aria-hidden="true"></div>
+</div>
+
+<!-- ===================== EDITOR DE MODELO ===================== -->
+<div id="tela-modelo" hidden>
+    <header class="barra">
+        <a class="btn btn--pequeno" href="#/">&larr; Início</a>
+        <div class="barra-titulo"><strong id="mo-cabecalho">Modelo</strong></div>
+        <div class="barra-acoes">
+            <button type="button" class="btn btn--primary" id="mo-salvar">Salvar o modelo</button>
+        </div>
+    </header>
+    <div class="grade-editor">
+        <aside class="editor">
+            <fieldset class="passo">
+                <legend><span class="num">1</span> O modelo</legend>
+                <div class="linha-campos">
+                    <label class="campo-largo">Nome do modelo
+                        <input type="text" id="mo-nome" placeholder="Ex.: Recuperação Paralela">
+                    </label>
+                </div>
+                <div class="linha-campos">
+                    <label class="campo-largo">Descrição
+                        <input type="text" id="mo-descricao" placeholder="Para que serve, em uma linha">
+                    </label>
+                </div>
+                <div class="linha-campos">
+                    <label class="campo-largo">Nome da avaliação que a prova recebe ao nascer
+                        <input type="text" id="mo-titulo" placeholder="Ex.: Avaliação Parcial de {disciplina}">
+                        <small><code>{componente}</code> vira o nome da área; <code>{disciplina}</code>, a disciplina.</small>
+                    </label>
+                </div>
+                <h3>Seções com que a prova nasce</h3>
+                <label class="opcao"><input type="radio" name="mo-secoes" value="componente"> As disciplinas da área (Biologia, Física, Química…)</label>
+                <label class="opcao"><input type="radio" name="mo-secoes" value="lista"> Uma lista própria, uma por linha:</label>
+                <textarea id="mo-lista-secoes" rows="3" placeholder="PARTE I — OBJETIVAS&#10;PARTE II — DISCURSIVAS"></textarea>
+            </fieldset>
+            <fieldset class="passo">
+                <legend><span class="num">2</span> O formato</legend>
+                <div id="mo-formato"></div>
+            </fieldset>
+        </aside>
+        <main class="previa">
+            <div class="previa-ferramentas"><span>Prévia com questões de exemplo</span></div>
+            <div class="previa-escala" id="mo-previa-escala"><div id="mo-paginas"></div></div>
+        </main>
+    </div>
+</div>
+
+<!-- a folha de correção, montada só na hora de imprimir -->
+<div id="chave" hidden></div>
+<div id="gabaritos-impressao" hidden></div>
+
+<dialog id="dialogo-colar" class="dialogo">
+    <form method="dialog">
+        <h2>Colar várias questões</h2>
+        <p class="dica">Cole do Word, de um PDF ou de um banco de questões. Cada questão começa com o número (<code>01.</code> ou <code>1)</code>), a fonte entre parênteses é reconhecida (<code>(Uece)</code>) e as alternativas começam com <code>a)</code>, <code>b)</code>… Um título em maiúsculas sozinho na linha (<code>BIOLOGIA</code>) abre uma seção. Uma linha <code>Gabarito: C</code> depois da questão marca a resposta. Negrito e itálico do Word vêm junto.</p>
+        <textarea id="colar-texto" rows="14" spellcheck="false" placeholder="BIOLOGIA&#10;01. (Uece) Dentre as características apresentadas abaixo, marque aquela que…&#10;a) Possuem ciclo de vida assexuado e sexuado.&#10;b) Apresentam cnidócitos como mecanismo de defesa.&#10;c) Filtram a água para a absorção de nutrientes.&#10;d) Não possuem células organizadas em tecidos bem definidos.&#10;e) Células específicas desse grupo são os solenócitos.&#10;Gabarito: D"></textarea>
+        <div id="colar-resultado" class="colar-resultado"></div>
+        <div class="acoes-lista">
+            <button type="button" class="btn btn--primary" id="colar-acrescentar" disabled>Acrescentar à prova</button>
+            <button type="submit" class="btn">Cancelar</button>
+        </div>
+    </form>
+</dialog>
+
+<dialog id="dialogo-banco" class="dialogo">
+    <form method="dialog">
+        <h2>Trazer questões de outra prova</h2>
+        <p class="dica">Reaproveite questões das suas provas guardadas. Marque as que quiser: elas entram no fim desta prova, na seção de mesmo nome.</p>
+        <div class="linha-campos">
+            <label class="campo-largo">Prova
+                <select id="banco-prova"></select>
+            </label>
+            <label class="campo-largo">Procurar
+                <input type="search" id="banco-busca" placeholder="palavra do enunciado">
+            </label>
+        </div>
+        <div id="banco-lista" class="banco-lista"></div>
+        <div class="acoes-lista">
+            <button type="button" class="btn btn--primary" id="banco-acrescentar" disabled>Acrescentar marcadas</button>
+            <button type="submit" class="btn">Cancelar</button>
+        </div>
+    </form>
+</dialog>
+
+<input type="file" id="arquivo-imagem" accept="image/*" multiple hidden>
+<input type="file" id="arquivo-gabarito" accept="image/*" hidden>
+
+<script src="js/texto.js"></script>
+<script src="js/modelos.js"></script>
+<script src="js/icones.js"></script>
+<script src="js/gabarito.js"></script>
+<script src="js/importar.js"></script>
+<script src="js/colar.js"></script>
+<script src="js/paginar.js"></script>
+<script src="js/armazem.js"></script>
+<script src="js/app.js"></script>
+<script>
+    /* Sem internet: o service worker guarda o app neste aparelho. Só existe
+       em http(s); aberto direto do computador (file://), o app já é local. */
+    if ('serviceWorker' in navigator && /^https?:$/.test(location.protocol)) {
+        navigator.serviceWorker.register('sw.js').then(function () {
+            return navigator.serviceWorker.ready;
+        }).then(function () {
+            const selo = document.getElementById('selo-offline');
+            if (selo) selo.hidden = false;
+        }).catch(function () { /* segue funcionando com internet */ });
+    }
+</script>
+</body>
+</html>

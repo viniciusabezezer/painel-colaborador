@@ -39,16 +39,18 @@
     }
     function limpar(elemento) { while (elemento.firstChild) elemento.removeChild(elemento.firstChild); }
 
-    /* O logotipo da escola entra no cabeçalho de identificação. É lido uma vez
-       só, do logo.png que mora ao lado do app; se falhar, o cabeçalho sai sem
-       ele em vez de a geração parar. */
+    /* O brasão da escola entra sempre no cabeçalho de identificação. É lido
+       uma vez só, do logo.png que mora ao lado do app; se o arquivo não vier
+       (pasta aberta direto do computador, sem internet), vale a cópia
+       embutida em js/brasao.js. */
     let logoPromessa = null;
     function bytesDoLogo() {
         if (!logoPromessa) {
             logoPromessa = fetch('logo.png')
                 .then(function (resposta) { return resposta.ok ? resposta.arrayBuffer() : null; })
                 .then(function (buffer) { return buffer ? new Uint8Array(buffer) : null; })
-                .catch(function () { return null; });
+                .catch(function () { return null; })
+                .then(function (lido) { return lido || (window.ProvasBrasao ? window.ProvasBrasao.bytes() : null); });
         }
         return logoPromessa;
     }

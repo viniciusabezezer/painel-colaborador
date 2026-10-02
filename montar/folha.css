@@ -1,0 +1,254 @@
+/* A folha impressa. Medidas em centímetros, como numa régua: margem de 1 cm
+   no alto e dos lados — o mesmo 1 cm em que o Identificador de Provas cola o
+   cabeçalho de 19 × 2,8 cm —, faixa de 3 cm, quadro de instruções da largura
+   toda, duas colunas justificadas e o número da página no pé, à direita. */
+
+.paginas { width: 210mm; }
+.paginas.paginas-quarto { width: 105mm; }
+
+.folha {
+    position: relative;
+    width: 210mm;
+    height: 297mm;
+    background: #fff;
+    color: #000;
+    overflow: hidden;
+    font-family: var(--fonte, "Times New Roman", Times, "Liberation Serif", Tinos, serif);
+    font-size: var(--corpo, 10pt);
+    line-height: var(--lh, 1.2);
+    margin: 0 auto 10mm;
+    box-shadow: 0 4px 22px -8px rgba(0, 0, 0, .35);
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+}
+
+.folha .miolo {
+    position: absolute;
+    top: 1cm; left: 1cm; right: 1cm; bottom: 1.3cm;
+    display: flex;
+    flex-direction: column;
+}
+
+.folha .topo { flex: none; }
+
+/* ----- faixa do Identificador ----- */
+/* Na tela: uma simulação do cabeçalho que o Identificador cola, com o brasão.
+   No papel: branco. */
+
+.folha .faixa {
+    position: relative;
+    outline: 1px dashed #9bbfa5;
+    outline-offset: -1px;
+    background: repeating-linear-gradient(-45deg, #f6faf7, #f6faf7 8px, #fff 8px, #fff 16px);
+    display: flex; align-items: center; justify-content: center;
+    text-align: center;
+}
+.folha .faixa { flex-direction: column; justify-content: flex-start; align-items: stretch; }
+.folha .faixa-simulada {
+    margin: 0; height: 2.8cm; border: 1px solid #b9cfbf; background: rgba(255, 255, 255, .85);
+    display: flex; align-items: center; gap: .35cm; padding: 0 .3cm;
+    font-family: Arial, 'Liberation Sans', sans-serif; color: #8aa293; text-align: left;
+}
+.folha .faixa-brasao { height: 1.9cm; width: auto; opacity: .75; }
+.folha .faixa-textos { flex: 1; min-width: 0; line-height: 1.25; }
+.folha .faixa-aval { font-family: Georgia, serif; font-size: 10pt; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.folha .faixa-nome { font-size: 13pt; font-weight: 700; letter-spacing: .3px; }
+.folha .faixa-linha { font-size: 8pt; font-weight: 700; display: flex; justify-content: space-between; gap: .3cm; }
+.folha .faixa-linha span { font-weight: 400; }
+.folha .faixa-qr {
+    width: 2cm; height: 2cm; flex: none;
+    background: repeating-conic-gradient(#c5d6ca 0 25%, transparent 0 50%) 0 0 / .4cm .4cm;
+    border: 1px solid #b9cfbf;
+}
+.folha .faixa-dica {
+    position: absolute; left: 0; right: 0; bottom: -.02cm;
+    font-family: 'Outfit', system-ui, sans-serif; text-align: center;
+    font-size: 7.5pt; color: #4f7a5c; line-height: 1.2;
+}
+
+/* ----- cabeçalho completo ----- */
+
+.folha .cab-completo {
+    width: 100%;
+    border-collapse: collapse;
+    table-layout: fixed;
+    font-size: 9.5pt;
+    line-height: 1.2;
+}
+.folha .cab-completo col.c-logo { width: 2.1cm; }
+.folha .cab-completo col.c-fim { width: 4.2cm; }
+.folha .cab-completo td {
+    border: .75pt solid #000;
+    padding: .09cm .16cm;
+    height: .62cm;
+    vertical-align: middle;
+    overflow: hidden;
+}
+.folha .cab-logo { text-align: center; padding: .05cm !important; }
+.folha .cab-logo img { height: 1.45cm; width: auto; display: inline-block; vertical-align: middle; }
+.folha .cab-escola { text-align: center; font-weight: 700; font-size: 11pt; }
+.folha .cab-titulo { text-align: center; font-weight: 700; font-size: 10pt; }
+.folha .cab-completo .rot { font-weight: 700; }
+
+/* ----- instruções ----- */
+
+.folha .instrucoes {
+    border: .75pt solid #000;
+    padding: .06cm .2cm .12cm;
+    line-height: 1.2;
+}
+.folha .cab-completo + .instrucoes { border-top: 0; }
+.folha .instrucoes-titulo {
+    text-align: center;
+    font-weight: 700; font-style: italic; text-decoration: underline;
+    font-size: 1.05em;
+}
+.folha .instrucoes ul { list-style: none; margin: 0; padding: 0; }
+.folha .instrucoes li { padding-left: 1.25em; text-indent: -1.25em; }
+.folha .instrucoes li::before { content: '➢'; display: inline-block; width: 1.25em; text-indent: 0; }
+
+/* ----- colunas ----- */
+
+.folha .colunas {
+    flex: 1 1 auto;
+    min-height: 0;
+    display: flex;
+    gap: .75cm;
+    padding: .4cm .45cm 0;
+}
+.folha .colunas.com-linha {
+    background: linear-gradient(#000, #000) center top / .5pt 100% no-repeat;
+    background-origin: content-box;
+    background-clip: content-box;
+}
+
+.folha .coluna {
+    flex: 1 1 0;
+    min-width: 0;
+    position: relative;
+    overflow: hidden;
+}
+
+.folha .coluna > * { margin: 0; }
+.folha .coluna > :first-child { padding-top: 0 !important; }
+
+.folha .q-par,
+.folha .q-alt {
+    text-align: justify;
+    hyphens: manual;
+    overflow-wrap: break-word;
+}
+.folha .item-inicio { padding-top: var(--entre, .85em); }
+.folha .q-alt-primeira { padding-top: .1em; }
+.folha .q-alt-primeira.item-inicio { padding-top: var(--entre, .85em); }
+
+/* alternativas lado a lado: duas por linha ou todas numa linha */
+.folha .alt-grade { display: grid; align-items: start; }
+.folha .alt-celula { min-width: 0; overflow-wrap: break-word; }
+.folha .alt-sonda { position: absolute; left: 0; top: 0; visibility: hidden; white-space: nowrap; }
+.folha .q-alt-com-img { text-align: left; }
+.folha .q-alt-com-img img, .folha .alt-celula img { margin: .1em 0 .15em 1.2em; }
+.folha .alt-celula img { margin-left: 0; }
+
+/* imagem ao lado do texto */
+.folha .q-lado { display: flow-root; }
+.folha .q-foto-lado { float: right; margin: .15em 0 .1em .3cm; }
+
+/* economia de tinta: figuras em tons de cinza */
+.folha.tinta .q-foto,
+.folha.tinta .cab-logo img { filter: grayscale(1); }
+.folha .partido { text-align-last: justify; }
+.folha sub, .folha sup { font-size: .72em; line-height: 0; }
+
+.folha .secao-titulo {
+    font-weight: 700;
+    padding-top: calc(var(--entre, .85em) * 1.4);
+    display: flex; align-items: center; gap: .35em;
+}
+.folha .icone-disc { width: 1.35em; height: 1.35em; flex: none; }
+.folha .q-titulo { font-weight: 700; }
+.folha .q-titulo + .q-par { padding-top: .15em; }
+
+.folha .q-img { padding: .3em 0 .15em; text-align: center; }
+.folha .q-img img { display: inline-block; vertical-align: top; }
+
+.folha .q-linha { height: .78cm; border-bottom: .5pt solid #444; }
+.folha .q-linha-primeira { height: .95cm; }
+
+.folha .bloco-gabarito { padding-bottom: .2em; }
+.folha .gabarito-titulo { font-weight: 700; padding-bottom: .55em; }
+.folha .gabarito-svg { display: block; }
+
+.folha .rodape {
+    position: absolute;
+    right: 1.2cm; bottom: .55cm;
+    font-size: 10pt;
+}
+
+.folha .grande-demais { outline: 2px dashed #c0392b; }
+
+/* ----- gabarito como imagem ----- */
+
+.folha .gabarito-imagem--prova { display: block; width: 100%; height: auto; max-height: 15cm; object-fit: contain; }
+
+/* ----- gabaritos avulsos: 4 por folha A4 ou 1 por página ----- */
+
+.folha-gabaritos { display: grid; grid-template-columns: 105mm 105mm; grid-template-rows: 148.5mm 148.5mm; }
+.folha-quarto {
+    position: relative; width: 105mm; height: 148.5mm; margin: 0 auto 10mm; background: #fff; color: #000;
+    box-shadow: 0 4px 22px -8px rgba(0, 0, 0, .35);
+}
+.quarto {
+    position: relative; width: 105mm; height: 148.5mm; overflow: hidden;
+    font-family: Arial, 'Liberation Sans', Arimo, Helvetica, sans-serif; color: #000;
+}
+.quarto-ident {
+    position: absolute; top: 4mm; left: 6mm; right: 6mm; height: 14mm;
+    display: flex; flex-direction: column; justify-content: space-around;
+    font-size: 8.5pt; padding: 0 1mm;
+}
+.quarto-ident > div { display: flex; align-items: flex-end; gap: 1.5mm; }
+.linha-escrever { flex: 1; border-bottom: .5pt solid #000; height: 1em; }
+.linha-escrever.curta { flex: 0 0 14mm; }
+.quarto-titulo {
+    position: absolute; top: 23mm; left: 6mm; right: 6mm;
+    text-align: center; font-size: 7.5pt; font-weight: 700; letter-spacing: .2px;
+}
+.quarto-titulo span { font-weight: 400; }
+.quarto-grade { position: absolute; top: 28mm; left: 0; right: 0; display: flex; justify-content: center; }
+.quarto--imagem { display: flex; align-items: center; justify-content: center; padding: 4mm; }
+.quarto--imagem .gabarito-imagem { max-width: 100%; max-height: 100%; object-fit: contain; }
+.folha.tinta .gabarito-imagem { filter: grayscale(1); }
+
+/* marcas de corte curtas nas bordas do meio, sem passar por cima do impresso */
+.folha-gabaritos .corte { position: absolute; background: #000; }
+.folha-gabaritos .corte-cima, .folha-gabaritos .corte-baixo { left: calc(105mm - .15pt); width: .3pt; height: 4mm; }
+.folha-gabaritos .corte-cima { top: 0; }
+.folha-gabaritos .corte-baixo { bottom: 0; }
+.folha-gabaritos .corte-esq, .folha-gabaritos .corte-dir { top: calc(148.5mm - .15pt); height: .3pt; width: 4mm; }
+.folha-gabaritos .corte-esq { left: 0; }
+.folha-gabaritos .corte-dir { right: 0; }
+
+/* ----- folha de correção ----- */
+
+.folha .chave-cab { border: .75pt solid #000; padding: .3cm; text-align: center; line-height: 1.5; margin-bottom: .6cm; }
+.folha .chave-grade { display: grid; grid-template-columns: repeat(4, 1fr); gap: .15cm .5cm; }
+.folha .chave-item { display: flex; align-items: baseline; gap: .25cm; border-bottom: .5pt solid #bbb; padding: .08cm 0; }
+.folha .chave-n { font-weight: 700; min-width: .8cm; }
+.folha .chave-r { font-weight: 700; font-size: 1.1em; }
+.folha .chave-r.falta { color: #c0392b; }
+.folha .chave-s { margin-left: auto; font-size: 7.5pt; color: #666; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 2.4cm; }
+
+/* ----- impressão ----- */
+
+@page { size: A4; margin: 0; }
+
+@media print {
+    html, body { background: #fff !important; }
+    .so-tela, .nao-imprime { display: none !important; }
+    .folha { margin: 0 !important; box-shadow: none !important; break-after: page; page-break-after: always; }
+    .folha:last-child { break-after: auto; page-break-after: auto; }
+    .folha-quarto { margin: 0 !important; box-shadow: none !important; }
+    .folha .faixa { outline: 0; background: none; }
+    .folha .grande-demais { outline: 0; }
+}

@@ -1,0 +1,85 @@
+BIOLOGIA
+01. (Uece) Dentre as características apresentadas abaixo, marque aquela que justifica a inclusão de um ser vivo no filo Porifera e não em outros filos animais.
+a) Possuem ciclo de vida assexuado e sexuado.
+b) Apresentam cnidócitos como mecanismo de defesa.
+c) Filtram a água para a absorção de nutrientes.
+d) Não possuem células organizadas em tecidos bem definidos.
+e) Células específicas desse grupo são os solenócitos
+Gabarito: D
+02. (IFCE) Há muitos animais, nos mares de Paracuru que possuem cnidoblastos, que são células presentes nos cnidários, sobre essas células, é correto afirmar que:
+a) são células de defesa dotadas de espinhos ou líquidos tóxicos.
+b) são células sensoriais com capacidade de percepção de estímulos químicos.
+c) são células digestivas responsáveis pela secreção de enzimas.
+d) estão presentes na mesogleia das esponjas.
+e) são as larvas de um hidrozoário.
+Gabarito: A
+03. (Fatec-SP) As planárias são vermes acelomados, pequenos e achatados dorsoventralmente; apresentam um tubo digestório com inúmeras ramificações.
+O tamanho e a forma da planária estão diretamente relacionados:
+a) À capacidade regenerativa de seu mesênquima.
+b) Ao sistema ganglionar ventral.
+c) À presença de células-flama.
+d) Aos ocelos acima dos gânglios cerebroides.
+e) À ausência de um sistema circulatório.
+04. (PUC-RJ) Um vizinho meu comprou carne de porco em uma venda na avenida Antônio Sales. Sabemos que é desaconselhável comer carne de porco crua porque podemos contrair uma doença, que se caracteriza por ingestão de:
+a) Cistos de *Taenia* e seu desenvolvimento no trato intestinal.
+b) Ovos de *Taenia* e seu desenvolvimento nos órgãos em geral.
+c) Ovos de *Trypanosoma* e seu desenvolvimento no trato intestinal.
+d) Larvas de moscas e seu desenvolvimento nos órgãos em geral.
+e) Toxinas bacterianas e desenvolvimento de diarreia.
+05. (PUCC-SP) Considere as duas listas abaixo:
+I. Verminoses importantes para a saúde pública brasileira:
+1. esquistossomose;
+2. teníase;
+3. ascaridíase;
+4. ancilostomose.
+II. Formas de aquisição dos vermes:
+a) ingestão de ovos;
+b) ingestão de cisticercos;
+c) penetração pela pele das larvas presentes no solo;
+d) penetração pela pele ou mucosas das larvas presentes na água.
+A associação correta entre I e II é:
+a) 1-d; 2-b; 3-a; 4-c.
+b) 1-a; 2-c; 3-c; 4-d.
+c) 1-b; 2-a; 3-d; 4-c.
+d) 1-c; 2-b; 3-a; 4-d.
+e) 1-d; 2-a; 3-c; 4-b.
+06. (Mack-SP) As verminoses representam um grande problema de saúde, principalmente nos países subdesenvolvidos.
+A falta de redes de água e de esgoto, de campanhas de esclarecimento público, de higiene pessoal e de programas de combate aos transmissores, leva ao aparecimento de milhares de novos casos na população brasileira.
+Dentre as verminoses humanas causadas por nematódos, citam-se, corretamente:
+a) teníase, ascaridíase e ancilostomose.
+b) filariose, ancilostomose e ascaridíase.
+c) esquistossomose, ascaridíase e ancilostomose.
+d) esquistossomose, filariose e oxiurose.
+e) teníase, filariose e esquistossomose.
+07. (Enem) *Euphorbia milii é uma planta ornamental amplamente disseminada no Brasil e conhecida como coroa-de-cristo,* encontrada nos mais variados lares do bairro das CarlotasII. *O estudo químico do látex dessa espécie forneceu o mais potente produto natural moluscicida, a miliamina L.* atividade moluscicida do látex de *Synadenium carinatum boiss*. (*Euphorbiaceae*) sobre *Biomphalaria glabrata* e isolamento do constituinte majoritário.
+O uso desse látex em água infestada por hospedeiros intermediários tem potencial para atuar no controle da
+a) dengue.
+b) malária.
+c) elefantíase.
+d) ascaridíase.
+e) esquistossomose.
+08. (UFRN) O professor Ulisses possue um terreno cheio de minhocas. A atividade das delas favorece a agricultura, pois reduz a compactação e facilita a aeração do solo. Entretanto, em função das características climáticas do semiárido nordestino, o uso de minhocas na lavoura não é recomendado por causa da baixa sobrevivência desses animais na região. Isso ocorre porque há:
+a) aumento da absorção de oxigênio, aumentando o metabolismo.
+b) redução da difusão de oxigênio e de gás carbônico.
+c) redução da concentração do sangue, diminuindo a difusão de oxigênio.
+d) aumento da desidratação, prejudicando a respiração.
+e) NDA
+09. (UFPE) Na figura a seguir é ilustrada a organização geral de um molusco gastrópode, em que se observa um corpo constituído por cabeça, massa visceral (onde se concentram os órgãos) e pé. Com relação ao filo Mollusca, é correto afirmar que:
+a) não apresenta sistema digestório completo, de forma que a digestão é processada através de uma bolsa enzimática.
+b) apresenta respiração exclusivamente branquial.
+c) o sistema nervoso consiste de um anel situado em torno da boca.
+d) a excreção é feita através dos túbulos de Malpighi e de glândulas localizadas na base dos pés.
+e) lesmas, ostras, mexilhões, lulas e polvos são moluscos.
+10. O filo Mollusca é o segundo maior do reino animal em número de espécies. É correto afirmar que os moluscos da classe Gastropoda
+a) são exclusivamente marinhos.
+b) possuem conchas, mas não rádula.
+c) são exclusivamente terrestres.
+d) possuem pé desenvolvido e rádula.
+e) Possuem duas válvas em sua estrutura física
+11. (Enem) *Recentemente, foi descoberta uma nova espécie de inseto* flebotomídeo, *batizado de* Lutzomya maruaga. *O novo inseto possui apenas fêmeas que se reproduzem a partir da produção de ovos sem a intervenção de machos, em um processo conhecido como partenogênese. A espécie está restrita a uma caverna na região amazônica, não sendo encontrada em outros lugares. O inseto não se alimenta de sangue nem transmite doenças, como o fazem outros mosquitos de seu mesmo gênero. Os adultos não se alimentam e as larvas parecem se alimentar apenas de fezes de morcego (guano) existente no fundo da caverna. Essa dieta larval acumularia reservas a serem usadas na fase adulta.*
+Em relação a essa descoberta, vê-se que a nova espécie de flebotomídeo:
+a) apresenta maior variabilidade genética que seus congêneres.
+b) tem uma fase adulta longa se comparado com seus congêneres.
+c) é mais vulnerável a desequilíbrios em seu ambiente que seus congêneres.
+d) utiliza o mesmo hábitat que os predadores.
+e) usa a reprodução assexuada em todo o seu ciclo de vida.

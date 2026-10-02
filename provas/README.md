@@ -36,6 +36,10 @@ Quando entra um novo, o mais antigo sai; dá para apagar um a um ou todos.
 
 ## O caminho
 
+A prova pode vir pronta do **Montador de Provas** (`/montar/`): a Avaliação
+Bimestral Malu sai de lá com a faixa em branco exatamente onde este app cola o
+cabeçalho (1 cm da borda, 19 × 2,8 cm), então basta subir o PDF.
+
 1. **A avaliação** — bimestre, ano e a *chave da escola*.
 2. **Os alunos** — cola-se tudo de uma vez, todas as turmas juntas. A turma pode
    vir como título de bloco (`TURMA 3B`) ou na própria linha (`3B; João da
@@ -105,6 +109,11 @@ natureza, `HUM` ciências humanas, `MAT` matemática.
 │ 1ª SÉRIE · TURMA 1A · Nº 03    MLS-2026-B3-1A-003… │ ▓▓▓▓▓▓ │
 └────────────────────────────────────────────────────┴────────┘
 ```
+
+O **brasão da escola** é padrão e sai sempre, à esquerda (ou do lado oposto ao
+QR). Ele é lido do `logo.png`; se o arquivo não vier — pasta aberta direto do
+computador, sem internet —, vale a cópia embutida em `js/brasao.js`, gerada do
+mesmo `logo.png`. Trocando o logo, gere de novo o `brasao.js`.
 
 O nome é o maior elemento, porque é ele que impede a prova de rodar de carteira
 em carteira, e nunca sai cortado: a fonte diminui até o nome inteiro caber. O QR
@@ -193,7 +202,7 @@ leve. O SHA-256 é implementação própria em `js/sha256.js`, porque o
 ## Testes
 
 ```bash
-node --test provas/test/provas.test.cjs   # 40 verificações: código, lista, QR, posição e PDF
+node --test provas/test/provas.test.cjs   # 41 verificações: código, lista, QR, posição e PDF
 node provas/test/provas-browser.mjs       # 38 verificações na tela, com Chromium
 ```
 
