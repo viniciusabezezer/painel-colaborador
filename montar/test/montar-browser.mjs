@@ -94,6 +94,9 @@ try {
             folhas: folhas.length,
             rodape: f1.querySelector('.rodape').textContent,
             faixaTopoCm: cm(faixa.top - folha.top),
+            faixaEsquerdaCm: cm(faixa.left - folha.left),
+            instrucoesCm: (() => { const r = f1.querySelector('.instrucoes').getBoundingClientRect(); return [cm(r.left - folha.left), cm(r.width)]; })(),
+            colunasCm: (() => { const r = f1.querySelector('.colunas').getBoundingClientRect(); return [cm(r.left - folha.left), cm(r.width)]; })(),
             faixaAlturaCm: cm(faixa.height),
             faixaLarguraCm: cm(faixa.width),
             gabarito: !!f1.querySelector('.coluna .bloco-gabarito'),
@@ -108,6 +111,9 @@ try {
     conferir(info.rodape === '1/' + info.folhas, 'o pé da página traz 1/' + info.folhas);
     conferir(Math.abs(info.faixaTopoCm - 0.6) < 0.05 && Math.abs(info.faixaAlturaCm - 2.5) < 0.05 && Math.abs(info.faixaLarguraCm - 19) < 0.05,
         'o espaço da identificação tem 19 × 2,5 cm, a 0,6 cm do alto, como no Identificador (' + info.faixaTopoCm.toFixed(2) + ', ' + info.faixaLarguraCm.toFixed(2) + ' × ' + info.faixaAlturaCm.toFixed(2) + ')');
+    conferir(Math.abs(info.faixaEsquerdaCm - 1) < 0.05, 'a faixa começa a 1 cm da esquerda (' + info.faixaEsquerdaCm.toFixed(2) + ')');
+    conferir(Math.abs(info.instrucoesCm[0] - 1) < 0.05 && Math.abs(info.instrucoesCm[1] - 19) < 0.05, 'o quadro de instruções fica alinhado à faixa');
+    conferir(Math.abs(info.colunasCm[0] - 0.5) < 0.05 && Math.abs(info.colunasCm[1] - 20) < 0.05, 'margens mínimas de 0,5 cm: as colunas ocupam 20 cm da folha (' + info.colunasCm.map((v) => v.toFixed(2)).join(' / ') + ')');
     conferir(info.gabarito, 'o gabarito abre a primeira coluna');
     conferir(info.instrucoes, 'a última instrução sai em negrito');
     conferir(!info.transbordou, 'nenhuma coluna transborda');
@@ -162,6 +168,24 @@ try {
     await pagina.click('#ins-restaurar');
     await pagina.waitForFunction(() => document.querySelectorAll('#paginas .instrucoes li').length === 5);
     conferir((await pagina.inputValue('#ins-texto')).includes('O Gabarito deverá estar preenchido'), '"Voltar às instruções do modelo" traz as da escola de volta');
+
+    /* margem maior: o texto encolhe, a faixa fica no lugar do Identificador */
+    await pagina.selectOption('[data-a="margemCm"]', '1.5');
+    await pagina.waitForFunction(() => getComputedStyle(document.querySelector('#paginas .folha')).getPropertyValue('--margem').trim() === '1.5cm');
+    await pagina.waitForTimeout(400);
+    const comMargem = await pagina.evaluate(() => {
+        const f = document.querySelector('#paginas .folha');
+        const esc = f.getBoundingClientRect().width / f.offsetWidth;
+        const cm = (px) => px / esc / (96 / 2.54);
+        const a = f.getBoundingClientRect();
+        const fx = f.querySelector('.faixa').getBoundingClientRect();
+        const col = f.querySelector('.colunas').getBoundingClientRect();
+        return { faixa: [cm(fx.left - a.left), cm(fx.top - a.top), cm(fx.width)], colunas: cm(col.left - a.left) };
+    });
+    conferir(Math.abs(comMargem.faixa[0] - 1) < 0.05 && Math.abs(comMargem.faixa[1] - 0.6) < 0.05 && Math.abs(comMargem.faixa[2] - 19) < 0.05 && Math.abs(comMargem.colunas - 1.5) < 0.05,
+        'com margem de 1,5 cm, o texto recua e a faixa continua em 1 × 0,6 cm, 19 cm de largura');
+    await pagina.selectOption('[data-a="margemCm"]', '0.5');
+    await pagina.waitForTimeout(400);
 
     /* linha entre as colunas, por padrão */
     conferir(await pagina.$('#paginas .colunas.com-linha') !== null, 'a linha entre as colunas vem por padrão');

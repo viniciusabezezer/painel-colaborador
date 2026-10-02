@@ -283,3 +283,12 @@ test('as instruções são do professor também no modelo fixo; a faixa tem 2,5 
     delete p.ajustes.textoInstrucoes;
     assert.equal(Modelos.layoutDaProva(p).textoInstrucoes.length, 5, 'sem o ajuste, volta às da escola');
 });
+
+test('margens mínimas de 0,5 cm por padrão, ajustáveis em toda prova', () => {
+    assert.equal(Modelos.obter(Modelos.FIXO_ID).layout.margemCm, 0.5);
+    assert.equal(Modelos.completarLayout({}).margemCm, 0.5);
+    assert.equal(Modelos.completarLayout({ margemCm: 0.1 }).margemCm, 0.4, 'nunca abaixo do que a impressora alcança');
+    const p = Modelos.criarProva(Modelos.obter(Modelos.FIXO_ID));
+    p.ajustes.margemCm = 1;
+    assert.equal(Modelos.layoutDaProva(p).margemCm, 1);
+});

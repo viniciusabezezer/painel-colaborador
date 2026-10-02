@@ -27,6 +27,11 @@ Em **toda** prova, inclusive na do modelo fixo, o professor escolhe no passo
 - **fonte** — Times New Roman (padrão), Arial, Calibri, Cambria ou Georgia;
 - **tamanho** — de 8 a 14 pt, **10 pt** por padrão;
 - **espaçamento** — compacto, normal (padrão) ou amplo;
+- **margens** — **0,5 cm** por padrão, a mais estreita que as impressoras
+  costumam aceitar (a área que elas não alcançam fica em torno de 4 mm); 0,8,
+  1 ou 1,5 cm se alguma impressora cortar a borda. A faixa da identificação e o
+  quadro de instruções ficam sempre no retângulo do Identificador (1 cm de cada
+  lado), qualquer que seja a margem;
 - **gabarito** — a folha de respostas do aluno entra ou não, e como (veja
   abaixo);
 - **linha entre as colunas** — ligada por padrão;
@@ -134,8 +139,9 @@ enunciado, alternativas vazias e respostas não marcadas.
 
 ## Economia de papel e tinta
 
-- O padrão (Times New Roman 10, espaçamento normal, duas colunas, alternativas
-  automáticas) já é a forma mais enxuta que a escola considera legível.
+- O padrão (Times New Roman 10, espaçamento normal, margens de 0,5 cm, duas
+  colunas de 9,7 cm, alternativas automáticas) já é a forma mais enxuta que a
+  escola considera legível.
 - Acima da prévia: **páginas, folhas por aluno** (frente e verso) e o **total
   de folhas para a turma** (o número de alunos fica guardado).
 - **Economizar papel** experimenta, fora da vista, espaçamento compacto e letra
@@ -231,7 +237,7 @@ HTML, CSS e JavaScript sem framework, sem build e sem biblioteca de fora.
 
 ```bash
 node --test montar/test/montar.test.cjs   # 24 testes: marcação, modelos, ícones, versão B, gabarito, colagem
-node montar/test/montar-browser.mjs        # 71 verificações na tela, com Chromium
+node montar/test/montar-browser.mjs        # 75 verificações na tela, com Chromium
 ```
 
 O teste de navegador precisa do `playwright` (global serve). Ele monta uma

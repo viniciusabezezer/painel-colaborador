@@ -31,6 +31,7 @@
     };
     const VAO_ALT_CM = 0.35; /* espaço entre alternativas lado a lado */
     const TOPO_FAIXA_CM = 0.6; /* onde o Identificador põe o cabeçalho, por padrão */
+    const ESQUERDA_FAIXA_CM = 1;
 
     function el(tag, classe, html) {
         const e = document.createElement(tag);
@@ -47,9 +48,9 @@
     function topoFaixa(prova, layout, base) {
         const faixa = el('div', 'faixa');
         faixa.style.height = layout.faixaCm + 'cm';
-        /* começa a 0,6 cm do alto (a margem é de 1 cm): o mesmo retângulo de
-           19 × 2,5 cm que o Identificador usa por padrão */
-        faixa.style.marginTop = (TOPO_FAIXA_CM - 1) + 'cm';
+        /* começa a 0,6 cm do alto, qualquer que seja a margem: o mesmo
+           retângulo de 19 × 2,5 cm que o Identificador usa por padrão */
+        faixa.style.marginTop = (TOPO_FAIXA_CM - layout.margemCm).toFixed(2) + 'cm';
         const serie = prova.serie ? prova.serie + 'ª SÉRIE' : 'SÉRIE';
         faixa.innerHTML =
             '<div class="faixa-simulada so-tela" aria-hidden="true">' +
@@ -360,6 +361,11 @@
         folha.style.setProperty('--entre', espaco.entre + 'em');
         folha.style.setProperty('--lh', String(espaco.lh));
         folha.classList.toggle('tinta', !!layout.imagensCinza);
+        const m = layout.margemCm;
+        folha.style.setProperty('--margem', m + 'cm');
+        /* o número da página mora no pé: ganha uma linha só para ele */
+        folha.style.setProperty('--margem-pe', (layout.numeroPagina ? m + 0.45 : m).toFixed(2) + 'cm');
+        folha.style.setProperty('--recuo', (ESQUERDA_FAIXA_CM - m).toFixed(2) + 'cm');
     }
 
     function novaFolha(destino, layout, numero) {
@@ -452,7 +458,7 @@
             const f = novaFolha(destino, layout, folhas.length + 1);
             folhas.push(f.folha);
             if (folhas.length === 1) {
-                const topo = el('div', 'topo');
+                const topo = el('div', 'topo' + (layout.cabecalho === 'faixa' ? ' com-faixa' : ''));
                 if (layout.cabecalho === 'faixa') topo.appendChild(topoFaixa(prova, layout, base));
                 else if (layout.cabecalho === 'completo') topo.appendChild(topoCompleto(prova, base));
                 if (layout.instrucoes && layout.textoInstrucoes.some(function (l) { return String(l).trim(); })) {

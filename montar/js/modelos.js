@@ -47,7 +47,11 @@
     /* O que toda prova ajusta, inclusive a do modelo fixo: a aparência do
        texto e o que entra ou não na folha. O resto do formato é do modelo. */
     const AJUSTAVEIS = ['fonte', 'corpoPt', 'espacamento', 'gabarito', 'gabaritoOrigem', 'gabaritoLocal', 'icones', 'imagensCinza', 'linhaColunas',
-        'instrucoes', 'textoInstrucoes'];
+        'instrucoes', 'textoInstrucoes', 'margemCm'];
+
+    /* Margens: a mais estreita que as impressoras costumam aceitar é o padrão
+       (a área que elas não alcançam fica em torno de 4 mm). */
+    const MARGENS = [[0.5, '0,5 cm — mínima (padrão)'], [0.8, '0,8 cm — estreita'], [1, '1 cm'], [1.5, '1,5 cm — larga']];
 
     /* Instruções que os professores costumam acrescentar: um clique põe a
        linha no quadro. */
@@ -65,6 +69,7 @@
     /* Formato livre de partida: o que vale quando um campo não foi dito. */
     const LAYOUT_PADRAO = {
         fonte: 'times',             /* Times New Roman 10 é o padrão da escola */
+        margemCm: 0.5,              /* margem da folha: a mínima, para caber mais em cada página */
         espacamento: 'normal',      /* 'compacto' | 'normal' | 'amplo' */
         icones: true,               /* ícone da disciplina ao lado do título da seção */
         imagensCinza: true,         /* figuras em tons de cinza: economiza tinta */
@@ -94,6 +99,7 @@
         layout: {
             cabecalho: 'faixa',
             faixaCm: 2.5,
+            margemCm: 0.5,
             instrucoes: true,
             textoInstrucoes: INSTRUCOES_BIMESTRAL,
             gabarito: true,
@@ -166,6 +172,7 @@
         if (pronto.gabaritoOrigem !== 'imagem') pronto.gabaritoOrigem = 'gerado';
         if (pronto.gabaritoLocal !== 'separado') pronto.gabaritoLocal = 'prova';
         pronto.faixaCm = Math.max(1, Math.min(8, Number(pronto.faixaCm) || 2.5));
+        pronto.margemCm = Math.max(0.4, Math.min(2.5, Number(pronto.margemCm) || 0.5));
         if (!Array.isArray(pronto.textoInstrucoes)) pronto.textoInstrucoes = [];
         return pronto;
     }
@@ -494,6 +501,7 @@
         FONTES: FONTES,
         AJUSTAVEIS: AJUSTAVEIS,
         SUGESTOES_INSTRUCOES: SUGESTOES_INSTRUCOES,
+        MARGENS: MARGENS,
         INSTRUCOES_BIMESTRAL: INSTRUCOES_BIMESTRAL,
         normalizarQuestao: normalizarQuestao,
         normalizarProva: normalizarProva,

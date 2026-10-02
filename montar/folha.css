@@ -1,8 +1,9 @@
-/* A folha impressa. Medidas em centímetros, como numa régua: margem de 1 cm
-   no alto e dos lados; a faixa da identificação, de 19 × 2,5 cm, começa a
-   0,6 cm do alto — onde o Identificador de Provas cola o cabeçalho —; quadro
-   de instruções da largura toda, duas colunas justificadas e o número da
-   página no pé, à direita. */
+/* A folha impressa. Medidas em centímetros, como numa régua. A margem é a
+   mais estreita que as impressoras aceitam (0,5 cm por padrão, ajustável): o
+   texto ocupa quase toda a folha. A faixa da identificação, de 19 × 2,5 cm,
+   fica sempre a 0,6 cm do alto e 1 cm da esquerda — onde o Identificador de
+   Provas cola o cabeçalho —, com o quadro de instruções alinhado a ela; depois,
+   duas colunas justificadas e o número da página no pé, à direita. */
 
 .paginas { width: 210mm; }
 .paginas.paginas-quarto { width: 105mm; }
@@ -25,12 +26,17 @@
 
 .folha .miolo {
     position: absolute;
-    top: 1cm; left: 1cm; right: 1cm; bottom: 1.3cm;
+    top: var(--margem, .5cm); left: var(--margem, .5cm); right: var(--margem, .5cm);
+    bottom: var(--margem-pe, .95cm);
     display: flex;
     flex-direction: column;
 }
 
 .folha .topo { flex: none; }
+/* com a faixa do Identificador, a faixa e as instruções ficam no retângulo
+   dele (1 cm de cada lado), por mais estreita que seja a margem */
+.folha .topo.com-faixa > .faixa,
+.folha .topo.com-faixa > .instrucoes { margin-left: var(--recuo, .5cm); margin-right: var(--recuo, .5cm); }
 
 /* ----- faixa do Identificador ----- */
 /* Na tela: uma simulação do cabeçalho que o Identificador cola, com o brasão.
@@ -114,8 +120,8 @@
     flex: 1 1 auto;
     min-height: 0;
     display: flex;
-    gap: .75cm;
-    padding: .4cm .45cm 0;
+    gap: .6cm;
+    padding: .3cm 0 0;
 }
 .folha .colunas.com-linha {
     background: linear-gradient(#000, #000) center top / .5pt 100% no-repeat;
@@ -182,8 +188,8 @@
 
 .folha .rodape {
     position: absolute;
-    right: 1.2cm; bottom: .55cm;
-    font-size: 10pt;
+    right: var(--margem, .5cm); bottom: var(--margem, .5cm);
+    font-size: 9pt; line-height: 1;
 }
 
 .folha .grande-demais { outline: 2px dashed #c0392b; }
