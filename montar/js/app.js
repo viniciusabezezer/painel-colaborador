@@ -305,7 +305,8 @@
                 '<label class="campo-largo">Fonte<select data-l="fonte">' + opcoesFonte(layout.fonte) + '</select></label>' +
                 '<label>Tamanho<select data-l="corpoPt" data-num>' + opcoesCorpo(layout.corpoPt) + '</select></label>' +
                 '<label>Espaçamento<select data-l="espacamento">' + opcoesHtml([['compacto', 'Compacto'], ['normal', 'Normal'], ['amplo', 'Amplo']], layout.espacamento) + '</select></label>' +
-                '</div>' : '') +
+                '</div>' +
+                '<div class="linha-campos"><label class="campo-largo">Margens da folha<select data-l="margemCm" data-num>' + opcoesHtml(Modelos.MARGENS, layout.margemCm) + '</select></label></div>' : '') +
             '<div class="linha-campos">' +
             '<label>Colunas<select data-l="colunas" data-num>' + opcoesHtml([[2, 'Duas'], [1, 'Uma']], layout.colunas) + '</select></label>' +
             '<label>Alternativas<select data-l="alternativas" data-num>' + opcoesHtml([[5, 'Cinco (a–e)'], [4, 'Quatro (a–d)']], layout.alternativas) + '</select></label>' +
@@ -487,6 +488,7 @@
     /* ----- aparência ----- */
 
     $('ap-fonte').innerHTML = opcoesFonte('times');
+    $('ap-margem').innerHTML = opcoesHtml(Modelos.MARGENS, 0.5);
     $('ap-corpo').innerHTML = opcoesCorpo(10);
 
     function preencherAparencia() {
@@ -1265,6 +1267,7 @@
         prova.secoes.forEach(function (s) { s.questoes.forEach(function (q) { (q.imagens || []).forEach(function (img) { if (img.largura > 70) grandes.push(img); }); }); });
         if (grandes.length) dicas.push(grandes.length + (grandes.length === 1 ? ' imagem ocupa' : ' imagens ocupam') + ' mais de 70% da coluna; reduzir o tamanho ou pôr "ao lado do texto" costuma poupar espaço.');
         if (!atual.imagensCinza) dicas.push('Ligue "Imagens em tons de cinza" no passo 2 para gastar menos tinta.');
+        if (atual.margemCm > 0.5) dicas.push('As margens estão em ' + virgula(atual.margemCm) + ' cm; em 0,5 cm (a mínima) cabe mais em cada página.');
 
         if (melhor.paginas < paginasAtuais) {
             const poupa = (folhasPorAluno(paginasAtuais) - folhasPorAluno(melhor.paginas)) * copias;
