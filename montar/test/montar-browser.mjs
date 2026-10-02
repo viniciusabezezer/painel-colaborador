@@ -425,6 +425,22 @@ try {
     conferir(true, 'sem internet a prova abre e a prévia é montada');
     await contexto.setOffline(false);
 
+    /* --- endereço próprio: a pasta montar é a raiz (montador-provas-malu.vercel.app) --- */
+    const proprio = await servir(APP, PORTA + 1);
+    try {
+        await pagina.goto(`http://127.0.0.1:${PORTA + 1}/`);
+        await pagina.waitForSelector('#tela-inicio:not([hidden]) .cartao');
+        conferir(!(await pagina.$('#voltar-ao-painel')), 'no endereço próprio o link de volta ao painel some');
+        conferir(!(await pagina.$('a[href="../provas/"]')), 'no endereço próprio o link do Identificador vira texto, sem levar a página que não existe');
+        await pagina.click('[data-usar="bimestral-malu"]');
+        await pagina.waitForSelector('#tela-editor:not([hidden]) .folha .faixa-brasao');
+        conferir(await pagina.$eval('.folha .faixa-brasao', (i) => i.naturalWidth > 0), 'no endereço próprio o brasão carrega');
+    } finally {
+        proprio.close();
+    }
+    await pagina.goto(`http://127.0.0.1:${PORTA}/montar/#/`);
+    await pagina.waitForSelector('#tela-inicio:not([hidden]) .cartao');
+
     /* --- celular --- */
     await pagina.setViewportSize({ width: 390, height: 844 });
     const larguraPagina = await pagina.evaluate(() => document.documentElement.scrollWidth);

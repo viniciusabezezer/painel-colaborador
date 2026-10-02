@@ -136,7 +136,7 @@
                         <input type="text" data-p="valor" placeholder="Ex.: 3,0 pontos">
                     </label>
                 </div>
-                <p class="dica" data-so-faixa>A primeira página sai com um <strong>espaço em branco de 2,5 cm</strong> no alto, para a gestão acrescentar a identificação. O brasão da escola, o nome do aluno, a turma, a data e o QR entram depois, pelo <a href="../provas/">Identificador de Provas</a> — a prévia mostra uma simulação.</p>
+                <p class="dica" data-so-faixa>A primeira página sai com um <strong>espaço em branco de 2,5 cm</strong> no alto, para a gestão acrescentar a identificação. O brasão da escola, o nome do aluno, a turma, a data e o QR entram depois, pelo <a href="../provas/" data-so-no-painel>Identificador de Provas</a> — a prévia mostra uma simulação.</p>
             </fieldset>
 
             <fieldset class="passo">
@@ -363,6 +363,17 @@
 <script src="js/armazem.js"></script>
 <script src="js/app.js"></script>
 <script>
+    /* Em endereço próprio (montador-provas-malu.vercel.app) a pasta do app é a
+       raiz e não há painel acima: os links para o painel e o Identificador
+       viram texto simples, em vez de levar a uma página que não existe. */
+    if (/^\/(index\.html)?$/.test(location.pathname)) {
+        document.querySelectorAll('[data-so-no-painel]').forEach(function (a) {
+            const texto = document.createElement('strong');
+            texto.textContent = a.textContent;
+            a.replaceWith(texto);
+        });
+    }
+
     /* Sem internet: o service worker guarda o app neste aparelho. Só existe
        em http(s); aberto direto do computador (file://), o app já é local. */
     if ('serviceWorker' in navigator && /^https?:$/.test(location.protocol)) {
