@@ -1,0 +1,171 @@
+/* A folha impressa. Medidas em centímetros, como numa régua: margem de 1 cm
+   no alto e dos lados — o mesmo 1 cm em que o Identificador de Provas cola o
+   cabeçalho de 19 × 2,8 cm —, faixa de 3 cm, quadro de instruções da largura
+   toda, duas colunas justificadas e o número da página no pé, à direita. */
+
+.paginas { width: 210mm; }
+
+.folha {
+    position: relative;
+    width: 210mm;
+    height: 297mm;
+    background: #fff;
+    color: #000;
+    overflow: hidden;
+    font-family: Arial, 'Liberation Sans', Arimo, Helvetica, sans-serif;
+    font-size: var(--corpo, 10.5pt);
+    line-height: 1.22;
+    margin: 0 auto 10mm;
+    box-shadow: 0 4px 22px -8px rgba(0, 0, 0, .35);
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+}
+
+.folha .miolo {
+    position: absolute;
+    top: 1cm; left: 1cm; right: 1cm; bottom: 1.3cm;
+    display: flex;
+    flex-direction: column;
+}
+
+.folha .topo { flex: none; }
+
+/* ----- faixa do Identificador ----- */
+
+.folha .faixa {
+    position: relative;
+    outline: 1px dashed #9bbfa5;
+    outline-offset: -1px;
+    background: repeating-linear-gradient(-45deg, #f6faf7, #f6faf7 8px, #fff 8px, #fff 16px);
+    display: flex; align-items: center; justify-content: center;
+    text-align: center;
+}
+.folha .faixa-dica {
+    font-family: 'Outfit', system-ui, sans-serif;
+    font-size: 9.5pt; color: #4f7a5c; max-width: 13cm; line-height: 1.35;
+}
+
+/* ----- cabeçalho completo ----- */
+
+.folha .cab-completo {
+    width: 100%;
+    border-collapse: collapse;
+    table-layout: fixed;
+    font-size: 9.5pt;
+    line-height: 1.2;
+}
+.folha .cab-completo col.c-logo { width: 2.1cm; }
+.folha .cab-completo col.c-fim { width: 4.2cm; }
+.folha .cab-completo td {
+    border: .75pt solid #000;
+    padding: .09cm .16cm;
+    height: .62cm;
+    vertical-align: middle;
+    overflow: hidden;
+}
+.folha .cab-logo { text-align: center; padding: .05cm !important; }
+.folha .cab-logo img { height: 1.45cm; width: auto; display: inline-block; vertical-align: middle; }
+.folha .cab-escola { text-align: center; font-weight: 700; font-size: 11pt; }
+.folha .cab-titulo { text-align: center; font-weight: 700; font-size: 10pt; }
+.folha .cab-completo .rot { font-weight: 700; }
+
+/* ----- instruções ----- */
+
+.folha .instrucoes {
+    border: .75pt solid #000;
+    padding: .06cm .2cm .12cm;
+    line-height: 1.2;
+}
+.folha .cab-completo + .instrucoes { border-top: 0; }
+.folha .instrucoes-titulo {
+    text-align: center;
+    font-weight: 700; font-style: italic; text-decoration: underline;
+    font-size: 1.05em;
+}
+.folha .instrucoes ul { list-style: none; margin: 0; padding: 0; }
+.folha .instrucoes li { padding-left: 1.25em; text-indent: -1.25em; }
+.folha .instrucoes li::before { content: '➢'; display: inline-block; width: 1.25em; text-indent: 0; }
+
+/* ----- colunas ----- */
+
+.folha .colunas {
+    flex: 1 1 auto;
+    min-height: 0;
+    display: flex;
+    gap: .75cm;
+    padding: .4cm .45cm 0;
+}
+.folha .colunas.com-linha {
+    background: linear-gradient(#000, #000) center top / .5pt 100% no-repeat;
+    background-origin: content-box;
+    background-clip: content-box;
+}
+
+.folha .coluna {
+    flex: 1 1 0;
+    min-width: 0;
+    position: relative;
+    overflow: hidden;
+}
+
+.folha .coluna > * { margin: 0; }
+.folha .coluna > :first-child { padding-top: 0 !important; }
+
+.folha .q-par,
+.folha .q-alt {
+    text-align: justify;
+    hyphens: manual;
+    overflow-wrap: break-word;
+}
+.folha .q-inicio { padding-top: .95em; }
+.folha .q-alt-primeira { padding-top: .1em; }
+.folha .partido { text-align-last: justify; }
+.folha sub, .folha sup { font-size: .72em; line-height: 0; }
+
+.folha .secao-titulo {
+    font-weight: 700;
+    padding-top: 1.15em;
+}
+.folha .q-titulo { font-weight: 700; padding-top: .95em; }
+.folha .q-titulo + .q-par { padding-top: .15em; }
+
+.folha .q-img { padding: .35em 0 .2em; text-align: center; }
+.folha .q-img img { display: inline-block; vertical-align: top; }
+
+.folha .q-linha { height: .78cm; border-bottom: .5pt solid #444; }
+.folha .q-linha-primeira { height: .95cm; }
+
+.folha .bloco-gabarito { padding-bottom: .2em; }
+.folha .gabarito-titulo { font-weight: 700; padding-bottom: .55em; }
+.folha .gabarito-svg { display: block; }
+
+.folha .rodape {
+    position: absolute;
+    right: 1.2cm; bottom: .55cm;
+    font-size: 10pt;
+}
+
+.folha .grande-demais { outline: 2px dashed #c0392b; }
+
+/* ----- folha de correção ----- */
+
+.folha .chave-cab { border: .75pt solid #000; padding: .3cm; text-align: center; line-height: 1.5; margin-bottom: .6cm; }
+.folha .chave-grade { display: grid; grid-template-columns: repeat(4, 1fr); gap: .15cm .5cm; }
+.folha .chave-item { display: flex; align-items: baseline; gap: .25cm; border-bottom: .5pt solid #bbb; padding: .08cm 0; }
+.folha .chave-n { font-weight: 700; min-width: .8cm; }
+.folha .chave-r { font-weight: 700; font-size: 1.1em; }
+.folha .chave-r.falta { color: #c0392b; }
+.folha .chave-s { margin-left: auto; font-size: 7.5pt; color: #666; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 2.4cm; }
+
+/* ----- impressão ----- */
+
+@page { size: A4; margin: 0; }
+
+@media print {
+    html, body { background: #fff !important; }
+    .so-tela, .nao-imprime { display: none !important; }
+    .folha { margin: 0 !important; box-shadow: none !important; break-after: page; page-break-after: always; }
+    .folha:last-child { break-after: auto; page-break-after: auto; }
+    .folha .faixa { outline: 0; background: none; }
+    .folha .grande-demais { outline: 0; }
+}
