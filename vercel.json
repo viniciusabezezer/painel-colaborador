@@ -6,6 +6,28 @@
   "redirects": [
     {
       "source": "/",
+      "has": [
+        {
+          "type": "host",
+          "value": "montador-provas-malu.vercel.app"
+        }
+      ],
+      "destination": "/montar/",
+      "permanent": false
+    },
+    {
+      "source": "/instapensa/:path*",
+      "has": [
+        {
+          "type": "host",
+          "value": "montador-provas-malu.vercel.app"
+        }
+      ],
+      "destination": "/montar/",
+      "permanent": false
+    },
+    {
+      "source": "/",
       "destination": "/instapensa/",
       "permanent": false
     },

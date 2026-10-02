@@ -395,8 +395,15 @@ try {
     await pagina.waitForTimeout(100);
 
     /* --- modelos --- */
+    /* o domínio do Montador servindo o repositório inteiro: o app fica em /montar/,
+       mas se comporta como site próprio (o Chromium leva *.localhost à máquina) */
+    await pagina.goto(`http://montador-provas-malu.localhost:${PORTA}/montar/`);
+    await pagina.waitForSelector('#tela-inicio:not([hidden]) .cartao');
+    conferir(!(await pagina.$('#voltar-ao-painel')) && !(await pagina.$('a[href="../provas/"]')),
+        'no domínio do Montador, mesmo em /montar/, não há link para o painel');
     await pagina.goto(`http://127.0.0.1:${PORTA}/montar/#/`);
     await pagina.waitForSelector('#tela-inicio:not([hidden]) .cartao');
+    conferir(await pagina.$('#voltar-ao-painel') !== null, 'dentro do painel o link de volta continua');
     const comNovo = await pagina.$$eval('#lista-modelos .cartao h3', (n) => n.map((x) => x.textContent));
     conferir(comNovo.includes('Modelo de teste'), '"Salvar este formato como modelo" cria o modelo');
 
