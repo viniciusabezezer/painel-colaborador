@@ -33,8 +33,13 @@ Em **toda** prova, inclusive na do modelo fixo, o professor escolhe no passo
 - **ícones das disciplinas** nos títulos das seções (ligados por padrão);
 - **imagens em tons de cinza**, para gastar menos tinta (ligado por padrão).
 
-O resto do formato (cabeçalho, instruções, colunas, letras, numeração) é do
-modelo. No modelo fixo ele não muda; se uma prova precisar de outro formato,
+O **quadro de instruções** também é do professor, em qualquer modelo (passo
+*Instruções*): ligar ou desligar, escrever uma instrução por linha (com
+negrito e itálico), acrescentar com um clique as mais comuns (duração,
+calculadora, celular…) e voltar às instruções do modelo quando quiser. A
+prova bimestral nasce com as cinco instruções da escola.
+
+O resto do formato (cabeçalho, colunas, letras, numeração) é do modelo. No modelo fixo ele não muda; se uma prova precisar de outro formato,
 **Fazer uma cópia com formato livre** a desliga do modelo fixo, sem mexer na
 original.
 
@@ -42,9 +47,10 @@ original.
 
 A prova bimestral sai do Montador para o [Identificador de Provas](../provas/),
 que cola o cabeçalho com o **brasão da escola**, o nome do aluno, a turma e o
-QR. Por isso a primeira página do modelo fixo traz, no alto, uma **faixa em
-branco** de 19 × 3 cm a 1 cm da borda — exatamente onde o Identificador cola,
-por padrão, o cabeçalho de 19 × 2,8 cm. Na tela, a faixa mostra uma
+QR. Por isso a primeira página do modelo fixo traz, no alto, um **espaço em
+branco de 2,5 cm** (19 × 2,5 cm, a 0,6 cm da borda de cima e 1 cm da esquerda)
+— exatamente o retângulo em que o Identificador cola, por padrão, o cabeçalho
+da identificação, que a gestão acrescenta depois. Na tela, a faixa mostra uma
 **simulação desse cabeçalho, com o brasão**, para o professor ver como a prova
 vai ficar; na impressão sai em branco. (No Identificador o brasão é padrão e
 está embutido no app, para sair sempre, até sem internet.)
@@ -225,7 +231,7 @@ HTML, CSS e JavaScript sem framework, sem build e sem biblioteca de fora.
 
 ```bash
 node --test montar/test/montar.test.cjs   # 24 testes: marcação, modelos, ícones, versão B, gabarito, colagem
-node montar/test/montar-browser.mjs        # 66 verificações na tela, com Chromium
+node montar/test/montar-browser.mjs        # 71 verificações na tela, com Chromium
 ```
 
 O teste de navegador precisa do `playwright` (global serve). Ele monta uma

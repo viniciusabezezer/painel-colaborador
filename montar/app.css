@@ -340,6 +340,16 @@ body[data-tela="editor"], body[data-tela="modelo"] { overflow: hidden; }
 .q-numero--texto { color: #8a7a45; }
 .q-tag.texto { background: #f4eedb; color: #6b5a22; }
 
+/* ----- instruções ----- */
+
+.sugestoes { display: flex; flex-wrap: wrap; gap: 6px; }
+.sugestao {
+    font: inherit; font-size: 12.5px; padding: 4px 10px; border-radius: 999px; cursor: pointer;
+    border: 1px dashed #c9c3b1; background: #fbfaf5; color: var(--ink-soft);
+}
+.sugestao:hover { border-style: solid; border-color: var(--green); color: var(--green-dark); }
+.sugestao[disabled] { opacity: .45; cursor: default; border-style: solid; }
+
 /* ----- gabarito ----- */
 
 .gabarito-opcoes { margin-top: 14px; padding-top: 12px; border-top: 1px solid var(--line); }

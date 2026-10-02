@@ -30,6 +30,7 @@
         amplo: { entre: 1.3, lh: 1.32 }
     };
     const VAO_ALT_CM = 0.35; /* espaço entre alternativas lado a lado */
+    const TOPO_FAIXA_CM = 0.6; /* onde o Identificador põe o cabeçalho, por padrão */
 
     function el(tag, classe, html) {
         const e = document.createElement(tag);
@@ -46,6 +47,9 @@
     function topoFaixa(prova, layout, base) {
         const faixa = el('div', 'faixa');
         faixa.style.height = layout.faixaCm + 'cm';
+        /* começa a 0,6 cm do alto (a margem é de 1 cm): o mesmo retângulo de
+           19 × 2,5 cm que o Identificador usa por padrão */
+        faixa.style.marginTop = (TOPO_FAIXA_CM - 1) + 'cm';
         const serie = prova.serie ? prova.serie + 'ª SÉRIE' : 'SÉRIE';
         faixa.innerHTML =
             '<div class="faixa-simulada so-tela" aria-hidden="true">' +

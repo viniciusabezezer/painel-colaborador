@@ -37,8 +37,9 @@ Quando entra um novo, o mais antigo sai; dá para apagar um a um ou todos.
 ## O caminho
 
 A prova pode vir pronta do **Montador de Provas** (`/montar/`): a Avaliação
-Bimestral Malu sai de lá com a faixa em branco exatamente onde este app cola o
-cabeçalho (1 cm da borda, 19 × 2,8 cm), então basta subir o PDF.
+Bimestral Malu sai de lá com um espaço em branco de 2,5 cm exatamente onde
+este app cola o cabeçalho com os valores padrão da tela (19 × 2,5 cm, a 0,6 cm
+do alto e 1 cm da esquerda), então basta subir o PDF.
 
 1. **A avaliação** — bimestre, ano e a *chave da escola*.
 2. **Os alunos** — cola-se tudo de uma vez, todas as turmas juntas. A turma pode

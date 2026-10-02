@@ -46,7 +46,21 @@
 
     /* O que toda prova ajusta, inclusive a do modelo fixo: a aparência do
        texto e o que entra ou não na folha. O resto do formato é do modelo. */
-    const AJUSTAVEIS = ['fonte', 'corpoPt', 'espacamento', 'gabarito', 'gabaritoOrigem', 'gabaritoLocal', 'icones', 'imagensCinza', 'linhaColunas'];
+    const AJUSTAVEIS = ['fonte', 'corpoPt', 'espacamento', 'gabarito', 'gabaritoOrigem', 'gabaritoLocal', 'icones', 'imagensCinza', 'linhaColunas',
+        'instrucoes', 'textoInstrucoes'];
+
+    /* Instruções que os professores costumam acrescentar: um clique põe a
+       linha no quadro. */
+    const SUGESTOES_INSTRUCOES = [
+        'Duração da avaliação: 2 horas;',
+        'Não é permitido o uso de calculadora;',
+        'É permitido o uso de calculadora;',
+        'Desligue o celular e guarde-o na mochila;',
+        'Leia com atenção cada questão antes de responder;',
+        'Nas questões discursivas, mostre os cálculos;',
+        'Questões rasuradas serão anuladas;',
+        'Escreva com letra legível;'
+    ];
 
     /* Formato livre de partida: o que vale quando um campo não foi dito. */
     const LAYOUT_PADRAO = {
@@ -55,7 +69,7 @@
         icones: true,               /* ícone da disciplina ao lado do título da seção */
         imagensCinza: true,         /* figuras em tons de cinza: economiza tinta */
         cabecalho: 'completo',      /* 'faixa' | 'completo' | 'nenhum' */
-        faixaCm: 3,                 /* altura da faixa em branco, abaixo da margem de 1 cm */
+        faixaCm: 2.5,               /* altura da faixa em branco da identificação, a 0,6 cm do alto */
         instrucoes: false,
         textoInstrucoes: [],
         gabarito: false,            /* folha de respostas com bolhas */
@@ -73,13 +87,13 @@
     const FIXO = {
         id: 'bimestral-malu',
         nome: 'Avaliação Bimestral Malu',
-        descricao: 'Modelo padrão da escola. Faixa para o cabeçalho do Identificador de Provas (com o brasão), quadro de instruções, gabarito com as marcas de alinhamento e duas colunas.',
+        descricao: 'Modelo padrão da escola. Espaço de 2,5 cm para a identificação (cabeçalho do Identificador, com o brasão), quadro de instruções editável, gabarito com as marcas de alinhamento e duas colunas.',
         fixo: true,
         tituloPadrao: 'Avaliação Bimestral de {componente}',
         secoesIniciais: 'componente',
         layout: {
             cabecalho: 'faixa',
-            faixaCm: 3,
+            faixaCm: 2.5,
             instrucoes: true,
             textoInstrucoes: INSTRUCOES_BIMESTRAL,
             gabarito: true,
@@ -151,7 +165,7 @@
         if (['compacto', 'normal', 'amplo'].indexOf(pronto.espacamento) === -1) pronto.espacamento = 'normal';
         if (pronto.gabaritoOrigem !== 'imagem') pronto.gabaritoOrigem = 'gerado';
         if (pronto.gabaritoLocal !== 'separado') pronto.gabaritoLocal = 'prova';
-        pronto.faixaCm = Math.max(1, Math.min(8, Number(pronto.faixaCm) || 3));
+        pronto.faixaCm = Math.max(1, Math.min(8, Number(pronto.faixaCm) || 2.5));
         if (!Array.isArray(pronto.textoInstrucoes)) pronto.textoInstrucoes = [];
         return pronto;
     }
@@ -479,6 +493,8 @@
         ESCOLA: ESCOLA,
         FONTES: FONTES,
         AJUSTAVEIS: AJUSTAVEIS,
+        SUGESTOES_INSTRUCOES: SUGESTOES_INSTRUCOES,
+        INSTRUCOES_BIMESTRAL: INSTRUCOES_BIMESTRAL,
         normalizarQuestao: normalizarQuestao,
         normalizarProva: normalizarProva,
         versaoEmbaralhada: versaoEmbaralhada,

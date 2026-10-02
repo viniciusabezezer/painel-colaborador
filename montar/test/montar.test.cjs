@@ -272,3 +272,14 @@ test('versão B troca a ordem das alternativas e leva a resposta certa junto', (
     assert.notEqual(r.prova.id, p.id);
     assert.deepEqual(q.alternativas, ['um', 'dois', 'três', 'quatro', 'cinco'], 'a original não muda');
 });
+
+test('as instruções são do professor também no modelo fixo; a faixa tem 2,5 cm', () => {
+    const p = Modelos.criarProva(Modelos.obter(Modelos.FIXO_ID));
+    assert.equal(Modelos.layoutDaProva(p).faixaCm, 2.5);
+    assert.equal(Modelos.layoutDaProva(p).textoInstrucoes.length, 5);
+    p.ajustes.textoInstrucoes = ['Só uma instrução.'];
+    p.ajustes.instrucoes = true;
+    assert.deepEqual(Modelos.layoutDaProva(p).textoInstrucoes, ['Só uma instrução.']);
+    delete p.ajustes.textoInstrucoes;
+    assert.equal(Modelos.layoutDaProva(p).textoInstrucoes.length, 5, 'sem o ajuste, volta às da escola');
+});
