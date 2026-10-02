@@ -170,7 +170,7 @@
         destino.innerHTML = '';
         if (!arquivos.length) destino.appendChild(el('p', 'vazio', 'Nada impresso ainda. As provas impressas ou salvas em PDF aparecem aqui.'));
         arquivos.forEach(function (a) {
-            const tipo = a.tipo === 'gabarito' ? 'Gabarito do professor' : (a.paginas + (a.paginas === 1 ? ' página' : ' páginas'));
+            const tipo = a.tipo === 'gabarito' ? 'Gabarito do professor' : a.tipo === 'gabaritos' ? 'Folhas de respostas' : (a.paginas + (a.paginas === 1 ? ' página' : ' páginas'));
             destino.appendChild(el('div', 'prova-linha',
                 '<div class="info"><strong>' + esc(a.nome) + '</strong><span class="meta">' + esc(a.titulo + ' · ' + tipo + ' · gerado em ' + dataHora(a.criadoEm)) + '</span></div>' +
                 '<div class="acoes">' +
@@ -313,10 +313,12 @@
             '<label>Numeração<select data-l="numeracao">' + opcoesHtml([['01.', '01. 02.'], ['1.', '1. 2.'], ['QUESTÃO 01', 'QUESTÃO 01']], layout.numeracao) + '</select></label>' +
             '</div>' +
             (comAparencia ?
-                '<label class="opcao"><input type="checkbox" data-l="gabarito"' + (layout.gabarito ? ' checked' : '') + '> Gabarito com bolhas e marcas de alinhamento na 1ª página</label>' +
+                '<label class="opcao"><input type="checkbox" data-l="gabarito"' + (layout.gabarito ? ' checked' : '') + '> Gabarito (folha de respostas com bolhas e marcas de alinhamento)</label>' +
+                '<div class="linha-campos"><label class="campo-largo">Onde fica o gabarito<select data-l="gabaritoLocal">' +
+                opcoesHtml([['prova', 'Na 1ª página da prova'], ['separado', 'Em folha à parte, 4 por folha A4']], layout.gabaritoLocal) + '</select></label></div>' +
+                '<label class="opcao"><input type="checkbox" data-l="linhaColunas"' + (layout.linhaColunas ? ' checked' : '') + '> Linha entre as colunas</label>' +
                 '<label class="opcao"><input type="checkbox" data-l="icones"' + (layout.icones ? ' checked' : '') + '> Ícone da disciplina nos títulos das seções</label>' +
                 '<label class="opcao"><input type="checkbox" data-l="imagensCinza"' + (layout.imagensCinza ? ' checked' : '') + '> Imagens em tons de cinza (economiza tinta)</label>' : '') +
-            '<label class="opcao"><input type="checkbox" data-l="linhaColunas"' + (layout.linhaColunas ? ' checked' : '') + '> Linha entre as colunas</label>' +
             '<label class="opcao"><input type="checkbox" data-l="numeroPagina"' + (layout.numeroPagina ? ' checked' : '') + '> Número da página no pé (1/8)</label>' +
             '<label class="opcao"><input type="checkbox" data-l="instrucoes"' + (layout.instrucoes ? ' checked' : '') + '> Quadro de instruções</label>' +
             '<label data-se="instrucoes" class="campo-coluna"><textarea data-l="textoInstrucoes" rows="5" placeholder="Uma instrução por linha. **negrito** vale aqui também.">' +
@@ -490,7 +492,57 @@
             if (campo.type === 'checkbox') campo.checked = !!v;
             else campo.value = v;
         });
+        visibilidadeGabarito();
     }
+
+    function visibilidadeGabarito() {
+        const layout = Modelos.layoutDaProva(prova);
+        document.querySelectorAll('#editor [data-se-gabarito]').forEach(function (e) { e.hidden = !layout.gabarito; });
+        document.querySelectorAll('#editor [data-se-gabarito-imagem]').forEach(function (e) { e.hidden = layout.gabaritoOrigem !== 'imagem'; });
+        document.querySelectorAll('#editor [data-se-gabarito-separado]').forEach(function (e) { e.hidden = layout.gabaritoLocal !== 'separado'; });
+        const img = prova.gabaritoImagem;
+        $('gab-miniatura').hidden = !img;
+        if (img) $('gab-miniatura').src = img.src;
+        $('gab-tirar').hidden = !img;
+        $('gab-escolher').textContent = img ? 'Trocar imagem…' : 'Escolher imagem…';
+    }
+
+    /* ----- gabarito como imagem ----- */
+
+    async function receberGabarito(arquivos) {
+        const arquivo = Array.from(arquivos || []).filter(function (f) { return /^image\//.test(f.type); })[0];
+        if (!arquivo) return;
+        try {
+            marcar();
+            /* mais resolução que nas questões: as bolhas precisam sair nítidas */
+            const img = await carregarImagem(arquivo, 2400);
+            prova.gabaritoImagem = { src: img.src, w: img.w, h: img.h };
+            prova.ajustes.gabarito = true;
+            prova.ajustes.gabaritoOrigem = 'imagem';
+            preencherAparencia();
+            mudou();
+        } catch (erro) {
+            alert('Não consegui abrir esta imagem. Tente salvar como PNG ou JPG.');
+        }
+    }
+
+    $('gab-escolher').onclick = function () { $('arquivo-gabarito').click(); };
+    $('arquivo-gabarito').addEventListener('change', function () { receberGabarito(this.files); this.value = ''; });
+    $('gab-tirar').onclick = function () {
+        marcar();
+        prova.gabaritoImagem = null;
+        visibilidadeGabarito();
+        mudou();
+    };
+    $('gab-zona').addEventListener('paste', function (e) {
+        e.preventDefault();
+        const lido = Colar.ler(e);
+        if (lido.imagens.length) receberGabarito(lido.imagens);
+        else $('ed-status').textContent = 'Não veio imagem: copie a imagem do gabarito (ou um print) e cole de novo';
+    });
+    $('gab-zona').addEventListener('beforeinput', function (e) { if (e.inputType !== 'insertFromPaste') e.preventDefault(); });
+    $('gab-zona').addEventListener('dragover', function (e) { e.preventDefault(); });
+    $('gab-zona').addEventListener('drop', function (e) { e.preventDefault(); receberGabarito(e.dataTransfer.files); });
 
     document.querySelectorAll('#editor [data-a]').forEach(function (campo) {
         campo.addEventListener('change', function () {
@@ -498,6 +550,7 @@
             prova.ajustes = prova.ajustes || {};
             prova.ajustes[nome] = campo.type === 'checkbox' ? campo.checked : ('num' in campo.dataset ? Number(campo.value) : campo.value);
             $('proposta').hidden = true;
+            visibilidadeGabarito();
             mudou();
         });
     });
@@ -822,13 +875,13 @@
 
     /* A imagem entra reduzida (até 1600 px no lado maior): dá nitidez de
        sobra no papel e não pesa a prova guardada. */
-    async function carregarImagem(arquivo) {
+    async function carregarImagem(arquivo, maximo) {
         const url = URL.createObjectURL(arquivo);
         try {
             const img = new Image();
             img.src = url;
             await img.decode();
-            const k = Math.min(1, 1600 / Math.max(img.naturalWidth, img.naturalHeight));
+            const k = Math.min(1, (maximo || 1600) / Math.max(img.naturalWidth, img.naturalHeight));
             const w = Math.max(1, Math.round(img.naturalWidth * k));
             const h = Math.max(1, Math.round(img.naturalHeight * k));
             const canvas = document.createElement('canvas');
@@ -1059,14 +1112,37 @@
             folhas + (folhas === 1 ? ' folha' : ' folhas') + ' por aluno (frente e verso) · ' + total + (total === 1 ? ' questão' : ' questões');
         atualizarTotalFolhas();
         aplicarZoom($('paginas'), $('previa-escala'), $('previa'));
+        desenharGabaritosAParte();
         mostrarAvisos(r, Modelos.pendencias(prova));
         mostrarDisposicoes();
+    }
+
+    function gabaritoAParte() {
+        const layout = Modelos.layoutDaProva(prova);
+        return layout.gabarito && layout.gabaritoLocal === 'separado';
     }
 
     function atualizarTotalFolhas() {
         if (!ultimoResultado) return;
         const copias = Math.max(1, parseInt($('copias').value, 10) || 1);
-        $('folhas-total').textContent = (folhasPorAluno(ultimoResultado.paginas) * copias) + ' folhas';
+        const daProva = folhasPorAluno(ultimoResultado.paginas) * copias;
+        /* 4 gabaritos por folha A4 */
+        const deGabarito = gabaritoAParte() ? Math.ceil(copias / 4) : 0;
+        $('folhas-total').textContent = (daProva + deGabarito) + ' folhas' + (deGabarito ? ' (' + deGabarito + ' de gabarito)' : '');
+    }
+
+    function desenharGabaritosAParte() {
+        const mostrar = gabaritoAParte();
+        $('previa-gabaritos').hidden = !mostrar;
+        if (!mostrar) { $('paginas-gabaritos').innerHTML = ''; return; }
+        Paginar.montarGabaritos(prova, $('paginas-gabaritos'), { porFolha: 4 });
+        aplicarZoomFixo($('paginas-gabaritos'), $('previa-gab-escala'), escalaAtual);
+    }
+
+    function aplicarZoomFixo(paginas, escala, s) {
+        paginas.style.transform = 'scale(' + s + ')';
+        escala.style.width = (paginas.offsetWidth * s) + 'px';
+        escala.style.height = (paginas.offsetHeight * s) + 'px';
     }
     $('copias').addEventListener('input', function () { guardar('copias', this.value); atualizarTotalFolhas(); });
 
@@ -1165,11 +1241,15 @@
             const z = b.dataset.zoom;
             zoom = z === 'ajustar' ? 'ajustar' : escalaAtual * (z === '+' ? 1.15 : 1 / 1.15);
             aplicarZoom($('paginas'), $('previa-escala'), $('previa'));
+            if (gabaritoAParte()) aplicarZoomFixo($('paginas-gabaritos'), $('previa-gab-escala'), escalaAtual);
         };
     });
 
     window.addEventListener('resize', debounce(function () {
-        if (document.body.dataset.tela === 'editor') aplicarZoom($('paginas'), $('previa-escala'), $('previa'));
+        if (document.body.dataset.tela === 'editor') {
+            aplicarZoom($('paginas'), $('previa-escala'), $('previa'));
+            if (prova && gabaritoAParte()) aplicarZoomFixo($('paginas-gabaritos'), $('previa-gab-escala'), escalaAtual);
+        }
         if (document.body.dataset.tela === 'modelo') aplicarZoomModelo();
     }, 150));
 
@@ -1178,6 +1258,7 @@
     let tituloAntesDeImprimir = null;
 
     function imprimir(chave) {
+        depoisDeImprimir();
         salvar.agora();
         if (paginar.pendente()) paginar.agora();
         const nome = Modelos.nomeArquivo(prova) + (chave ? '-GABARITO-PROFESSOR' : '');
@@ -1190,13 +1271,37 @@
         /* a versão que vai para a impressão fica guardada */
         Armazem.guardarArquivo(prova, { nome: nome, tipo: chave ? 'gabarito' : 'prova', paginas: chave ? 1 : ultimoResultado.paginas });
         window.print();
-        /* No Chrome o print() espera a janela fechar; nos outros, o afterprint
-           arruma. */
-        setTimeout(depoisDeImprimir, 500);
+        /* o afterprint desfaz o modo de impressão; cada impressão nova também
+           começa limpando o anterior, caso o navegador não avise */
     }
+
+    /* Folhas de respostas avulsas: 4 por A4, ou uma por página de 10,5 ×
+       14,85 cm (o tamanho que a aba Gabaritos do Identificador recebe). */
+    function imprimirGabaritos(porFolha) {
+        depoisDeImprimir();
+        salvar.agora();
+        const nome = Modelos.nomeArquivo(prova) + (porFolha === 4 ? '-GABARITOS-4-POR-FOLHA' : '-GABARITO');
+        tituloAntesDeImprimir = document.title;
+        document.title = nome;
+        Paginar.montarGabaritos(prova, $('gabaritos-impressao'), { porFolha: porFolha });
+        if (porFolha === 1) {
+            const pagina = document.createElement('style');
+            pagina.id = 'pagina-quarto';
+            pagina.textContent = '@page { size: 105mm 148.5mm; margin: 0; }';
+            document.head.appendChild(pagina);
+        }
+        document.body.classList.add('imprimindo-gabaritos');
+        Armazem.guardarArquivo(prova, { nome: nome, tipo: 'gabaritos', paginas: 1 });
+        window.print();
+    }
+    $('gab-imprimir4').onclick = function () { imprimirGabaritos(4); };
+    $('gab-imprimir1').onclick = function () { imprimirGabaritos(1); };
 
     function depoisDeImprimir() {
         document.body.classList.remove('imprimindo-chave');
+        document.body.classList.remove('imprimindo-gabaritos');
+        const pagina = $('pagina-quarto');
+        if (pagina) pagina.remove();
         if (tituloAntesDeImprimir) document.title = tituloAntesDeImprimir;
         tituloAntesDeImprimir = null;
     }

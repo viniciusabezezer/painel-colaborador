@@ -27,7 +27,9 @@ Em **toda** prova, inclusive na do modelo fixo, o professor escolhe no passo
 - **fonte** — Times New Roman (padrão), Arial, Calibri, Cambria ou Georgia;
 - **tamanho** — de 8 a 14 pt, **10 pt** por padrão;
 - **espaçamento** — compacto, normal (padrão) ou amplo;
-- **gabarito** — a folha de respostas com bolhas na 1ª página entra ou não;
+- **gabarito** — a folha de respostas do aluno entra ou não, e como (veja
+  abaixo);
+- **linha entre as colunas** — ligada por padrão;
 - **ícones das disciplinas** nos títulos das seções (ligados por padrão);
 - **imagens em tons de cinza**, para gastar menos tinta (ligado por padrão).
 
@@ -57,6 +59,26 @@ ligado, a primeira coluna abre com o **GABARITO (NÃO RASURE)**:
   prova impressa da escola (até 65 questões);
 - as marcas quadradas de alinhamento em quatro fileiras verticais, de cinco em
   cinco linhas, sempre no mesmo lugar, qualquer que seja o número de questões.
+
+### O gabarito: gerado ou imagem, na prova ou à parte
+
+- **Como**: *gerado pelo app* (a grade acima, com o número de questões da
+  prova) ou *imagem enviada por mim* — foto, print ou digitalização da folha de
+  respostas que o professor já usa (escolher, colar com Ctrl+V ou arrastar).
+- **Onde**: *na 1ª página da prova* (abrindo a primeira coluna) ou *em folha à
+  parte, 4 por folha A4*. À parte, a prova fica sem o gabarito e:
+  - **Imprimir gabaritos (4 por folha)** sai uma folha A4 com quatro
+    gabaritos, cada um num quarto da folha, com marcas de corte curtas nas
+    bordas do meio — o mesmo formato da aba *Gabaritos* do Identificador;
+  - **Salvar 1 por página (para o Identificador)** sai um PDF de
+    10,5 × 14,85 cm, que se sobe na aba *Gabaritos* do Identificador: ele cola
+    em cada um o cabeçalho com o brasão, o nome e o mesmo QR da prova do aluno,
+    e monta 4 por folha.
+  O gabarito avulso gerado traz no alto as linhas *Nome / Nº / Turma / Data*
+  para quem imprime direto; elas ficam exatamente sob o cabeçalho do
+  Identificador (0,3 a 1,9 cm do alto), que as cobre.
+- A conta de folhas da prévia soma as de gabarito (uma folha para cada quatro
+  alunos).
 
 O PDF sai com o nome `PROVA-2026-B3-2S-NAT.pdf` (ano, bimestre, série e área),
 pronto para subir no Identificador.
@@ -203,13 +225,14 @@ HTML, CSS e JavaScript sem framework, sem build e sem biblioteca de fora.
 
 ```bash
 node --test montar/test/montar.test.cjs   # 24 testes: marcação, modelos, ícones, versão B, gabarito, colagem
-node montar/test/montar-browser.mjs        # 57 verificações na tela, com Chromium
+node montar/test/montar-browser.mjs        # 66 verificações na tela, com Chromium
 ```
 
 O teste de navegador precisa do `playwright` (global serve). Ele monta uma
 Avaliação Bimestral colando `test/questoes-exemplo.txt`, confere a faixa, o
 gabarito (e tirá-lo), a fonte padrão, os ícones, as alternativas lado a lado, a
-colagem de texto do Word e de imagem, tamanho e posição de imagem, texto de
+gabarito como imagem e à parte (4 por folha e 1 por página, no tamanho real),
+a linha entre as colunas, colagem de texto do Word e de imagem, tamanho e posição de imagem, texto de
 apoio, desfazer, economia de papel, versão B, os últimos arquivos gerados, gera
 o PDF como a impressão do navegador gera e, por fim, **corta a internet e abre
 o app de novo**. Os PDFs e uma captura da tela ficam em `test/saida/`.

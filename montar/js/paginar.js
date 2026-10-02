@@ -145,6 +145,65 @@
         return 'lista';
     }
 
+    /* ----- o gabarito: gerado ou imagem ----- */
+
+    function imagemDoGabarito(prova, layout) {
+        return layout.gabaritoOrigem === 'imagem' && prova.gabaritoImagem && prova.gabaritoImagem.src ? prova.gabaritoImagem : null;
+    }
+
+    function svgDoGabarito(prova, layout) {
+        const numeradas = Modelos.questoesNumeradas(prova);
+        return Gabarito.svg({
+            total: numeradas.length,
+            alternativas: layout.alternativas,
+            rotulo: rotuloGabarito(prova),
+            discursivas: numeradas.filter(function (i) { return i.questao.tipo === 'discursiva'; }).map(function (i) { return i.numero; })
+        });
+    }
+
+    /* onde: 'prova' (na coluna) ou 'quarto' (um quarto de A4) */
+    function conteudoGabarito(prova, layout, onde) {
+        const img = imagemDoGabarito(prova, layout);
+        if (img) return '<img class="gabarito-imagem gabarito-imagem--' + onde + '" src="' + img.src + '" alt="Gabarito">';
+        return svgDoGabarito(prova, layout);
+    }
+
+    function quartoHtml(prova, layout) {
+        const img = imagemDoGabarito(prova, layout);
+        if (img) return '<div class="quarto quarto--imagem">' + conteudoGabarito(prova, layout, 'quarto') + '</div>';
+        const comp = Modelos.COMPONENTES[prova.componente];
+        const titulo = ['GABARITO', prova.serie ? prova.serie + 'º ANO' : '', comp ? comp.sigla : (prova.disciplina || '').toUpperCase(),
+            bimestreTexto(prova).toUpperCase().replace(' BIMESTRE', ' BIM.')].filter(Boolean).join(' · ');
+        return '<div class="quarto">' +
+            /* a faixa do alto é onde o Identificador cola o cabeçalho (com fundo branco, cobrindo as linhas) */
+            '<div class="quarto-ident"><div>Nome: <span class="linha-escrever"></span></div>' +
+            '<div>Nº <span class="linha-escrever curta"></span> Turma <span class="linha-escrever curta"></span> Data <span class="linha-escrever curta"></span></div></div>' +
+            '<div class="quarto-titulo">' + Texto.escapar(titulo) + ' <span>(NÃO RASURE)</span></div>' +
+            '<div class="quarto-grade">' + svgDoGabarito(prova, layout) + '</div></div>';
+    }
+
+    /* As folhas de respostas avulsas: 4 por folha A4, com marcas de corte nas
+       bordas do meio, como no Identificador; ou uma por página de
+       10,5 × 14,85 cm, para subir na aba Gabaritos do Identificador. */
+    function montarGabaritos(prova, destino, opcoes) {
+        opcoes = opcoes || {};
+        const layout = Modelos.layoutDaProva(prova);
+        const porFolha = opcoes.porFolha === 1 ? 1 : 4;
+        destino.innerHTML = '';
+        destino.classList.add('paginas');
+        /* um por página: o contêiner tem a largura do quarto, senão o navegador
+           encolhe tudo para caber na página de 10,5 cm */
+        destino.classList.toggle('paginas-quarto', porFolha === 1);
+        const quarto = quartoHtml(prova, layout);
+        const folha = el('section', porFolha === 4 ? 'folha folha-gabaritos' : 'folha-quarto');
+        estiloFolha(folha, layout);
+        folha.innerHTML = porFolha === 4
+            ? quarto + quarto + quarto + quarto + '<i class="corte corte-cima"></i><i class="corte corte-baixo"></i><i class="corte corte-esq"></i><i class="corte corte-dir"></i>'
+            : quarto;
+        destino.appendChild(folha);
+        return { paginas: 1 };
+    }
+
     /* ----- os blocos ----- */
 
     function rotuloGabarito(prova) {
@@ -154,19 +213,9 @@
 
     function blocos(prova, layout, disposicaoDe) {
         const fila = [];
-        const numeradas = Modelos.questoesNumeradas(prova);
 
-        if (layout.gabarito) {
-            const discursivas = numeradas.filter(function (i) { return i.questao.tipo === 'discursiva'; }).map(function (i) { return i.numero; });
-            fila.push({
-                tipo: 'gabarito',
-                html: '<div class="gabarito-titulo">GABARITO (NÃO RASURE)</div>' + Gabarito.svg({
-                    total: numeradas.length,
-                    alternativas: layout.alternativas,
-                    rotulo: rotuloGabarito(prova),
-                    discursivas: discursivas
-                })
-            });
+        if (layout.gabarito && layout.gabaritoLocal !== 'separado') {
+            fila.push({ tipo: 'gabarito', html: '<div class="gabarito-titulo">GABARITO (NÃO RASURE)</div>' + conteudoGabarito(prova, layout, 'prova') });
         }
 
         let n = 0;
@@ -384,7 +433,7 @@
         const espaco = ESPACOS[layout.espacamento] || ESPACOS.normal;
         const linhaPx = layout.corpoPt * PX_POR_PT * espaco.lh;
 
-        if (layout.gabarito) {
+        if (layout.gabarito && !imagemDoGabarito(prova, layout)) {
             const total = Modelos.questoesNumeradas(prova).length;
             if (total > Gabarito.capacidade()) {
                 avisos.push('A folha de respostas comporta ' + Gabarito.capacidade() + ' questões; esta prova tem ' + total + '.');
@@ -503,6 +552,6 @@
         return { paginas: 1 };
     }
 
-    const api = { montar: montar, montarChave: montarChave, blocos: blocos, ESPACOS: ESPACOS };
+    const api = { montar: montar, montarChave: montarChave, montarGabaritos: montarGabaritos, blocos: blocos, ESPACOS: ESPACOS };
     global.MontarPaginar = api;
 })(typeof globalThis !== 'undefined' ? globalThis : this);

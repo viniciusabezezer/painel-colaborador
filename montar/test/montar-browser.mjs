@@ -147,6 +147,50 @@ try {
     await pagina.selectOption('[data-a="corpoPt"]', '11');
     await pagina.waitForFunction(() => /Arial/.test(getComputedStyle(document.querySelector('#paginas .q-par')).fontFamily));
     conferir(true, 'a fonte e o tamanho mudam na prévia');
+    /* linha entre as colunas, por padrão */
+    conferir(await pagina.$('#paginas .colunas.com-linha') !== null, 'a linha entre as colunas vem por padrão');
+
+    /* gabarito como imagem, na prova */
+    await pagina.selectOption('[data-a="gabaritoOrigem"]', 'imagem');
+    const [escolhaGab] = await Promise.all([pagina.waitForEvent('filechooser'), pagina.click('#gab-escolher')]);
+    await escolhaGab.setFiles(join(APP, 'logo.png'));
+    await pagina.waitForSelector('#paginas .bloco-gabarito img.gabarito-imagem');
+    conferir(!(await pagina.$('#paginas .bloco-gabarito svg')), 'o gabarito pode ser uma imagem enviada pelo professor, no lugar do gerado');
+
+    /* gabarito à parte, 4 por folha */
+    await pagina.selectOption('[data-a="gabaritoLocal"]', 'separado');
+    await pagina.waitForFunction(() => !document.querySelector('#paginas .bloco-gabarito') && document.querySelectorAll('#paginas-gabaritos .quarto').length === 4);
+    conferir(await pagina.isVisible('#previa-gabaritos'), 'em folha à parte, o gabarito sai da prova e aparece 4 por folha na prévia');
+    conferir(/de gabarito/.test(await pagina.textContent('#folhas-total')), 'a conta de folhas inclui as de gabarito: ' + await pagina.textContent('#folhas-total'));
+    await pagina.selectOption('[data-a="gabaritoOrigem"]', 'gerado');
+    await pagina.waitForFunction(() => document.querySelectorAll('#paginas-gabaritos .quarto .gabarito-svg').length === 4);
+    await pagina.evaluate(() => { window.print = () => {}; });
+    await pagina.click('#gab-imprimir4');
+    await pagina.emulateMedia({ media: 'print' });
+    const estadoImpressao = await pagina.evaluate(() => document.body.className + ' / ' + getComputedStyle(document.getElementById('tela-editor')).display);
+    conferir(/none$/.test(estadoImpressao), 'na impressão dos gabaritos a prova não sai junto (' + estadoImpressao + ')');
+    const pdf4 = await pagina.pdf({ preferCSSPageSize: true, printBackground: true });
+    await writeFile(join(SAIDA, 'gabaritos-4-por-folha.pdf'), pdf4);
+    conferir((pdf4.toString('latin1').match(/\/Type\s*\/Page[^s]/g) || []).length === 1, 'os 4 gabaritos saem numa folha só');
+    await pagina.emulateMedia({ media: 'screen' });
+    await pagina.evaluate(() => window.dispatchEvent(new Event('afterprint')));
+    await pagina.click('#gab-imprimir1');
+    await pagina.emulateMedia({ media: 'print' });
+    const larguraGrade = await pagina.evaluate(() => {
+        const svg = document.querySelector('#gabaritos-impressao .gabarito-svg');
+        return svg.getBoundingClientRect().width / (96 / 25.4);
+    });
+    conferir(Math.abs(larguraGrade - 86.6) < 0.5, 'a grade sai no tamanho real, sem encolher (' + larguraGrade.toFixed(1) + ' mm)');
+    const pdf1 = await pagina.pdf({ preferCSSPageSize: true, printBackground: true });
+    await writeFile(join(SAIDA, 'gabarito-1-por-pagina.pdf'), pdf1);
+    const caixa = /\/MediaBox\s*\[\s*0\s+0\s+([\d.]+)\s+([\d.]+)\s*\]/.exec(pdf1.toString('latin1'));
+    conferir(caixa && Math.abs(caixa[1] - 297.6) < 2 && Math.abs(caixa[2] - 420.9) < 2, 'um por página sai em 10,5 × 14,85 cm, para o Identificador (' + (caixa ? caixa[1] + '×' + caixa[2] : '?') + ' pt)');
+    await pagina.emulateMedia({ media: 'screen' });
+    await pagina.evaluate(() => window.dispatchEvent(new Event('afterprint')));
+    conferir(!(await pagina.$('#pagina-quarto')), 'depois de imprimir, a página volta ao A4');
+    await pagina.selectOption('[data-a="gabaritoLocal"]', 'prova');
+    await pagina.waitForSelector('#paginas .bloco-gabarito svg');
+
     await pagina.selectOption('[data-a="fonte"]', 'times');
     await pagina.selectOption('[data-a="corpoPt"]', '10');
     await pagina.waitForFunction(() => /Times/.test(getComputedStyle(document.querySelector('#paginas .q-par')).fontFamily) &&

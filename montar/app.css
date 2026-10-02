@@ -340,6 +340,15 @@ body[data-tela="editor"], body[data-tela="modelo"] { overflow: hidden; }
 .q-numero--texto { color: #8a7a45; }
 .q-tag.texto { background: #f4eedb; color: #6b5a22; }
 
+/* ----- gabarito ----- */
+
+.gabarito-opcoes { margin-top: 14px; padding-top: 12px; border-top: 1px solid var(--line); }
+.gab-imagem { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-top: 4px; }
+.gab-imagem img { width: 70px; height: 90px; object-fit: contain; border: 1px solid var(--line); border-radius: 6px; background: #fff; }
+.gab-imagem .zona-colar { flex: 1 1 160px; }
+#gab-zona:empty::before { content: '📋 Cole (Ctrl+V) a imagem do gabarito aqui'; }
+.previa-gabaritos h3 { text-align: center; font-size: 14px; color: #3e4a42; margin: 6px 0 10px; }
+
 /* ----- economia de papel ----- */
 
 .economia { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; font-weight: 500; }
@@ -384,4 +393,7 @@ body[data-tela="editor"], body[data-tela="modelo"] { overflow: hidden; }
     .previa-escala > .paginas { transform: none !important; }
     body.imprimindo-chave #tela-editor { display: none !important; }
     body.imprimindo-chave #chave { display: block !important; }
+    .previa-gabaritos { display: none !important; }
+    body.imprimindo-gabaritos #tela-editor { display: none !important; }
+    body.imprimindo-gabaritos #gabaritos-impressao { display: block !important; }
 }

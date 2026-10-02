@@ -46,7 +46,7 @@
 
     /* O que toda prova ajusta, inclusive a do modelo fixo: a aparência do
        texto e o que entra ou não na folha. O resto do formato é do modelo. */
-    const AJUSTAVEIS = ['fonte', 'corpoPt', 'espacamento', 'gabarito', 'icones', 'imagensCinza'];
+    const AJUSTAVEIS = ['fonte', 'corpoPt', 'espacamento', 'gabarito', 'gabaritoOrigem', 'gabaritoLocal', 'icones', 'imagensCinza', 'linhaColunas'];
 
     /* Formato livre de partida: o que vale quando um campo não foi dito. */
     const LAYOUT_PADRAO = {
@@ -58,13 +58,15 @@
         faixaCm: 3,                 /* altura da faixa em branco, abaixo da margem de 1 cm */
         instrucoes: false,
         textoInstrucoes: [],
-        gabarito: false,            /* folha de respostas com bolhas na 1ª página */
+        gabarito: false,            /* folha de respostas com bolhas */
+        gabaritoOrigem: 'gerado',   /* 'gerado' pelo app | 'imagem' enviada pelo professor */
+        gabaritoLocal: 'prova',     /* 'prova' (1ª coluna da 1ª página) | 'separado' (4 por folha A4) */
         colunas: 2,
         corpoPt: 10,
         alternativas: 5,
         letras: 'a)',               /* 'a)' | 'A)' | '(A)' */
         numeracao: '01.',           /* '01.' | '1.' | 'QUESTÃO 01' */
-        linhaColunas: false,
+        linhaColunas: true,         /* fio entre as colunas: guia a leitura e não pesa na tinta */
         numeroPagina: true
     };
 
@@ -90,7 +92,7 @@
             alternativas: 5,
             letras: 'a)',
             numeracao: '01.',
-            linhaColunas: false,
+            linhaColunas: true,
             numeroPagina: true
         }
     };
@@ -117,7 +119,7 @@
                 alternativas: 5,
                 letras: 'a)',
                 numeracao: '01.',
-                linhaColunas: false,
+                linhaColunas: true,
                 numeroPagina: true
             }
         }
@@ -147,6 +149,8 @@
         pronto.corpoPt = Math.max(8, Math.min(14, Number(pronto.corpoPt) || 10));
         if (!FONTES[pronto.fonte]) pronto.fonte = 'times';
         if (['compacto', 'normal', 'amplo'].indexOf(pronto.espacamento) === -1) pronto.espacamento = 'normal';
+        if (pronto.gabaritoOrigem !== 'imagem') pronto.gabaritoOrigem = 'gerado';
+        if (pronto.gabaritoLocal !== 'separado') pronto.gabaritoLocal = 'prova';
         pronto.faixaCm = Math.max(1, Math.min(8, Number(pronto.faixaCm) || 3));
         if (!Array.isArray(pronto.textoInstrucoes)) pronto.textoInstrucoes = [];
         return pronto;
@@ -465,6 +469,9 @@
                 if (!q.correta) avisos.push('Questão ' + n + ' sem a resposta certa marcada (só faz falta no gabarito do professor).');
             }
         });
+        if (layout.gabarito && layout.gabaritoOrigem === 'imagem' && !(prova.gabaritoImagem && prova.gabaritoImagem.src)) {
+            avisos.unshift('O gabarito está como "imagem enviada por mim", mas nenhuma imagem foi escolhida: por enquanto sai o gerado pelo app.');
+        }
         return avisos;
     }
 

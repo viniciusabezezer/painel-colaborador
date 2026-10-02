@@ -156,10 +156,41 @@
                         </select>
                     </label>
                 </div>
-                <label class="opcao"><input type="checkbox" data-a="gabarito"> Incluir o <strong>gabarito</strong> (bolhas com as marcas de alinhamento) na 1ª página</label>
+                <label class="opcao"><input type="checkbox" data-a="linhaColunas"> Linha entre as colunas</label>
                 <label class="opcao"><input type="checkbox" data-a="icones"> Ícone da disciplina ao lado do título de cada seção</label>
                 <label class="opcao"><input type="checkbox" data-a="imagensCinza"> Imagens em tons de cinza <small>(economiza tinta)</small></label>
-                <p class="dica dica--pequena">Padrão da escola: Times New Roman 10, espaçamento normal. A fonte precisa estar instalada no computador que imprime (o Windows tem todas).</p>
+                <p class="dica dica--pequena">Padrão da escola: Times New Roman 10, espaçamento normal, linha entre as colunas. A fonte precisa estar instalada no computador que imprime (o Windows tem todas).</p>
+
+                <div class="gabarito-opcoes">
+                    <label class="opcao"><input type="checkbox" data-a="gabarito"> <strong>Gabarito</strong> (folha de respostas do aluno)</label>
+                    <div data-se-gabarito>
+                        <div class="linha-campos">
+                            <label class="campo-largo">Como
+                                <select data-a="gabaritoOrigem">
+                                    <option value="gerado">Gerado pelo app, com as questões da prova</option>
+                                    <option value="imagem">Imagem enviada por mim</option>
+                                </select>
+                            </label>
+                            <label class="campo-largo">Onde
+                                <select data-a="gabaritoLocal">
+                                    <option value="prova">Na 1ª página da prova</option>
+                                    <option value="separado">Em folha à parte, 4 por folha A4</option>
+                                </select>
+                            </label>
+                        </div>
+                        <div class="gab-imagem" data-se-gabarito-imagem>
+                            <img id="gab-miniatura" alt="" hidden>
+                            <div class="zona-colar" contenteditable="true" spellcheck="false" id="gab-zona" aria-label="Área para colar a imagem do gabarito"></div>
+                            <button type="button" class="btn btn--pequeno" id="gab-escolher">Escolher imagem…</button>
+                            <button type="button" class="btn btn--pequeno" id="gab-tirar" hidden>Tirar</button>
+                        </div>
+                        <p class="dica dica--pequena" data-se-gabarito-imagem>Foto, print ou digitalização da folha de respostas que você já usa. Para a leitura óptica, prefira o arquivo digital ao celular.</p>
+                        <div class="acoes-lista" data-se-gabarito-separado>
+                            <button type="button" class="btn btn--pequeno btn--verde" id="gab-imprimir4">Imprimir gabaritos (4 por folha)</button>
+                            <button type="button" class="btn btn--pequeno" id="gab-imprimir1" title="Uma folha de respostas por página de 10,5 × 14,85 cm: o formato que a aba Gabaritos do Identificador recebe">Salvar 1 por página (para o Identificador)</button>
+                        </div>
+                    </div>
+                </div>
             </fieldset>
 
             <fieldset class="passo">
@@ -200,6 +231,10 @@
             </div>
             <div id="proposta" class="proposta" hidden></div>
             <div class="previa-escala" id="previa-escala"><div id="paginas"></div></div>
+            <div id="previa-gabaritos" class="previa-gabaritos" hidden>
+                <h3>Folha de respostas — impressa à parte, 4 por folha A4</h3>
+                <div class="previa-escala" id="previa-gab-escala"><div id="paginas-gabaritos"></div></div>
+            </div>
         </main>
     </div>
     <!-- onde o app mede, fora da vista, as alternativas de economia -->
@@ -254,6 +289,7 @@
 
 <!-- a folha de correção, montada só na hora de imprimir -->
 <div id="chave" hidden></div>
+<div id="gabaritos-impressao" hidden></div>
 
 <dialog id="dialogo-colar" class="dialogo">
     <form method="dialog">
@@ -289,6 +325,7 @@
 </dialog>
 
 <input type="file" id="arquivo-imagem" accept="image/*" multiple hidden>
+<input type="file" id="arquivo-gabarito" accept="image/*" hidden>
 
 <script src="js/texto.js"></script>
 <script src="js/modelos.js"></script>
