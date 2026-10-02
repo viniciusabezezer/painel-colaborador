@@ -106,8 +106,8 @@ try {
     });
     conferir(info.folhas >= 2, 'a prova tem ' + info.folhas + ' folhas');
     conferir(info.rodape === '1/' + info.folhas, 'o pé da página traz 1/' + info.folhas);
-    conferir(Math.abs(info.faixaTopoCm - 1) < 0.05 && Math.abs(info.faixaAlturaCm - 3) < 0.05 && Math.abs(info.faixaLarguraCm - 19) < 0.05,
-        'a faixa do Identificador fica a 1 cm do alto, com 19 × 3 cm (' + info.faixaTopoCm.toFixed(2) + ', ' + info.faixaLarguraCm.toFixed(2) + ' × ' + info.faixaAlturaCm.toFixed(2) + ')');
+    conferir(Math.abs(info.faixaTopoCm - 0.6) < 0.05 && Math.abs(info.faixaAlturaCm - 2.5) < 0.05 && Math.abs(info.faixaLarguraCm - 19) < 0.05,
+        'o espaço da identificação tem 19 × 2,5 cm, a 0,6 cm do alto, como no Identificador (' + info.faixaTopoCm.toFixed(2) + ', ' + info.faixaLarguraCm.toFixed(2) + ' × ' + info.faixaAlturaCm.toFixed(2) + ')');
     conferir(info.gabarito, 'o gabarito abre a primeira coluna');
     conferir(info.instrucoes, 'a última instrução sai em negrito');
     conferir(!info.transbordou, 'nenhuma coluna transborda');
@@ -147,6 +147,22 @@ try {
     await pagina.selectOption('[data-a="corpoPt"]', '11');
     await pagina.waitForFunction(() => /Arial/.test(getComputedStyle(document.querySelector('#paginas .q-par')).fontFamily));
     conferir(true, 'a fonte e o tamanho mudam na prévia');
+    /* instruções: editáveis também na bimestral fixa */
+    conferir((await pagina.inputValue('#ins-texto')).startsWith('Esta avaliação deverá ser feita individual'), 'as instruções da escola vêm preenchidas para editar');
+    await pagina.fill('#ins-texto', 'Esta avaliação deverá ser feita individual e sem consulta;\n**Boa prova!**');
+    await pagina.click('#ins-sugestoes [data-sugestao="1"]');
+    await pagina.waitForFunction(() => document.querySelectorAll('#paginas .instrucoes li').length === 3);
+    const instrucoes = await pagina.$$eval('#paginas .instrucoes li', (n) => n.map((x) => x.innerHTML));
+    conferir(instrucoes[1].includes('calculadora') && instrucoes[2].replace(/<\/strong> <strong>/g, ' ') === '<strong>Boa prova!</strong>', 'o professor muda as instruções e a sugestão entra antes da linha final em negrito');
+    conferir(await pagina.$('#ins-sugestoes [data-sugestao="1"][disabled]') !== null, 'sugestão já usada fica apagada');
+    await pagina.uncheck('#ins-ligado');
+    await pagina.waitForFunction(() => !document.querySelector('#paginas .instrucoes'));
+    conferir(true, 'o quadro de instruções pode sair da prova');
+    await pagina.check('#ins-ligado');
+    await pagina.click('#ins-restaurar');
+    await pagina.waitForFunction(() => document.querySelectorAll('#paginas .instrucoes li').length === 5);
+    conferir((await pagina.inputValue('#ins-texto')).includes('O Gabarito deverá estar preenchido'), '"Voltar às instruções do modelo" traz as da escola de volta');
+
     /* linha entre as colunas, por padrão */
     conferir(await pagina.$('#paginas .colunas.com-linha') !== null, 'a linha entre as colunas vem por padrão');
 

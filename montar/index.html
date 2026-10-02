@@ -136,7 +136,7 @@
                         <input type="text" data-p="valor" placeholder="Ex.: 3,0 pontos">
                     </label>
                 </div>
-                <p class="dica" data-so-faixa>A primeira página sai com a <strong>faixa em branco</strong> no alto. O brasão da escola, o nome do aluno, a turma, a data e o QR entram depois, pelo <a href="../provas/">Identificador de Provas</a> — a prévia mostra uma simulação.</p>
+                <p class="dica" data-so-faixa>A primeira página sai com um <strong>espaço em branco de 2,5 cm</strong> no alto, para a gestão acrescentar a identificação. O brasão da escola, o nome do aluno, a turma, a data e o QR entram depois, pelo <a href="../provas/">Identificador de Provas</a> — a prévia mostra uma simulação.</p>
             </fieldset>
 
             <fieldset class="passo">
@@ -194,12 +194,33 @@
             </fieldset>
 
             <fieldset class="passo">
-                <legend><span class="num">3</span> O formato</legend>
+                <legend><span class="num">3</span> Instruções</legend>
+                <label class="opcao"><input type="checkbox" id="ins-ligado"> Quadro de instruções na 1ª página</label>
+                <div id="ins-corpo">
+                    <div class="campo-texto">
+                        <div class="campo-texto-cab"><span>Uma instrução por linha — cada uma sai com a setinha ➢</span>
+                            <div class="fmt" role="toolbar" aria-label="Formatação">
+                                <button type="button" data-fmt-ins="b" title="Negrito (Ctrl+B)"><b>N</b></button>
+                                <button type="button" data-fmt-ins="i" title="Itálico (Ctrl+I)"><i>I</i></button>
+                            </div>
+                        </div>
+                        <textarea id="ins-texto" rows="6" placeholder="Esta avaliação deverá ser feita individual e sem consulta;"></textarea>
+                    </div>
+                    <p class="dica dica--pequena">Acrescentar com um clique:</p>
+                    <div class="sugestoes" id="ins-sugestoes"></div>
+                    <div class="acoes-lista">
+                        <button type="button" class="btn btn--pequeno" id="ins-restaurar">Voltar às instruções do modelo</button>
+                    </div>
+                </div>
+            </fieldset>
+
+            <fieldset class="passo">
+                <legend><span class="num">4</span> O formato</legend>
                 <div id="formato"></div>
             </fieldset>
 
             <fieldset class="passo">
-                <legend><span class="num">4</span> As questões</legend>
+                <legend><span class="num">5</span> As questões</legend>
                 <p class="dica">Escreva aqui ou <strong>cole</strong> do Word, de um PDF ou de um site — negrito, itálico, índices e expoentes vêm junto. Imagens: cole (Ctrl+V), arraste para a questão ou use o botão. Cada linha do enunciado é um parágrafo.</p>
                 <div id="secoes"></div>
                 <div class="acoes-lista">

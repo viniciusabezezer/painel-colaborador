@@ -320,13 +320,16 @@
                 '<label class="opcao"><input type="checkbox" data-l="icones"' + (layout.icones ? ' checked' : '') + '> Ícone da disciplina nos títulos das seções</label>' +
                 '<label class="opcao"><input type="checkbox" data-l="imagensCinza"' + (layout.imagensCinza ? ' checked' : '') + '> Imagens em tons de cinza (economiza tinta)</label>' : '') +
             '<label class="opcao"><input type="checkbox" data-l="numeroPagina"' + (layout.numeroPagina ? ' checked' : '') + '> Número da página no pé (1/8)</label>' +
-            '<label class="opcao"><input type="checkbox" data-l="instrucoes"' + (layout.instrucoes ? ' checked' : '') + '> Quadro de instruções</label>' +
-            '<label data-se="instrucoes" class="campo-coluna"><textarea data-l="textoInstrucoes" rows="5" placeholder="Uma instrução por linha. **negrito** vale aqui também.">' +
-            esc(layout.textoInstrucoes.join('\n')) + '</textarea></label>';
+            (comAparencia ?
+                '<label class="opcao"><input type="checkbox" data-l="instrucoes"' + (layout.instrucoes ? ' checked' : '') + '> Quadro de instruções</label>' +
+                '<label data-se="instrucoes" class="campo-coluna"><textarea data-l="textoInstrucoes" rows="5" placeholder="Uma instrução por linha. **negrito** vale aqui também.">' +
+                esc(layout.textoInstrucoes.join('\n')) + '</textarea></label>' +
+                '<p class="dica dica--pequena">São as instruções com que a prova nasce; o professor pode mudá-las em cada prova.</p>' : '');
 
         function visibilidade() {
             caixa.querySelector('[data-se="faixa"]').hidden = layout.cabecalho !== 'faixa';
-            caixa.querySelector('[data-se="instrucoes"]').hidden = !layout.instrucoes;
+            const instr = caixa.querySelector('[data-se="instrucoes"]');
+            if (instr) instr.hidden = !layout.instrucoes;
         }
         visibilidade();
 
@@ -428,6 +431,7 @@
         $('ed-titulo').textContent = prova.titulo || 'Prova sem título';
         preencherDados();
         preencherAparencia();
+        preencherInstrucoes();
         desenharFormato();
         desenharSecoes();
     }
@@ -507,6 +511,72 @@
         $('gab-escolher').textContent = img ? 'Trocar imagem…' : 'Escolher imagem…';
     }
 
+    /* ----- instruções: o texto é do professor, em qualquer modelo ----- */
+
+    function linhasInstrucoes() {
+        return Modelos.layoutDaProva(prova).textoInstrucoes.filter(function (l) { return String(l).trim(); });
+    }
+
+    function preencherInstrucoes() {
+        const layout = Modelos.layoutDaProva(prova);
+        $('ins-ligado').checked = !!layout.instrucoes;
+        $('ins-corpo').hidden = !layout.instrucoes;
+        if (document.activeElement !== $('ins-texto')) $('ins-texto').value = layout.textoInstrucoes.join('\n').replace(/\n+$/, '');
+        desenharSugestoes();
+    }
+
+    function desenharSugestoes() {
+        const atuais = linhasInstrucoes().map(function (l) { return Texto.semMarcas(l).toLowerCase(); });
+        $('ins-sugestoes').innerHTML = Modelos.SUGESTOES_INSTRUCOES.map(function (s, i) {
+            const ja = atuais.indexOf(s.toLowerCase()) !== -1;
+            return '<button type="button" class="sugestao" data-sugestao="' + i + '"' + (ja ? ' disabled title="Já está no quadro"' : '') + '>+ ' + esc(s.replace(/;$/, '')) + '</button>';
+        }).join('');
+    }
+
+    function definirInstrucoes(linhas) {
+        prova.ajustes.textoInstrucoes = linhas;
+        mudou();
+    }
+
+    $('ins-ligado').addEventListener('change', function () {
+        marcar();
+        prova.ajustes.instrucoes = this.checked;
+        if (this.checked && !linhasInstrucoes().length) prova.ajustes.textoInstrucoes = Modelos.INSTRUCOES_BIMESTRAL.slice();
+        preencherInstrucoes();
+        mudou();
+    });
+    $('ins-texto').addEventListener('input', function () {
+        definirInstrucoes(this.value.split('\n'));
+        desenharSugestoes();
+    });
+    $('ins-texto').addEventListener('keydown', function (e) {
+        const tecla = e.key.toLowerCase();
+        if ((e.ctrlKey || e.metaKey) && (tecla === 'b' || tecla === 'i')) { e.preventDefault(); aplicarMarca(this, tecla); }
+    });
+    document.querySelectorAll('[data-fmt-ins]').forEach(function (b) {
+        b.addEventListener('mousedown', function (e) { e.preventDefault(); });
+        b.addEventListener('click', function () { aplicarMarca($('ins-texto'), b.dataset.fmtIns); });
+    });
+    $('ins-sugestoes').addEventListener('click', function (e) {
+        const b = e.target.closest('[data-sugestao]');
+        if (!b || b.disabled) return;
+        marcar();
+        const linhas = linhasInstrucoes();
+        const nova = Modelos.SUGESTOES_INSTRUCOES[Number(b.dataset.sugestao)];
+        /* entra antes da última, que costuma ser a regra em negrito do fim */
+        const fim = linhas.length && /^\*\*/.test(linhas[linhas.length - 1]) ? linhas.length - 1 : linhas.length;
+        linhas.splice(fim, 0, nova);
+        definirInstrucoes(linhas);
+        preencherInstrucoes();
+    });
+    $('ins-restaurar').onclick = function () {
+        marcar();
+        delete prova.ajustes.textoInstrucoes;
+        delete prova.ajustes.instrucoes;
+        preencherInstrucoes();
+        mudou();
+    };
+
     /* ----- gabarito como imagem ----- */
 
     async function receberGabarito(arquivos) {
@@ -560,10 +630,10 @@
         if (prova.fixo) {
             const layout = Modelos.layoutDaProva(prova);
             caixa.innerHTML = '<div class="formato-travado"><strong>🔒 Formato fixo da Avaliação Bimestral Malu</strong>' +
-                '<ul><li>Faixa de ' + virgula(layout.faixaCm) + ' cm para o cabeçalho do Identificador de Provas, com o brasão</li>' +
-                '<li>Quadro de instruções da escola</li><li>Gabarito com as marcas de alinhamento (até ' + Gabarito.capacidade() + ' questões) — pode tirar no passo 2</li>' +
+                '<ul><li>Espaço em branco de ' + virgula(layout.faixaCm) + ' cm no alto, para a gestão acrescentar a identificação (cabeçalho do Identificador de Provas, com o brasão)</li>' +
+                '<li>Quadro de instruções — o texto é seu, no passo 3</li><li>Gabarito com as marcas de alinhamento (até ' + Gabarito.capacidade() + ' questões) — pode tirar ou pôr à parte no passo 2</li>' +
                 '<li>Duas colunas, alternativas de a) a e), numeração 01.</li></ul>' +
-                'Fonte, tamanho, espaçamento e gabarito você ajusta no passo 2. Se esta prova precisa de outro formato, ' +
+                'Fonte, tamanho, espaçamento e gabarito você ajusta no passo 2; as instruções, no passo 3. Se esta prova precisa de outro formato, ' +
                 '<button type="button" class="btn btn--pequeno" id="tornar-livre">fazer uma cópia com formato livre</button></div>';
             $('tornar-livre').onclick = async function () {
                 if (!confirm('Criar uma cópia desta prova com o formato livre? A cópia deixa de ser a Avaliação Bimestral padrão; esta continua como está.')) return;

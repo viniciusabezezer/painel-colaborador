@@ -1,7 +1,8 @@
 /* A folha impressa. Medidas em centímetros, como numa régua: margem de 1 cm
-   no alto e dos lados — o mesmo 1 cm em que o Identificador de Provas cola o
-   cabeçalho de 19 × 2,8 cm —, faixa de 3 cm, quadro de instruções da largura
-   toda, duas colunas justificadas e o número da página no pé, à direita. */
+   no alto e dos lados; a faixa da identificação, de 19 × 2,5 cm, começa a
+   0,6 cm do alto — onde o Identificador de Provas cola o cabeçalho —; quadro
+   de instruções da largura toda, duas colunas justificadas e o número da
+   página no pé, à direita. */
 
 .paginas { width: 210mm; }
 .paginas.paginas-quarto { width: 105mm; }
@@ -45,18 +46,18 @@
 }
 .folha .faixa { flex-direction: column; justify-content: flex-start; align-items: stretch; }
 .folha .faixa-simulada {
-    margin: 0; height: 2.8cm; border: 1px solid #b9cfbf; background: rgba(255, 255, 255, .85);
+    margin: 0; height: 100%; border: 1px solid #b9cfbf; background: rgba(255, 255, 255, .85);
     display: flex; align-items: center; gap: .35cm; padding: 0 .3cm;
     font-family: Arial, 'Liberation Sans', sans-serif; color: #8aa293; text-align: left;
 }
-.folha .faixa-brasao { height: 1.9cm; width: auto; opacity: .75; }
+.folha .faixa-brasao { height: 72%; width: auto; opacity: .75; }
 .folha .faixa-textos { flex: 1; min-width: 0; line-height: 1.25; }
 .folha .faixa-aval { font-family: Georgia, serif; font-size: 10pt; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .folha .faixa-nome { font-size: 13pt; font-weight: 700; letter-spacing: .3px; }
 .folha .faixa-linha { font-size: 8pt; font-weight: 700; display: flex; justify-content: space-between; gap: .3cm; }
 .folha .faixa-linha span { font-weight: 400; }
 .folha .faixa-qr {
-    width: 2cm; height: 2cm; flex: none;
+    height: 80%; aspect-ratio: 1; flex: none;
     background: repeating-conic-gradient(#c5d6ca 0 25%, transparent 0 50%) 0 0 / .4cm .4cm;
     border: 1px solid #b9cfbf;
 }
