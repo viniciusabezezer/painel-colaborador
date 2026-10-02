@@ -630,3 +630,15 @@ test('a prova inteira leva todas as páginas, com página em branco quando o tot
     assert.equal(await contar(1, true), 4, 'prova inteira de uma página: capa e uma em branco');
     assert.equal(await contar(1, false), 4, 'capa e verso com PDF de uma página: capa e uma em branco');
 });
+
+/* ===== brasão ===== */
+
+test('o brasão embutido é o mesmo logo.png, para sair mesmo sem o arquivo', async () => {
+    const brasao = require(path.join(app, 'brasao.js'));
+    const fs = require('node:fs');
+    const original = fs.readFileSync(path.join(__dirname, '..', 'logo.png'));
+    assert.ok(Buffer.from(brasao.bytes()).equals(original));
+    const doc = await global.PDFLib.PDFDocument.create();
+    const img = await doc.embedPng(brasao.bytes());
+    assert.ok(img.width > 0 && img.height > 0);
+});
