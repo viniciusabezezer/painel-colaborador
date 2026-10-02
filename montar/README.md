@@ -203,7 +203,10 @@ equivalentes de mesma medida (Liberation, Tinos, Arimo, Carlito, Caladea).
 ## Publicação
 
 Endereço próprio: **https://montador-provas-malu.vercel.app** (projeto
-`montador-provas-malu` na Vercel, Root Directory = `montar`). Também roda dentro
+`montador-provas-malu` na Vercel, Root Directory = `montar`). Se esse projeto
+estiver publicando a raiz do repositório por engano, o `vercel.json` da raiz
+manda esse domínio para `/montar/` (e não para o InstaPensa), e o app se
+comporta como site próprio também ali. Também roda dentro
 do painel, em `/montar/` do projeto `instapensa`.
 
 Como o Identificador, roda de dois jeitos sem mudar nada:
@@ -241,7 +244,7 @@ HTML, CSS e JavaScript sem framework, sem build e sem biblioteca de fora.
 
 ```bash
 node --test montar/test/montar.test.cjs   # 24 testes: marcação, modelos, ícones, versão B, gabarito, colagem
-node montar/test/montar-browser.mjs        # 78 verificações na tela, com Chromium
+node montar/test/montar-browser.mjs        # 80 verificações na tela, com Chromium
 ```
 
 O teste de navegador precisa do `playwright` (global serve). Ele monta uma

@@ -20,7 +20,10 @@
     <a class="back-link" id="voltar-ao-painel" href="../index.html">&larr; Voltar ao Painel do Colaborador</a>
     <script>
         /* Na raiz de um domínio próprio não há painel acima: o link sai. */
-        if (/^\/(index\.html)?$/.test(location.pathname)) {
+        /* Endereço próprio: a pasta do app na raiz do domínio, ou o domínio do
+           Montador servindo o repositório inteiro (aí o app mora em /montar/). */
+        window.MONTADOR_SOZINHO = /^\/(index\.html)?$/.test(location.pathname) || /^montador-provas-malu\./.test(location.hostname);
+        if (window.MONTADOR_SOZINHO) {
             document.getElementById('voltar-ao-painel').remove();
         }
     </script>
@@ -366,7 +369,7 @@
     /* Em endereço próprio (montador-provas-malu.vercel.app) a pasta do app é a
        raiz e não há painel acima: os links para o painel e o Identificador
        viram texto simples, em vez de levar a uma página que não existe. */
-    if (/^\/(index\.html)?$/.test(location.pathname)) {
+    if (window.MONTADOR_SOZINHO) {
         document.querySelectorAll('[data-so-no-painel]').forEach(function (a) {
             const texto = document.createElement('strong');
             texto.textContent = a.textContent;
