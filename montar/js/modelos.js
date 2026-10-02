@@ -33,15 +33,34 @@
         '**O descumprimento de qualquer regra acarretará na anulação da avaliação**.'
     ];
 
+    /* As fontes oferecidas. Todas existem no Windows e no Mac; no Linux e no
+       Android entram as equivalentes de mesma medida (Liberation, Tinos,
+       Carlito), para a paginação não mudar de um computador para outro. */
+    const FONTES = {
+        times: { nome: 'Times New Roman', css: '"Times New Roman", Times, "Liberation Serif", Tinos, serif' },
+        arial: { nome: 'Arial', css: 'Arial, "Liberation Sans", Arimo, Helvetica, sans-serif' },
+        calibri: { nome: 'Calibri', css: 'Calibri, Carlito, "Segoe UI", sans-serif' },
+        cambria: { nome: 'Cambria', css: 'Cambria, Caladea, Georgia, serif' },
+        georgia: { nome: 'Georgia', css: 'Georgia, "DejaVu Serif", serif' }
+    };
+
+    /* O que toda prova ajusta, inclusive a do modelo fixo: a aparência do
+       texto e o que entra ou não na folha. O resto do formato é do modelo. */
+    const AJUSTAVEIS = ['fonte', 'corpoPt', 'espacamento', 'gabarito', 'icones', 'imagensCinza'];
+
     /* Formato livre de partida: o que vale quando um campo não foi dito. */
     const LAYOUT_PADRAO = {
+        fonte: 'times',             /* Times New Roman 10 é o padrão da escola */
+        espacamento: 'normal',      /* 'compacto' | 'normal' | 'amplo' */
+        icones: true,               /* ícone da disciplina ao lado do título da seção */
+        imagensCinza: true,         /* figuras em tons de cinza: economiza tinta */
         cabecalho: 'completo',      /* 'faixa' | 'completo' | 'nenhum' */
         faixaCm: 3,                 /* altura da faixa em branco, abaixo da margem de 1 cm */
         instrucoes: false,
         textoInstrucoes: [],
         gabarito: false,            /* folha de respostas com bolhas na 1ª página */
         colunas: 2,
-        corpoPt: 10.5,
+        corpoPt: 10,
         alternativas: 5,
         letras: 'a)',               /* 'a)' | 'A)' | '(A)' */
         numeracao: '01.',           /* '01.' | '1.' | 'QUESTÃO 01' */
@@ -52,7 +71,7 @@
     const FIXO = {
         id: 'bimestral-malu',
         nome: 'Avaliação Bimestral Malu',
-        descricao: 'Modelo padrão da escola. Faixa em branco para o Identificador de Provas, quadro de instruções, gabarito com as marcas de alinhamento na primeira página e duas colunas.',
+        descricao: 'Modelo padrão da escola. Faixa para o cabeçalho do Identificador de Provas (com o brasão), quadro de instruções, gabarito com as marcas de alinhamento e duas colunas.',
         fixo: true,
         tituloPadrao: 'Avaliação Bimestral de {componente}',
         secoesIniciais: 'componente',
@@ -63,7 +82,11 @@
             textoInstrucoes: INSTRUCOES_BIMESTRAL,
             gabarito: true,
             colunas: 2,
-            corpoPt: 10.5,
+            fonte: 'times',
+            corpoPt: 10,
+            espacamento: 'normal',
+            icones: true,
+            imagensCinza: true,
             alternativas: 5,
             letras: 'a)',
             numeracao: '01.',
@@ -89,7 +112,8 @@
                 ],
                 gabarito: false,
                 colunas: 2,
-                corpoPt: 11,
+                fonte: 'times',
+                corpoPt: 10,
                 alternativas: 5,
                 letras: 'a)',
                 numeracao: '01.',
@@ -120,7 +144,9 @@
         const pronto = Object.assign(copiar(LAYOUT_PADRAO), copiar(layout || {}));
         pronto.colunas = pronto.colunas === 1 ? 1 : 2;
         pronto.alternativas = Math.max(2, Math.min(5, Number(pronto.alternativas) || 5));
-        pronto.corpoPt = Math.max(8, Math.min(14, Number(pronto.corpoPt) || 10.5));
+        pronto.corpoPt = Math.max(8, Math.min(14, Number(pronto.corpoPt) || 10));
+        if (!FONTES[pronto.fonte]) pronto.fonte = 'times';
+        if (['compacto', 'normal', 'amplo'].indexOf(pronto.espacamento) === -1) pronto.espacamento = 'normal';
         pronto.faixaCm = Math.max(1, Math.min(8, Number(pronto.faixaCm) || 3));
         if (!Array.isArray(pronto.textoInstrucoes)) pronto.textoInstrucoes = [];
         return pronto;
@@ -195,20 +221,60 @@
     /* ----- a prova ----- */
 
     function novaQuestao(tipo, alternativas) {
+        const t = tipo === 'discursiva' || tipo === 'texto' ? tipo : 'objetiva';
         return {
             id: novoId('q'),
-            tipo: tipo === 'discursiva' ? 'discursiva' : 'objetiva',
+            tipo: t,
             fonte: '',
             enunciado: '',
-            imagem: null,
-            alternativas: tipo === 'discursiva' ? [] : new Array(alternativas || 5).fill(''),
+            imagens: [],
+            alternativas: t === 'objetiva' ? new Array(alternativas || 5).fill('') : [],
+            altImagens: [],
+            disposicao: 'auto',      /* alternativas: 'auto' | 'lista' | 'duas' | 'linha' */
             correta: '',
             linhas: 6
         };
     }
 
+    /* Provas guardadas por versões antigas do app: uma imagem só (q.imagem)
+       vira a lista de imagens; campos novos ganham o valor padrão. */
+    function normalizarQuestao(q) {
+        if (!Array.isArray(q.imagens)) q.imagens = [];
+        if (q.imagem) {
+            q.imagens.push(Object.assign({ id: novoId('img'), posicao: 'abaixo' }, q.imagem));
+            delete q.imagem;
+        }
+        q.imagens.forEach(function (img) {
+            if (!img.id) img.id = novoId('img');
+            if (!img.posicao) img.posicao = 'abaixo';
+            img.largura = Math.max(15, Math.min(100, Number(img.largura) || 100));
+        });
+        if (!Array.isArray(q.alternativas)) q.alternativas = [];
+        if (!Array.isArray(q.altImagens)) q.altImagens = [];
+        if (!q.disposicao) q.disposicao = 'auto';
+        if (q.linhas == null) q.linhas = 6;
+        return q;
+    }
+
+    function normalizarProva(prova) {
+        prova.secoes = Array.isArray(prova.secoes) && prova.secoes.length ? prova.secoes : [novaSecao('')];
+        prova.secoes.forEach(function (s) {
+            if (!s.id) s.id = novoId('s');
+            if (!s.icone) s.icone = 'auto';
+            s.questoes = (s.questoes || []).map(normalizarQuestao);
+        });
+        if (!prova.ajustes) prova.ajustes = escolher(completarLayout(prova.fixo ? FIXO.layout : prova.layout), AJUSTAVEIS);
+        return prova;
+    }
+
+    function escolher(objeto, chaves) {
+        const saida = {};
+        chaves.forEach(function (k) { if (objeto && objeto[k] !== undefined) saida[k] = objeto[k]; });
+        return saida;
+    }
+
     function novaSecao(titulo) {
-        return { id: novoId('s'), titulo: titulo || '', questoes: [] };
+        return { id: novoId('s'), titulo: titulo || '', icone: 'auto', questoes: [] };
     }
 
     function secoesDoModelo(modelo, componente) {
@@ -242,6 +308,7 @@
             criadaEm: Date.now(),
             atualizadaEm: Date.now()
         };
+        prova.ajustes = escolher(prova.layout, AJUSTAVEIS);
         prova.secoes = secoesDoModelo(modelo, prova.componente);
         prova.titulo = tituloPadrao(modelo, prova);
         return prova;
@@ -268,8 +335,8 @@
     /* O formato que vale para a prova: o do modelo fixo, sempre o atual; o
        da própria prova, nos demais. */
     function layoutDaProva(prova) {
-        if (prova.fixo && prova.modeloId === FIXO.id) return completarLayout(FIXO.layout);
-        return completarLayout(prova.layout);
+        const base = (prova.fixo && prova.modeloId === FIXO.id) ? FIXO.layout : prova.layout;
+        return completarLayout(Object.assign({}, base, escolher(prova.ajustes, AJUSTAVEIS)));
     }
 
     /* Desliga a prova do modelo fixo: o formato passa a ser dela e se edita. */
@@ -290,6 +357,50 @@
             secoesIniciais: prova.secoes.map(function (s) { return s.titulo; }).filter(Boolean),
             layout: layoutDaProva(prova)
         };
+    }
+
+    /* ----- versão B ----- */
+
+    /* Alternativas que dependem da posição ("todas as anteriores", "nenhuma
+       das alternativas", "NDA", "a e b estão corretas") não podem trocar de
+       lugar: a questão fica na ordem original. */
+    const PRESA_A_ORDEM = /anterior|nenhuma d|todas as|\bnda\b|\b[a-e]\s*(,|e)\s*[a-e]\b|\b[a-e]\)\s*e\s*[a-e]\)|apenas\s+[a-e]\b/i;
+
+    function embaralhar(lista, aleatorio) {
+        const copia = lista.slice();
+        for (let i = copia.length - 1; i > 0; i--) {
+            const j = Math.floor(aleatorio() * (i + 1));
+            const t = copia[i]; copia[i] = copia[j]; copia[j] = t;
+        }
+        return copia;
+    }
+
+    /* Uma cópia da prova com as alternativas em outra ordem (a resposta certa
+       acompanha). As questões continuam na mesma ordem, para o texto de apoio
+       e o "Leia o texto para as questões 3 e 4" continuarem valendo. */
+    function versaoEmbaralhada(prova, rotulo, aleatorio) {
+        aleatorio = aleatorio || Math.random;
+        const nova = copiar(prova);
+        const n = layoutDaProva(prova).alternativas;
+        const presas = [];
+        nova.id = novoId('prova');
+        nova.titulo = (prova.titulo || 'Prova') + ' — Tipo ' + (rotulo || 'B');
+        nova.criadaEm = Date.now();
+        questoesNumeradas(nova).forEach(function (item) {
+            const q = item.questao;
+            if (q.tipo !== 'objetiva') return;
+            const textos = q.alternativas.slice(0, n);
+            if (textos.some(function (a) { return PRESA_A_ORDEM.test(a || ''); })) { presas.push(item.numero); return; }
+            const ordem = textos.map(function (_, i) { return i; });
+            let nova0 = embaralhar(ordem, aleatorio);
+            /* sem embaralhar de mentira: se saiu igual, gira uma casa */
+            if (nova0.every(function (v, i) { return v === i; })) nova0 = ordem.slice(1).concat(ordem[0]);
+            const certaAntes = q.correta ? 'ABCDE'.indexOf(q.correta) : -1;
+            q.alternativas = nova0.map(function (i) { return q.alternativas[i] || ''; }).concat(q.alternativas.slice(n));
+            q.altImagens = nova0.map(function (i) { return (q.altImagens || [])[i] || null; });
+            if (certaAntes >= 0) q.correta = 'ABCDE'[nova0.indexOf(certaAntes)];
+        });
+        return { prova: nova, presas: presas };
     }
 
     /* ----- números e letras ----- */
@@ -331,6 +442,7 @@
         const lista = [];
         prova.secoes.forEach(function (secao) {
             secao.questoes.forEach(function (q) {
+                if (q.tipo === 'texto') return; /* texto de apoio não tem número */
                 lista.push({ numero: lista.length + 1, questao: q, secao: secao });
             });
         });
@@ -344,9 +456,11 @@
         questoesNumeradas(prova).forEach(function (item) {
             const q = item.questao;
             const n = numero(item.numero, '01.').replace('.', '');
-            if (!String(q.enunciado || '').trim() && !q.imagem) avisos.push('Questão ' + n + ' sem enunciado.');
+            if (!String(q.enunciado || '').trim() && !(q.imagens || []).length) avisos.push('Questão ' + n + ' sem enunciado.');
             if (q.tipo === 'objetiva') {
-                const vazias = q.alternativas.slice(0, layout.alternativas).filter(function (a) { return !String(a || '').trim(); }).length;
+                const vazias = q.alternativas.slice(0, layout.alternativas).filter(function (a, i) {
+                    return !String(a || '').trim() && !(q.altImagens && q.altImagens[i]);
+                }).length;
                 if (vazias) avisos.push('Questão ' + n + ': ' + vazias + (vazias > 1 ? ' alternativas vazias.' : ' alternativa vazia.'));
                 if (!q.correta) avisos.push('Questão ' + n + ' sem a resposta certa marcada (só faz falta no gabarito do professor).');
             }
@@ -356,6 +470,12 @@
 
     const api = {
         ESCOLA: ESCOLA,
+        FONTES: FONTES,
+        AJUSTAVEIS: AJUSTAVEIS,
+        normalizarQuestao: normalizarQuestao,
+        normalizarProva: normalizarProva,
+        versaoEmbaralhada: versaoEmbaralhada,
+        escolher: escolher,
         COMPONENTES: COMPONENTES,
         FIXO_ID: FIXO.id,
         DO_ZERO_ID: DO_ZERO.id,

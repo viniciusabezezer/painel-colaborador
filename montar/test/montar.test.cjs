@@ -11,6 +11,7 @@ const Texto = require(path.join(js, 'texto.js'));
 const Modelos = require(path.join(js, 'modelos.js'));
 const Gabarito = require(path.join(js, 'gabarito.js'));
 const Importar = require(path.join(js, 'importar.js'));
+const Icones = require(path.join(js, 'icones.js'));
 
 /* ===== texto ===== */
 
@@ -184,4 +185,90 @@ test('questão sem alternativas vira discursiva; texto-base antes da questão en
     assert.match(q1.enunciado, /^TEXTO I\nUm texto de apoio\.\nExplique o texto\.$/);
     assert.equal(q2.fonte, 'Autoral');
     assert.equal(q2.tipo, 'objetiva');
+});
+
+/* ===== aparência, ícones, versão B, texto de apoio ===== */
+
+test('Times New Roman 10 é o padrão, inclusive no modelo fixo', () => {
+    const fixo = Modelos.obter(Modelos.FIXO_ID);
+    assert.equal(fixo.layout.fonte, 'times');
+    assert.equal(fixo.layout.corpoPt, 10);
+    assert.equal(Modelos.completarLayout({}).fonte, 'times');
+    assert.equal(Modelos.completarLayout({}).corpoPt, 10);
+    assert.equal(Modelos.completarLayout({ fonte: 'comic' }).fonte, 'times', 'fonte desconhecida volta ao padrão');
+});
+
+test('no modelo fixo a fonte, o tamanho e o gabarito se ajustam; o resto não', () => {
+    const p = Modelos.criarProva(Modelos.obter(Modelos.FIXO_ID));
+    p.ajustes.fonte = 'arial';
+    p.ajustes.corpoPt = 11;
+    p.ajustes.gabarito = false;
+    p.ajustes.colunas = 1; /* não é ajustável: ignorado */
+    const l = Modelos.layoutDaProva(p);
+    assert.equal(l.fonte, 'arial');
+    assert.equal(l.corpoPt, 11);
+    assert.equal(l.gabarito, false);
+    assert.equal(l.colunas, 2);
+});
+
+test('prova guardada por versão antiga ganha os campos novos', () => {
+    const antiga = { fixo: true, modeloId: Modelos.FIXO_ID, secoes: [{ titulo: 'BIOLOGIA', questoes: [{ id: 'q1', tipo: 'objetiva', enunciado: 'x', alternativas: ['a'], imagem: { src: 'data:image/png;base64,AA', w: 10, h: 5, largura: 60 } }] }] };
+    Modelos.normalizarProva(antiga);
+    const q = antiga.secoes[0].questoes[0];
+    assert.equal(q.imagens.length, 1);
+    assert.equal(q.imagens[0].largura, 60);
+    assert.equal(q.imagens[0].posicao, 'abaixo');
+    assert.equal(q.imagem, undefined);
+    assert.equal(q.disposicao, 'auto');
+    assert.equal(antiga.secoes[0].icone, 'auto');
+    assert.equal(antiga.ajustes.fonte, 'times');
+});
+
+test('texto de apoio não leva número nem entra na contagem', () => {
+    const p = Modelos.criarProva(Modelos.obter(Modelos.FIXO_ID));
+    const t = Modelos.novaQuestao('texto');
+    t.enunciado = 'TEXTO I';
+    const q = Modelos.novaQuestao('objetiva', 5);
+    q.enunciado = 'Pergunta';
+    p.secoes[0].questoes.push(t, q);
+    const lista = Modelos.questoesNumeradas(p);
+    assert.equal(lista.length, 1);
+    assert.equal(lista[0].questao, q);
+    assert.equal(lista[0].numero, 1);
+});
+
+test('ícone da disciplina sai do título da seção', () => {
+    assert.equal(Icones.detectar('BIOLOGIA'), 'biologia');
+    assert.equal(Icones.detectar('Física'), 'fisica');
+    assert.equal(Icones.detectar('EDUCAÇÃO FÍSICA'), 'edfisica');
+    assert.equal(Icones.detectar('LÍNGUA PORTUGUESA'), 'portugues');
+    assert.equal(Icones.detectar('Língua Inglesa'), 'linguas');
+    assert.equal(Icones.detectar('PARTE I'), null, 'PARTE não é ARTE');
+    assert.equal(Icones.resolver('nenhum', 'BIOLOGIA'), null);
+    assert.equal(Icones.resolver('quimica', 'BIOLOGIA'), 'quimica');
+    assert.match(Icones.svg('biologia'), /^<svg[^>]+viewBox="0 0 24 24"/);
+    Object.keys(Modelos.COMPONENTES).forEach((c) => Modelos.COMPONENTES[c].secoes.forEach((s) => {
+        assert.ok(Icones.detectar(s), 'toda disciplina da escola tem ícone: ' + s);
+    }));
+});
+
+test('versão B troca a ordem das alternativas e leva a resposta certa junto', () => {
+    const p = Modelos.criarProva(Modelos.obter(Modelos.FIXO_ID));
+    const q = Modelos.novaQuestao('objetiva', 5);
+    q.alternativas = ['um', 'dois', 'três', 'quatro', 'cinco'];
+    q.correta = 'C';
+    const presa = Modelos.novaQuestao('objetiva', 5);
+    presa.alternativas = ['x', 'y', 'z', 'w', 'todas as anteriores'];
+    p.secoes[0].questoes.push(q, presa);
+    let semente = 7;
+    const r = Modelos.versaoEmbaralhada(p, 'B', () => ((semente = (semente * 9301 + 49297) % 233280) / 233280));
+    const q2 = r.prova.secoes[0].questoes[0];
+    assert.notDeepEqual(q2.alternativas, q.alternativas);
+    assert.deepEqual([...q2.alternativas].sort(), [...q.alternativas].sort());
+    assert.equal(q2.alternativas['ABCDE'.indexOf(q2.correta)], 'três');
+    assert.deepEqual(r.prova.secoes[0].questoes[1].alternativas, presa.alternativas, '"todas as anteriores" fica na ordem');
+    assert.deepEqual(r.presas, [2]);
+    assert.match(r.prova.titulo, /Tipo B$/);
+    assert.notEqual(r.prova.id, p.id);
+    assert.deepEqual(q.alternativas, ['um', 'dois', 'três', 'quatro', 'cinco'], 'a original não muda');
 });

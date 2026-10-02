@@ -12,9 +12,9 @@
     background: #fff;
     color: #000;
     overflow: hidden;
-    font-family: Arial, 'Liberation Sans', Arimo, Helvetica, sans-serif;
-    font-size: var(--corpo, 10.5pt);
-    line-height: 1.22;
+    font-family: var(--fonte, "Times New Roman", Times, "Liberation Serif", Tinos, serif);
+    font-size: var(--corpo, 10pt);
+    line-height: var(--lh, 1.2);
     margin: 0 auto 10mm;
     box-shadow: 0 4px 22px -8px rgba(0, 0, 0, .35);
     -webkit-print-color-adjust: exact;
@@ -31,6 +31,8 @@
 .folha .topo { flex: none; }
 
 /* ----- faixa do Identificador ----- */
+/* Na tela: uma simulação do cabeçalho que o Identificador cola, com o brasão.
+   No papel: branco. */
 
 .folha .faixa {
     position: relative;
@@ -40,9 +42,27 @@
     display: flex; align-items: center; justify-content: center;
     text-align: center;
 }
+.folha .faixa { flex-direction: column; justify-content: flex-start; align-items: stretch; }
+.folha .faixa-simulada {
+    margin: 0; height: 2.8cm; border: 1px solid #b9cfbf; background: rgba(255, 255, 255, .85);
+    display: flex; align-items: center; gap: .35cm; padding: 0 .3cm;
+    font-family: Arial, 'Liberation Sans', sans-serif; color: #8aa293; text-align: left;
+}
+.folha .faixa-brasao { height: 1.9cm; width: auto; opacity: .75; }
+.folha .faixa-textos { flex: 1; min-width: 0; line-height: 1.25; }
+.folha .faixa-aval { font-family: Georgia, serif; font-size: 10pt; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.folha .faixa-nome { font-size: 13pt; font-weight: 700; letter-spacing: .3px; }
+.folha .faixa-linha { font-size: 8pt; font-weight: 700; display: flex; justify-content: space-between; gap: .3cm; }
+.folha .faixa-linha span { font-weight: 400; }
+.folha .faixa-qr {
+    width: 2cm; height: 2cm; flex: none;
+    background: repeating-conic-gradient(#c5d6ca 0 25%, transparent 0 50%) 0 0 / .4cm .4cm;
+    border: 1px solid #b9cfbf;
+}
 .folha .faixa-dica {
-    font-family: 'Outfit', system-ui, sans-serif;
-    font-size: 9.5pt; color: #4f7a5c; max-width: 13cm; line-height: 1.35;
+    position: absolute; left: 0; right: 0; bottom: -.02cm;
+    font-family: 'Outfit', system-ui, sans-serif; text-align: center;
+    font-size: 7.5pt; color: #4f7a5c; line-height: 1.2;
 }
 
 /* ----- cabeçalho completo ----- */
@@ -117,19 +137,38 @@
     hyphens: manual;
     overflow-wrap: break-word;
 }
-.folha .q-inicio { padding-top: .95em; }
+.folha .item-inicio { padding-top: var(--entre, .85em); }
 .folha .q-alt-primeira { padding-top: .1em; }
+.folha .q-alt-primeira.item-inicio { padding-top: var(--entre, .85em); }
+
+/* alternativas lado a lado: duas por linha ou todas numa linha */
+.folha .alt-grade { display: grid; align-items: start; }
+.folha .alt-celula { min-width: 0; overflow-wrap: break-word; }
+.folha .alt-sonda { position: absolute; left: 0; top: 0; visibility: hidden; white-space: nowrap; }
+.folha .q-alt-com-img { text-align: left; }
+.folha .q-alt-com-img img, .folha .alt-celula img { margin: .1em 0 .15em 1.2em; }
+.folha .alt-celula img { margin-left: 0; }
+
+/* imagem ao lado do texto */
+.folha .q-lado { display: flow-root; }
+.folha .q-foto-lado { float: right; margin: .15em 0 .1em .3cm; }
+
+/* economia de tinta: figuras em tons de cinza */
+.folha.tinta .q-foto,
+.folha.tinta .cab-logo img { filter: grayscale(1); }
 .folha .partido { text-align-last: justify; }
 .folha sub, .folha sup { font-size: .72em; line-height: 0; }
 
 .folha .secao-titulo {
     font-weight: 700;
-    padding-top: 1.15em;
+    padding-top: calc(var(--entre, .85em) * 1.4);
+    display: flex; align-items: center; gap: .35em;
 }
-.folha .q-titulo { font-weight: 700; padding-top: .95em; }
+.folha .icone-disc { width: 1.35em; height: 1.35em; flex: none; }
+.folha .q-titulo { font-weight: 700; }
 .folha .q-titulo + .q-par { padding-top: .15em; }
 
-.folha .q-img { padding: .35em 0 .2em; text-align: center; }
+.folha .q-img { padding: .3em 0 .15em; text-align: center; }
 .folha .q-img img { display: inline-block; vertical-align: top; }
 
 .folha .q-linha { height: .78cm; border-bottom: .5pt solid #444; }

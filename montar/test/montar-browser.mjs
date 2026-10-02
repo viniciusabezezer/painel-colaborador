@@ -24,7 +24,7 @@ const APP = resolve(import.meta.dirname, '..');
 const RAIZ = resolve(APP, '..');
 const SAIDA = join(APP, 'test', 'saida');
 const PORTA = 8741;
-const TIPOS = { '.html': 'text/html; charset=utf-8', '.css': 'text/css; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.png': 'image/png' };
+const TIPOS = { '.html': 'text/html; charset=utf-8', '.css': 'text/css; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.png': 'image/png', '.webmanifest': 'application/manifest+json' };
 
 function servir(raiz, porta) {
     const servidor = createServer(async (pedido, resposta) => {
@@ -45,11 +45,13 @@ function conferir(certo, mensagem) {
 
 const servidor = await servir(RAIZ, PORTA);
 const navegador = await chromium.launch();
-const pagina = await navegador.newPage({ viewport: { width: 1400, height: 1000 } });
+const contexto = await navegador.newContext({ viewport: { width: 1400, height: 1000 } });
+const pagina = await contexto.newPage();
 const erros = [];
-const RUIDO = /fonts\.googleapis|ERR_CERT_AUTHORITY_INVALID/;
+const RUIDO = /fonts\.googleapis|fonts\.gstatic|ERR_CERT_AUTHORITY_INVALID|ERR_INTERNET_DISCONNECTED/;
 pagina.on('pageerror', (erro) => erros.push(String(erro)));
 pagina.on('console', (msg) => { if (msg.type() === 'error' && !RUIDO.test(msg.text())) erros.push(msg.text()); });
+pagina.on('requestfailed', (p) => { if (!RUIDO.test(p.url())) erros.push('pedido falhou: ' + p.url()); });
 pagina.on('dialog', (d) => d.accept(d.type() === 'prompt' ? 'Modelo de teste' : undefined));
 
 try {
@@ -71,12 +73,13 @@ try {
     conferir(await pagina.$eval('[data-p="titulo"]', (n) => n.value) === 'Avaliação Bimestral de Ciências da Natureza', 'o nome acompanha a área');
     conferir(await pagina.$('#formato .formato-travado') !== null, 'o formato aparece travado');
 
-    await pagina.click('#ed-colar');
-    await pagina.fill('#colar-texto', await readFile(join(APP, 'test', 'questoes-exemplo.txt'), 'utf8'));
+    await pagina.click('#add-colar');
+    await pagina.fill('#colar-texto', await readFile(join(APP, 'test', 'questoes-exemplo.txt'), 'utf8') +
+        '12. Quanto vale 2 + 2?\na) 1\nb) 2\nc) 3\nd) 4\ne) 5\nGabarito: D\n');
     await pagina.waitForSelector('#colar-acrescentar:not([disabled])');
-    conferir((await pagina.textContent('#colar-resultado')).includes('11 questões'), 'a colagem reconhece 11 questões');
+    conferir((await pagina.textContent('#colar-resultado')).includes('12 questões'), 'a colagem reconhece 12 questões');
     await pagina.click('#colar-acrescentar');
-    await pagina.waitForFunction(() => document.querySelectorAll('#secoes .questao').length === 11);
+    await pagina.waitForFunction(() => document.querySelectorAll('#secoes .questao').length === 12);
     await pagina.waitForTimeout(400);
 
     const info = await pagina.evaluate(() => {
@@ -111,7 +114,45 @@ try {
     conferir(info.secao === 'BIOLOGIA', 'o título da seção sai na folha');
 
     const svg = await pagina.$eval('#paginas .gabarito-svg', (s) => ({ bolhas: s.querySelectorAll('circle').length, texto: s.textContent }));
-    conferir(svg.bolhas === 20 + 11 * 5, 'o gabarito tem as bolhas do número da lista e das 11 questões');
+    conferir(svg.bolhas === 20 + 12 * 5, 'o gabarito tem as bolhas do número da lista e das 12 questões');
+
+    const aparencia = await pagina.evaluate(() => {
+        const f = document.querySelector('#paginas .folha');
+        const p = f.querySelector('.q-par');
+        return {
+            fonte: getComputedStyle(p).fontFamily,
+            corpo: getComputedStyle(p).fontSize,
+            icone: !!f.querySelector('.secao-titulo svg.icone-disc'),
+            brasao: !!f.querySelector('.faixa .faixa-brasao'),
+            linha: !!document.querySelector('#paginas .alt-grade'),
+            celulas: [...document.querySelectorAll('#paginas .alt-grade')].map((g) => g.children.length)
+        };
+    });
+    conferir(/Times New Roman/.test(aparencia.fonte) && aparencia.corpo === '13.3333px', 'Times New Roman 10 é o padrão (' + aparencia.fonte.split(',')[0] + ', ' + aparencia.corpo + ')');
+    conferir(aparencia.icone, 'o título BIOLOGIA sai com o ícone da disciplina');
+    conferir(aparencia.brasao, 'a faixa mostra, na tela, o cabeçalho do Identificador com o brasão');
+    conferir(aparencia.celulas.includes(5), 'alternativas curtas (1, 2, 3…) vão todas numa linha só');
+    const dispQ12 = await pagina.evaluate(() => window.MontadorProvas.resultado().disposicoes);
+    conferir(Object.values(dispQ12).includes('lista'), 'alternativas longas continuam uma por linha');
+
+    /* o gabarito é opcional, também no modelo fixo */
+    await pagina.uncheck('[data-a="gabarito"]');
+    await pagina.waitForFunction(() => !document.querySelector('#paginas .bloco-gabarito'));
+    conferir(true, 'desmarcando, o gabarito sai da prova');
+    await pagina.check('[data-a="gabarito"]');
+    await pagina.waitForFunction(() => !!document.querySelector('#paginas .bloco-gabarito'));
+
+    /* a fonte e o tamanho mudam */
+    await pagina.selectOption('[data-a="fonte"]', 'arial');
+    await pagina.selectOption('[data-a="corpoPt"]', '11');
+    await pagina.waitForFunction(() => /Arial/.test(getComputedStyle(document.querySelector('#paginas .q-par')).fontFamily));
+    conferir(true, 'a fonte e o tamanho mudam na prévia');
+    await pagina.selectOption('[data-a="fonte"]', 'times');
+    await pagina.selectOption('[data-a="corpoPt"]', '10');
+    await pagina.waitForFunction(() => /Times/.test(getComputedStyle(document.querySelector('#paginas .q-par')).fontFamily) &&
+        document.querySelectorAll('#paginas .folha').length === Number(document.querySelector('#paginas .rodape').textContent.split('/')[1]));
+    await pagina.waitForTimeout(400);
+    info.folhas = await pagina.$$eval('#paginas .folha', (n) => n.length);
     conferir(svg.texto.includes('2º Ano') && svg.texto.includes('C.N.'), 'o rótulo do gabarito traz a série e a área');
 
     const prova = await pagina.evaluate(() => window.MontadorProvas.estado());
@@ -136,13 +177,91 @@ try {
     const pdfChave = await pagina.pdf({ preferCSSPageSize: true });
     await writeFile(join(SAIDA, 'gabarito-professor.pdf'), pdfChave);
     const chave = await pagina.$$eval('#chave .chave-item', (n) => n.map((x) => x.textContent));
-    conferir(chave.length === 11 && chave[0].startsWith('01D'), 'o gabarito do professor lista as respostas (' + chave[0] + ')');
+    conferir(chave.length === 12 && chave[0].startsWith('01D'), 'o gabarito do professor lista as respostas (' + chave[0] + ')');
     await pagina.emulateMedia({ media: 'screen' });
     await pagina.evaluate(() => window.dispatchEvent(new Event('afterprint')));
 
+    /* colar texto formatado do Word: vira marcação */
+    await pagina.click('#abrir-todas');
+    const colado = await pagina.evaluate(() => {
+        const ta = document.querySelector('.questao[data-q] textarea[data-campo="enunciado"]');
+        ta.value = '';
+        ta.focus();
+        const dt = new DataTransfer();
+        dt.setData('text/html', '<p class=MsoNormal>Leia o <b>texto</b> e veja o <i>Homo sapiens</i> e o H<sub>2</sub>O.</p><p>Segundo parágrafo.</p>');
+        dt.setData('text/plain', 'Leia o texto');
+        ta.dispatchEvent(new ClipboardEvent('paste', { clipboardData: dt, bubbles: true, cancelable: true }));
+        return ta.value;
+    });
+    conferir(colado === 'Leia o **texto** e veja o *Homo sapiens* e o H~2~O.\nSegundo parágrafo.', 'colar do Word mantém negrito, itálico e índice: ' + JSON.stringify(colado));
+
+    /* botões de formatação */
+    await pagina.evaluate(() => {
+        const ta = document.querySelector('.questao[data-q] textarea[data-campo="enunciado"]');
+        ta.focus();
+        ta.setSelectionRange(0, 4);
+    });
+    await pagina.click('.questao[data-q] [data-fmt="b"]');
+    conferir((await pagina.$eval('.questao[data-q] textarea[data-campo="enunciado"]', (t) => t.value)).startsWith('**Leia**'), 'o botão N põe a seleção em negrito');
+
+    /* imagem: escolher, tamanho e posição */
+    const [seletor] = await Promise.all([
+        pagina.waitForEvent('filechooser'),
+        pagina.click('.questao[data-q] [data-acao="img-escolher"]')
+    ]);
+    await seletor.setFiles(join(APP, 'logo.png'));
+    await pagina.waitForSelector('#paginas .q-img img.q-foto');
+    conferir(true, 'a imagem escolhida entra na prova');
+    await pagina.$eval('.img-item input[type=range]', (r) => { r.value = '30'; r.dispatchEvent(new Event('input', { bubbles: true })); });
+    await pagina.waitForTimeout(400);
+    const larguraImg = await pagina.evaluate(() => {
+        const img = document.querySelector('#paginas .q-img img');
+        return img.offsetWidth / img.closest('.coluna').clientWidth;
+    });
+    conferir(Math.abs(larguraImg - 0.3) < 0.02, 'o controle de tamanho deixa a imagem com 30% da coluna (' + larguraImg.toFixed(2) + ')');
+    conferir(await pagina.evaluate(() => getComputedStyle(document.querySelector('#paginas .q-foto')).filter.includes('grayscale')), 'a imagem sai em tons de cinza para poupar tinta');
+    await pagina.selectOption('.img-item select[data-campo="img-posicao"]', 'lado');
+    await pagina.waitForSelector('#paginas .q-lado .q-foto-lado');
+    conferir(true, 'a imagem pode ir ao lado do texto');
+
+    /* imagem colada na zona de colar */
+    const comImagem = await pagina.evaluate(async () => {
+        const bytes = await (await fetch('logo.png')).blob();
+        const zona = document.querySelectorAll('.questao[data-q] [data-zona]')[1];
+        const dt = new DataTransfer();
+        dt.items.add(new File([bytes], 'print.png', { type: 'image/png' }));
+        zona.dispatchEvent(new ClipboardEvent('paste', { clipboardData: dt, bubbles: true, cancelable: true }));
+        await new Promise((r) => setTimeout(r, 600));
+        return window.MontadorProvas.estado().secoes[0].questoes[1].imagens.length;
+    });
+    conferir(comImagem === 1, 'colar um print na zona da questão põe a imagem nela');
+
+    /* texto de apoio: sem número, sem gabarito */
+    await pagina.click('.secao[data-s] >> nth=0 >> [data-acao="add-texto"]');
+    await pagina.fill('.questao--texto textarea[data-campo="enunciado"]', 'TEXTO I\nUm texto de apoio para as próximas questões.');
+    await pagina.waitForTimeout(500);
+    conferir(await pagina.$$eval('#paginas .texto-apoio', (n) => n.length) === 2, 'o texto de apoio sai na prova');
+    conferir(await pagina.$eval('#paginas .gabarito-svg', (s) => s.querySelectorAll('circle').length) === 20 + 12 * 5, 'o texto de apoio não entra no gabarito');
+
+    /* desfazer */
+    const antesDeApagar = await pagina.$$eval('#secoes .questao', (n) => n.length);
+    await pagina.click('.questao--texto [data-acao="q-apagar"]');
+    conferir(await pagina.$$eval('#secoes .questao', (n) => n.length) === antesDeApagar - 1, 'apagar tira a questão');
+    await pagina.click('#ed-desfazer');
+    conferir(await pagina.$$eval('#secoes .questao', (n) => n.length) === antesDeApagar, 'desfazer traz de volta');
+
+    /* economia de papel */
+    await pagina.fill('#copias', '40');
+    await pagina.click('#economizar');
+    await pagina.waitForSelector('#proposta:not([hidden])');
+    conferir((await pagina.textContent('#proposta')).length > 20, 'economizar papel dá uma resposta: ' + (await pagina.textContent('#proposta')).slice(0, 90));
+    conferir(/\d+ folhas/.test(await pagina.textContent('#folhas-total')), 'mostra o total de folhas para a turma: ' + await pagina.textContent('#folhas-total'));
+    if (await pagina.$('#aplicar-proposta')) await pagina.click('#aplicar-proposta');
+    else await pagina.click('#fechar-proposta');
+
     /* edição: questão nova, discursiva, guardada */
     await pagina.click('.secao[data-s] >> nth=1 >> [data-acao="add-discursiva"]');
-    await pagina.fill('.questao[open] textarea[data-campo="enunciado"]', 'Explique a **importância** do CO~2~ na fotossíntese.');
+    await pagina.fill('.secao[data-s] >> nth=1 >> .questao[open] textarea[data-campo="enunciado"]', 'Explique a **importância** do CO~2~ na fotossíntese.');
     await pagina.waitForTimeout(900);
     const html = await pagina.$eval('#paginas', (p) => p.innerHTML);
     conferir(html.includes('<strong>importância</strong>') && html.includes('CO<sub>2</sub>'), 'a marcação vira negrito e índice na folha');
@@ -154,11 +273,25 @@ try {
     /* recarrega e a prova continua lá */
     await pagina.reload();
     await pagina.waitForSelector('#tela-editor:not([hidden]) .folha');
-    conferir(await pagina.$$eval('#secoes .questao', (n) => n.length) === 12, 'depois de recarregar, as 12 questões continuam');
+    conferir(await pagina.$$eval('#secoes .questao', (n) => n.length) === 14, 'depois de recarregar, as 13 questões e o texto de apoio continuam');
+
+    /* imprimir guarda a versão em "últimos arquivos" */
+    await pagina.evaluate(() => { window.print = () => {}; });
+    await pagina.click('#ed-imprimir');
+    await pagina.waitForTimeout(300);
+
+    /* versão B */
+    await pagina.click('#ed-versaob');
+    await pagina.waitForFunction(() => /Tipo B/.test(document.getElementById('ed-titulo').textContent));
+    const b = await pagina.evaluate(() => window.MontadorProvas.estado().secoes[0].questoes.find((q) => q.fonte === 'Uece'));
+    conferir(b.alternativas[0] !== 'Possuem ciclo de vida assexuado e sexuado.' || b.correta !== 'D', 'a versão B abre com as alternativas em outra ordem');
+    conferir(b.alternativas['ABCDE'.indexOf(b.correta)].startsWith('Não possuem células'), 'na versão B a resposta certa acompanha a alternativa');
 
     /* --- do zero: formato livre --- */
     await pagina.goto(`http://127.0.0.1:${PORTA}/montar/#/`);
     await pagina.waitForSelector('#tela-inicio:not([hidden]) .prova-linha');
+    const arquivos = await pagina.$$eval('#lista-arquivos .prova-linha strong', (n) => n.map((x) => x.textContent));
+    conferir(arquivos.includes('PROVA-2026-B3-2S-NAT') && arquivos.includes('PROVA-2026-B3-2S-NAT-GABARITO-PROFESSOR'), 'a prova e o gabarito impressos ficam em "Últimos arquivos gerados"');
     await pagina.click('[data-usar="do-zero"]');
     await pagina.waitForSelector('#tela-editor:not([hidden]) #formato select[data-l="cabecalho"]');
     await pagina.selectOption('#formato [data-l="colunas"]', '1');
@@ -194,6 +327,19 @@ try {
     await pagina.waitForSelector('#tela-inicio:not([hidden])');
     const fim = await pagina.$$eval('#lista-modelos .cartao h3', (n) => n.map((x) => x.textContent));
     conferir(fim.includes('Simulado') && fim[0] === 'Avaliação Bimestral Malu', 'o modelo novo entra e o fixo continua igual');
+
+    /* --- sem internet --- */
+    await pagina.goto(`http://127.0.0.1:${PORTA}/montar/`);
+    await pagina.waitForFunction(() => navigator.serviceWorker && navigator.serviceWorker.controller, null, { timeout: 15000 })
+        .catch(async () => { await pagina.reload(); await pagina.waitForFunction(() => navigator.serviceWorker.controller, null, { timeout: 15000 }); });
+    await contexto.setOffline(true);
+    await pagina.reload();
+    await pagina.waitForSelector('#tela-inicio:not([hidden]) .prova-linha', { timeout: 15000 });
+    conferir(await pagina.isVisible('#selo-offline'), 'sem internet o app abre, com as provas guardadas');
+    await pagina.click('#lista-provas .prova-linha a');
+    await pagina.waitForSelector('#tela-editor:not([hidden]) .folha');
+    conferir(true, 'sem internet a prova abre e a prévia é montada');
+    await contexto.setOffline(false);
 
     /* --- celular --- */
     await pagina.setViewportSize({ width: 390, height: 844 });

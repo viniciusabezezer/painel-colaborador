@@ -1,5 +1,6 @@
-/* A tela do Montador de Provas: início (modelos e provas guardadas), editor
-   da prova com a prévia paginada ao lado, e editor de modelos. */
+/* A tela do Montador de Provas: início (modelos, provas guardadas e últimos
+   arquivos gerados), editor da prova com a prévia paginada ao lado, e editor
+   de modelos. */
 (function () {
     'use strict';
 
@@ -9,6 +10,8 @@
     const Armazem = window.MontarArmazem;
     const Importar = window.MontarImportar;
     const Gabarito = window.MontarGabarito;
+    const Icones = window.MontarIcones;
+    const Colar = window.MontarColar;
 
     const $ = function (id) { return document.getElementById(id); };
     const esc = Texto.escapar;
@@ -19,6 +22,18 @@
     let zoom = 'ajustar';
     let escalaAtual = 1;
     let lidoColar = null;
+    let ultimoResultado = null;
+    let historico = [];
+
+    const CORPOS = [8, 8.5, 9, 9.5, 10, 10.5, 11, 11.5, 12, 13, 14];
+    const DISPOSICOES = [
+        ['auto', 'Automática (a mais econômica)'],
+        ['lista', 'Uma por linha'],
+        ['duas', 'Duas por linha'],
+        ['linha', 'Todas numa linha']
+    ];
+    const NOMES_DISPOSICAO = { lista: 'uma por linha', duas: 'duas por linha', linha: 'todas numa linha' };
+    const POSICOES = [['abaixo', 'Abaixo do texto'], ['acima', 'Acima do texto'], ['lado', 'Ao lado do texto']];
 
     function el(tag, classe, html) {
         const e = document.createElement(tag);
@@ -34,6 +49,21 @@
         chamar.pendente = function () { return t !== null; };
         return chamar;
     }
+
+    function guardado(chave, padrao) {
+        try { const v = localStorage.getItem('montar-provas:' + chave); return v == null ? padrao : v; } catch (e) { return padrao; }
+    }
+    function guardar(chave, valor) {
+        try { localStorage.setItem('montar-provas:' + chave, valor); } catch (e) { /* sem problema */ }
+    }
+
+    function opcoesHtml(lista, atual) {
+        return lista.map(function (o) {
+            return '<option value="' + esc(o[0]) + '"' + (String(o[0]) === String(atual) ? ' selected' : '') + '>' + esc(o[1]) + '</option>';
+        }).join('');
+    }
+
+    function virgula(n) { return String(n).replace('.', ','); }
 
     /* ===================== telas ===================== */
 
@@ -63,11 +93,11 @@
 
     function resumoLayout(layout) {
         const itens = [];
-        itens.push({ faixa: 'faixa para o Identificador', completo: 'cabeçalho completo', nenhum: 'sem cabeçalho' }[layout.cabecalho]);
+        itens.push({ faixa: 'faixa para o Identificador', completo: 'cabeçalho completo com brasão', nenhum: 'sem cabeçalho' }[layout.cabecalho]);
         if (layout.instrucoes) itens.push('instruções');
         if (layout.gabarito) itens.push('gabarito com bolhas');
         itens.push(layout.colunas === 2 ? 'duas colunas' : 'uma coluna');
-        itens.push(layout.alternativas + ' alternativas');
+        itens.push((Modelos.FONTES[layout.fonte] || {}).nome + ' ' + virgula(layout.corpoPt));
         return itens.join(' · ');
     }
 
@@ -93,6 +123,8 @@
         return d.toLocaleDateString('pt-BR') + ' ' + d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
     }
 
+    let provasDoInicio = [];
+
     async function desenharInicio() {
         const lista = $('lista-modelos');
         lista.innerHTML = '';
@@ -102,25 +134,51 @@
             '<h3>+ Criar um modelo</h3><p>Um formato próprio — recuperação, simulado, lista de exercícios — para reaproveitar sempre que quiser.</p>' +
             '<div class="cartao-acoes"><a class="btn btn--pequeno" href="#/modelo">Criar modelo</a></div>'));
 
-        const provas = await Armazem.listar();
+        provasDoInicio = await Armazem.listar();
+        $('busca-provas').hidden = provasDoInicio.length < 6;
+        desenharListaProvas();
+        desenharArquivos();
+        $('aviso-armazem').hidden = await Armazem.persistente();
+    }
+
+    function desenharListaProvas() {
+        const termo = Texto.semMarcas($('busca-provas').value || '').toLowerCase();
         const destino = $('lista-provas');
         destino.innerHTML = '';
-        if (!provas.length) destino.appendChild(el('p', 'vazio', 'Nenhuma prova ainda. Escolha um modelo acima para começar.'));
-        provas.forEach(function (p) {
+        if (!provasDoInicio.length) destino.appendChild(el('p', 'vazio', 'Nenhuma prova ainda. Escolha um modelo acima para começar.'));
+        provasDoInicio.forEach(function (p) {
             const total = Modelos.questoesNumeradas(p).length;
             const meta = [p.modeloNome, p.serie ? p.serie + 'ª série' : '', p.componente || p.disciplina,
                 total + (total === 1 ? ' questão' : ' questões'), 'editada em ' + dataHora(p.atualizadaEm)].filter(Boolean).join(' · ');
-            const linha = el('div', 'prova-linha',
+            if (termo && (p.titulo + ' ' + meta).toLowerCase().indexOf(termo) === -1) return;
+            destino.appendChild(el('div', 'prova-linha',
                 '<div class="info"><strong>' + esc(p.titulo || 'Prova sem título') + '</strong><span class="meta">' + esc(meta) + '</span></div>' +
                 '<div class="acoes">' +
                 '<a class="btn btn--primary btn--pequeno" href="#/prova/' + encodeURIComponent(p.id) + '">Abrir</a>' +
                 '<button type="button" class="btn btn--pequeno" data-duplicar="' + esc(p.id) + '">Duplicar</button>' +
                 '<button type="button" class="btn btn--pequeno" data-exportar="' + esc(p.id) + '">Exportar</button>' +
                 '<button type="button" class="btn btn--pequeno" data-apagar-prova="' + esc(p.id) + '">Apagar</button>' +
-                '</div>');
-            destino.appendChild(linha);
+                '</div>'));
         });
-        $('aviso-armazem').hidden = await Armazem.persistente();
+    }
+    $('busca-provas').addEventListener('input', desenharListaProvas);
+
+    async function desenharArquivos() {
+        $('limite-arquivos').textContent = Armazem.LIMITE_ARQUIVOS;
+        const arquivos = await Armazem.listarArquivos();
+        const destino = $('lista-arquivos');
+        destino.innerHTML = '';
+        if (!arquivos.length) destino.appendChild(el('p', 'vazio', 'Nada impresso ainda. As provas impressas ou salvas em PDF aparecem aqui.'));
+        arquivos.forEach(function (a) {
+            const tipo = a.tipo === 'gabarito' ? 'Gabarito do professor' : (a.paginas + (a.paginas === 1 ? ' página' : ' páginas'));
+            destino.appendChild(el('div', 'prova-linha',
+                '<div class="info"><strong>' + esc(a.nome) + '</strong><span class="meta">' + esc(a.titulo + ' · ' + tipo + ' · gerado em ' + dataHora(a.criadoEm)) + '</span></div>' +
+                '<div class="acoes">' +
+                '<button type="button" class="btn btn--primary btn--pequeno" data-reabrir="' + esc(a.id) + '" title="Abre uma cópia desta versão para imprimir de novo ou ajustar">Abrir esta versão</button>' +
+                '<button type="button" class="btn btn--pequeno" data-exportar-arquivo="' + esc(a.id) + '">Exportar</button>' +
+                '<button type="button" class="btn btn--pequeno" data-apagar-arquivo="' + esc(a.id) + '">Apagar</button>' +
+                '</div>'));
+        });
     }
 
     async function usarModelo(id) {
@@ -141,8 +199,17 @@
         setTimeout(function () { URL.revokeObjectURL(a.href); a.remove(); }, 1000);
     }
 
-    function exportar(p) {
-        baixar(Modelos.nomeArquivo(p) + '.json', JSON.stringify({ app: 'montador-provas-malu', versao: 1, prova: p }, null, 1), 'application/json');
+    function exportar(p, nome) {
+        baixar((nome || Modelos.nomeArquivo(p)) + '.json', JSON.stringify({ app: 'montador-provas-malu', versao: 2, prova: p }, null, 1), 'application/json');
+    }
+
+    async function copiaComoNova(p, titulo) {
+        const copia = Modelos.normalizarProva(Modelos.copiar(p));
+        copia.id = Modelos.novoId('prova');
+        copia.titulo = titulo;
+        copia.criadaEm = Date.now();
+        await Armazem.salvar(copia);
+        return copia;
     }
 
     $('lista-modelos').addEventListener('click', function (e) {
@@ -163,20 +230,33 @@
         if (!alvo) return;
         if (alvo.dataset.duplicar) {
             const p = await Armazem.obter(alvo.dataset.duplicar);
-            const copia = Modelos.copiar(p);
-            copia.id = Modelos.novoId('prova');
-            copia.titulo = (p.titulo || 'Prova') + ' (cópia)';
-            copia.criadaEm = Date.now();
-            await Armazem.salvar(copia);
+            await copiaComoNova(p, (p.titulo || 'Prova') + ' (cópia)');
             desenharInicio();
         } else if (alvo.dataset.exportar) {
             exportar(await Armazem.obter(alvo.dataset.exportar));
         } else if (alvo.dataset.apagarProva) {
             const p = await Armazem.obter(alvo.dataset.apagarProva);
-            if (p && confirm('Apagar a prova "' + (p.titulo || 'sem título') + '"? Não dá para desfazer.')) {
+            if (p && confirm('Apagar a prova "' + (p.titulo || 'sem título') + '"? As versões impressas continuam em "Últimos arquivos gerados".')) {
                 await Armazem.apagar(p.id);
                 desenharInicio();
             }
+        }
+    });
+
+    $('lista-arquivos').addEventListener('click', async function (e) {
+        const alvo = e.target.closest('button');
+        if (!alvo) return;
+        const id = alvo.dataset.reabrir || alvo.dataset.exportarArquivo || alvo.dataset.apagarArquivo;
+        const a = await Armazem.obterArquivo(id);
+        if (!a) return;
+        if (alvo.dataset.reabrir) {
+            const nova = await copiaComoNova(a.prova, a.titulo + ' (versão de ' + new Date(a.criadoEm).toLocaleDateString('pt-BR') + ')');
+            location.hash = '#/prova/' + encodeURIComponent(nova.id);
+        } else if (alvo.dataset.exportarArquivo) {
+            exportar(a.prova, a.nome);
+        } else if (confirm('Apagar "' + a.nome + '" dos arquivos gerados?')) {
+            await Armazem.apagarArquivo(a.id);
+            desenharArquivos();
         }
     });
 
@@ -188,6 +268,7 @@
             const dados = JSON.parse(await arquivo.text());
             const p = dados && dados.prova;
             if (!p || !Array.isArray(p.secoes)) throw new Error('formato');
+            Modelos.normalizarProva(p);
             p.id = Modelos.novoId('prova');
             await Armazem.salvar(p);
             desenharInicio();
@@ -198,32 +279,43 @@
 
     /* ===================== formato (prova e modelo) ===================== */
 
-    function opcoesHtml(lista, atual) {
-        return lista.map(function (o) {
-            return '<option value="' + esc(o[0]) + '"' + (String(o[0]) === String(atual) ? ' selected' : '') + '>' + esc(o[1]) + '</option>';
-        }).join('');
+    function opcoesFonte(atual) {
+        return opcoesHtml(Object.keys(Modelos.FONTES).map(function (k) {
+            return [k, Modelos.FONTES[k].nome + (k === 'times' ? ' (padrão)' : '')];
+        }), atual);
+    }
+    function opcoesCorpo(atual) {
+        return opcoesHtml(CORPOS.map(function (c) { return [c, virgula(c) + ' pt' + (c === 10 ? ' (padrão)' : '')]; }), atual);
     }
 
-    /* Monta o formulário do formato e mexe direto no objeto `layout`. */
-    function formLayout(caixa, layout, aoMudar) {
+    /* Monta o formulário do formato e mexe direto no objeto `layout`.
+       comAparencia: o editor de modelos mostra também fonte, corpo etc.;
+       numa prova, essas opções ficam no passo "Aparência". */
+    function formLayout(caixa, layout, aoMudar, comAparencia) {
         caixa.innerHTML =
             '<div class="linha-campos">' +
             '<label class="campo-largo">Cabeçalho da 1ª página<select data-l="cabecalho">' + opcoesHtml([
-                ['faixa', 'Faixa em branco para o Identificador'],
-                ['completo', 'Cabeçalho completo (escola, aluno, turma, nota)'],
+                ['faixa', 'Faixa para o Identificador (com brasão)'],
+                ['completo', 'Cabeçalho completo com brasão'],
                 ['nenhum', 'Sem cabeçalho']], layout.cabecalho) + '</select></label>' +
             '<label data-se="faixa">Altura da faixa<select data-l="faixaCm" data-num>' + opcoesHtml([[2.5, '2,5 cm'], [3, '3 cm'], [3.5, '3,5 cm'], [4, '4 cm']], layout.faixaCm) + '</select></label>' +
             '</div>' +
+            (comAparencia ?
+                '<div class="linha-campos">' +
+                '<label class="campo-largo">Fonte<select data-l="fonte">' + opcoesFonte(layout.fonte) + '</select></label>' +
+                '<label>Tamanho<select data-l="corpoPt" data-num>' + opcoesCorpo(layout.corpoPt) + '</select></label>' +
+                '<label>Espaçamento<select data-l="espacamento">' + opcoesHtml([['compacto', 'Compacto'], ['normal', 'Normal'], ['amplo', 'Amplo']], layout.espacamento) + '</select></label>' +
+                '</div>' : '') +
             '<div class="linha-campos">' +
             '<label>Colunas<select data-l="colunas" data-num>' + opcoesHtml([[2, 'Duas'], [1, 'Uma']], layout.colunas) + '</select></label>' +
-            '<label>Letra<select data-l="corpoPt" data-num>' + opcoesHtml([[9, '9 pt'], [9.5, '9,5 pt'], [10, '10 pt'], [10.5, '10,5 pt'], [11, '11 pt'], [11.5, '11,5 pt'], [12, '12 pt'], [13, '13 pt']], layout.corpoPt) + '</select></label>' +
             '<label>Alternativas<select data-l="alternativas" data-num>' + opcoesHtml([[5, 'Cinco (a–e)'], [4, 'Quatro (a–d)']], layout.alternativas) + '</select></label>' +
-            '</div>' +
-            '<div class="linha-campos">' +
             '<label>Letras<select data-l="letras">' + opcoesHtml([['a)', 'a) b) c)'], ['A)', 'A) B) C)'], ['(A)', '(A) (B) (C)']], layout.letras) + '</select></label>' +
-            '<label>Numeração<select data-l="numeracao">' + opcoesHtml([['01.', '01. 02. 03.'], ['1.', '1. 2. 3.'], ['QUESTÃO 01', 'QUESTÃO 01']], layout.numeracao) + '</select></label>' +
+            '<label>Numeração<select data-l="numeracao">' + opcoesHtml([['01.', '01. 02.'], ['1.', '1. 2.'], ['QUESTÃO 01', 'QUESTÃO 01']], layout.numeracao) + '</select></label>' +
             '</div>' +
-            '<label class="opcao"><input type="checkbox" data-l="gabarito"' + (layout.gabarito ? ' checked' : '') + '> Gabarito com bolhas e marcas de alinhamento na 1ª página</label>' +
+            (comAparencia ?
+                '<label class="opcao"><input type="checkbox" data-l="gabarito"' + (layout.gabarito ? ' checked' : '') + '> Gabarito com bolhas e marcas de alinhamento na 1ª página</label>' +
+                '<label class="opcao"><input type="checkbox" data-l="icones"' + (layout.icones ? ' checked' : '') + '> Ícone da disciplina nos títulos das seções</label>' +
+                '<label class="opcao"><input type="checkbox" data-l="imagensCinza"' + (layout.imagensCinza ? ' checked' : '') + '> Imagens em tons de cinza (economiza tinta)</label>' : '') +
             '<label class="opcao"><input type="checkbox" data-l="linhaColunas"' + (layout.linhaColunas ? ' checked' : '') + '> Linha entre as colunas</label>' +
             '<label class="opcao"><input type="checkbox" data-l="numeroPagina"' + (layout.numeroPagina ? ' checked' : '') + '> Número da página no pé (1/8)</label>' +
             '<label class="opcao"><input type="checkbox" data-l="instrucoes"' + (layout.instrucoes ? ' checked' : '') + '> Quadro de instruções</label>' +
@@ -268,28 +360,74 @@
         $('ed-titulo').textContent = prova.titulo || 'Prova sem título';
     }
 
+    /* ----- desfazer ----- */
+
+    function marcar() {
+        if (!prova) return;
+        const foto = JSON.stringify(prova);
+        if (historico[historico.length - 1] === foto) return;
+        historico.push(foto);
+        if (historico.length > 30) historico.shift();
+        $('ed-desfazer').disabled = false;
+    }
+
+    function desfazer() {
+        if (!historico.length) return;
+        const atual = JSON.stringify(prova);
+        let anterior = historico.pop();
+        /* a foto tirada ao entrar no campo pode ser igual ao estado atual */
+        while (anterior === atual && historico.length) anterior = historico.pop();
+        if (anterior === atual) { $('ed-desfazer').disabled = true; return; }
+        prova = JSON.parse(anterior);
+        $('ed-desfazer').disabled = !historico.length;
+        redesenharTudo();
+        mudou();
+        $('ed-status').textContent = 'Desfeito';
+    }
+    $('ed-desfazer').onclick = desfazer;
+    document.addEventListener('keydown', function (e) {
+        if (document.body.dataset.tela !== 'editor') return;
+        if ((e.ctrlKey || e.metaKey) && !e.shiftKey && e.key.toLowerCase() === 'z' && !/^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement.tagName)) {
+            e.preventDefault();
+            desfazer();
+        }
+    });
+    /* foto ao entrar num campo: o desfazer volta ao que estava antes de digitar */
+    $('editor').addEventListener('focusin', function (e) {
+        if (/^(INPUT|TEXTAREA|SELECT)$/.test(e.target.tagName)) marcar();
+    });
+
+    /* ----- abrir ----- */
+
     function abrirProva(p) {
-        prova = p;
+        prova = Modelos.normalizarProva(p);
         abertas = new Set();
-        const todas = Modelos.questoesNumeradas(p);
-        if (!todas.length) {
+        historico = [];
+        $('ed-desfazer').disabled = true;
+        $('proposta').hidden = true;
+        if (!Modelos.questoesNumeradas(p).length && !p.secoes.some(function (s) { return s.questoes.length; })) {
             /* prova nova: a primeira seção já ganha uma questão aberta */
             const q = Modelos.novaQuestao('objetiva', 5);
-            p.secoes[0] = p.secoes[0] || Modelos.novaSecao('');
             p.secoes[0].questoes.push(q);
             abertas.add(q.id);
         }
         mostrar('editor');
-        $('ed-titulo').textContent = p.titulo || 'Prova sem título';
         $('ed-modelo').textContent = (p.fixo ? '🔒 ' : '') + p.modeloNome;
         $('ed-modelo').className = 'selo' + (p.fixo ? ' selo--fixo' : '');
         $('ed-status').textContent = 'Salvo neste navegador';
         document.title = (p.titulo || 'Prova') + ' — Montador de Provas da Malu';
+        $('copias').value = guardado('copias', '35');
+        zoom = 'ajustar';
+        redesenharTudo();
+        repaginar();
+    }
+
+    function redesenharTudo() {
+        $('ed-titulo').textContent = prova.titulo || 'Prova sem título';
         preencherDados();
+        preencherAparencia();
         desenharFormato();
         desenharSecoes();
-        zoom = 'ajustar';
-        repaginar();
     }
 
     function preencherDados() {
@@ -307,7 +445,7 @@
 
     function secoesVazias(p) {
         return p.secoes.every(function (s) {
-            return s.questoes.every(function (q) { return !String(q.enunciado || '').trim() && !q.imagem; });
+            return s.questoes.every(function (q) { return !String(q.enunciado || '').trim() && !(q.imagens || []).length; });
         });
     }
 
@@ -340,15 +478,39 @@
         mudou();
     }
 
+    /* ----- aparência ----- */
+
+    $('ap-fonte').innerHTML = opcoesFonte('times');
+    $('ap-corpo').innerHTML = opcoesCorpo(10);
+
+    function preencherAparencia() {
+        const layout = Modelos.layoutDaProva(prova);
+        document.querySelectorAll('#editor [data-a]').forEach(function (campo) {
+            const v = layout[campo.dataset.a];
+            if (campo.type === 'checkbox') campo.checked = !!v;
+            else campo.value = v;
+        });
+    }
+
+    document.querySelectorAll('#editor [data-a]').forEach(function (campo) {
+        campo.addEventListener('change', function () {
+            const nome = campo.dataset.a;
+            prova.ajustes = prova.ajustes || {};
+            prova.ajustes[nome] = campo.type === 'checkbox' ? campo.checked : ('num' in campo.dataset ? Number(campo.value) : campo.value);
+            $('proposta').hidden = true;
+            mudou();
+        });
+    });
+
     function desenharFormato() {
         const caixa = $('formato');
         if (prova.fixo) {
             const layout = Modelos.layoutDaProva(prova);
             caixa.innerHTML = '<div class="formato-travado"><strong>🔒 Formato fixo da Avaliação Bimestral Malu</strong>' +
-                '<ul><li>Faixa de ' + String(layout.faixaCm).replace('.', ',') + ' cm em branco para o Identificador de Provas</li>' +
-                '<li>Quadro de instruções da escola</li><li>Gabarito com as marcas de alinhamento na 1ª página (até ' + Gabarito.capacidade() + ' questões)</li>' +
-                '<li>Duas colunas, Arial ' + String(layout.corpoPt).replace('.', ',') + ' pt, alternativas de a) a e), numeração 01.</li></ul>' +
-                'O conteúdo é todo seu; o formato é o da escola e não muda. Se esta prova precisa de outro formato, ' +
+                '<ul><li>Faixa de ' + virgula(layout.faixaCm) + ' cm para o cabeçalho do Identificador de Provas, com o brasão</li>' +
+                '<li>Quadro de instruções da escola</li><li>Gabarito com as marcas de alinhamento (até ' + Gabarito.capacidade() + ' questões) — pode tirar no passo 2</li>' +
+                '<li>Duas colunas, alternativas de a) a e), numeração 01.</li></ul>' +
+                'Fonte, tamanho, espaçamento e gabarito você ajusta no passo 2. Se esta prova precisa de outro formato, ' +
                 '<button type="button" class="btn btn--pequeno" id="tornar-livre">fazer uma cópia com formato livre</button></div>';
             $('tornar-livre').onclick = async function () {
                 if (!confirm('Criar uma cópia desta prova com o formato livre? A cópia deixa de ser a Avaliação Bimestral padrão; esta continua como está.')) return;
@@ -366,9 +528,9 @@
         caixa.appendChild(form);
         formLayout(form, prova.layout, function (campo) {
             visibilidadeDados();
-            if (campo === 'alternativas') desenharSecoes();
+            if (campo === 'alternativas' || campo === 'letras') desenharSecoes();
             mudou();
-        });
+        }, false);
         const salvarModelo = el('div', 'acoes-lista', '<button type="button" class="btn btn--pequeno">Salvar este formato como modelo</button>');
         salvarModelo.querySelector('button').onclick = function () {
             const nome = prompt('Nome do novo modelo (ex.: Recuperação Paralela):');
@@ -392,45 +554,74 @@
     function resumo(q) {
         const primeiro = Texto.paragrafos(q.enunciado)[0];
         if (primeiro) return { texto: (q.fonte ? '(' + q.fonte + ') ' : '') + Texto.semMarcas(primeiro), vazio: false };
-        return { texto: q.imagem ? '(só imagem)' : 'enunciado ainda vazio', vazio: !q.imagem };
+        return { texto: (q.imagens || []).length ? '(só imagem)' : (q.tipo === 'texto' ? 'texto de apoio vazio' : 'enunciado ainda vazio'), vazio: !(q.imagens || []).length };
     }
 
     function etiqueta(q) {
+        if (q.tipo === 'texto') return '<span class="q-tag texto">texto de apoio</span>';
         if (q.tipo === 'discursiva') return '<span class="q-tag">discursiva</span>';
         return q.correta ? '<span class="q-tag certa">' + q.correta + '</span>' : '<span class="q-tag falta">sem resposta</span>';
     }
 
+    function ferramentasTexto() {
+        return '<div class="fmt" role="toolbar" aria-label="Formatação">' +
+            '<button type="button" data-fmt="b" title="Negrito (Ctrl+B)"><b>N</b></button>' +
+            '<button type="button" data-fmt="i" title="Itálico (Ctrl+I)"><i>I</i></button>' +
+            '<button type="button" data-fmt="sub" title="Índice (H₂O)">x<sub>2</sub></button>' +
+            '<button type="button" data-fmt="sup" title="Expoente (x²)">x<sup>2</sup></button>' +
+            '</div>';
+    }
+
+    function controleTamanho(campo, valor) {
+        return '<label class="tamanho">Tamanho <input type="range" min="15" max="100" step="5" data-campo="' + campo + '" value="' + valor + '"><output>' + valor + '%</output></label>';
+    }
+
+    function imagensHtml(q) {
+        const lista = (q.imagens || []).map(function (img) {
+            return '<div class="img-item" data-img="' + img.id + '"><img src="' + img.src + '" alt="">' +
+                '<div class="img-controles">' +
+                '<label>Posição<select data-campo="img-posicao">' + opcoesHtml(POSICOES, img.posicao) + '</select></label>' +
+                controleTamanho('img-largura', img.largura || 100) +
+                '</div><button type="button" class="icone icone--perigo" data-acao="img-remover" title="Tirar a imagem">✕</button></div>';
+        }).join('');
+        return '<div class="imagens">' + lista + '</div>' +
+            '<div class="zona-linha"><div class="zona-colar" contenteditable="true" spellcheck="false" data-zona ' +
+            'title="Clique aqui e cole (Ctrl+V), ou arraste uma imagem" aria-label="Área para colar imagem ou texto"></div>' +
+            '<button type="button" class="btn btn--pequeno" data-acao="img-escolher">Escolher imagem…</button></div>';
+    }
+
     function questaoHtml(q, numero, layout) {
         const r = resumo(q);
-        while (q.alternativas.length < 5 && q.tipo === 'objetiva') q.alternativas.push('');
+        const texto = q.tipo === 'texto';
+        if (q.tipo === 'objetiva') while (q.alternativas.length < 5) q.alternativas.push('');
         let corpo = '<div class="linha-campos">' +
-            '<label>Tipo<select data-campo="tipo">' + opcoesHtml([['objetiva', 'Objetiva'], ['discursiva', 'Discursiva']], q.tipo) + '</select></label>' +
-            '<label class="campo-largo">Fonte <small>(sai entre parênteses)</small><input type="text" data-campo="fonte" value="' + esc(q.fonte || '') + '" placeholder="Ex.: Enem, Uece, autoral"></label>' +
+            '<label>Tipo<select data-campo="tipo">' + opcoesHtml([['objetiva', 'Objetiva'], ['discursiva', 'Discursiva'], ['texto', 'Texto de apoio']], q.tipo) + '</select></label>' +
+            (texto ? '' : '<label class="campo-largo">Fonte <small>(sai entre parênteses)</small><input type="text" data-campo="fonte" value="' + esc(q.fonte || '') + '" placeholder="Ex.: Enem, Uece, autoral"></label>') +
             '</div>' +
-            '<label>Enunciado<textarea data-campo="enunciado" rows="4" placeholder="Texto da questão. Cada linha é um parágrafo.">' + esc(q.enunciado || '') + '</textarea></label>';
-
-        corpo += '<div class="q-imagem">';
-        if (q.imagem) {
-            corpo += '<img src="' + q.imagem.src + '" alt="">' +
-                '<label>Largura<select data-campo="img-largura">' + opcoesHtml([[100, 'Coluna toda'], [80, '80%'], [60, '60%'], [40, '40%']], q.imagem.largura || 100) + '</select></label>' +
-                '<button type="button" class="btn btn--pequeno" data-acao="img-remover">Tirar a imagem</button>';
-        } else {
-            corpo += '<label class="btn btn--pequeno">+ Imagem<input type="file" accept="image/*" data-acao="img-arquivo" hidden></label>' +
-                '<small class="dica">ou cole (Ctrl+V) no enunciado</small>';
-        }
-        corpo += '</div>';
+            (texto ? '<p class="dica dica--pequena">Texto, tirinha, gráfico ou tabela que serve a várias questões. Não leva número nem entra no gabarito.</p>' : '') +
+            '<div class="campo-texto"><div class="campo-texto-cab"><span>' + (texto ? 'Texto' : 'Enunciado') + '</span>' + ferramentasTexto() + '</div>' +
+            '<textarea data-campo="enunciado" rows="4" placeholder="' + (texto ? 'TEXTO I&#10;Cole ou escreva o texto de apoio.' : 'Texto da questão. Cada linha é um parágrafo.') + '">' + esc(q.enunciado || '') + '</textarea></div>' +
+            imagensHtml(q);
 
         if (q.tipo === 'objetiva') {
-            corpo += '<div class="alternativas">';
+            corpo += '<div class="alternativas">' +
+                '<div class="disposicao"><label>Alternativas<select data-campo="disposicao">' + opcoesHtml(DISPOSICOES, q.disposicao || 'auto') + '</select></label>' +
+                '<span class="disp-auto" data-disp-auto></span></div>';
             for (let i = 0; i < layout.alternativas; i++) {
                 const letraMaiuscula = 'ABCDE'[i];
-                corpo += '<div class="alt"><label class="alt-letra" title="Marcar como a resposta certa">' +
+                const img = (q.altImagens || [])[i];
+                corpo += '<div class="alt" data-i="' + i + '"><label class="alt-letra" title="Marcar como a resposta certa">' +
                     '<input type="radio" name="certa-' + q.id + '" value="' + letraMaiuscula + '" data-campo="correta"' + (q.correta === letraMaiuscula ? ' checked' : '') + '>' +
                     esc(Modelos.letra(i, layout.letras)) + '</label>' +
-                    '<textarea rows="1" data-campo="alt" data-i="' + i + '">' + esc(q.alternativas[i] || '') + '</textarea></div>';
+                    '<div class="alt-corpo"><textarea rows="1" data-campo="alt" data-i="' + i + '">' + esc(q.alternativas[i] || '') + '</textarea>' +
+                    (img ? '<div class="alt-img"><img src="' + img.src + '" alt="">' + controleTamanho('alt-img-largura', img.largura || 40) +
+                        '<button type="button" class="icone icone--perigo" data-acao="alt-img-remover" title="Tirar a imagem">✕</button></div>' : '') +
+                    '</div>' +
+                    (img ? '' : '<button type="button" class="icone" data-acao="alt-img" title="Pôr uma imagem nesta alternativa">🖼</button>') +
+                    '</div>';
             }
-            corpo += '<small>Marque a bolinha da alternativa certa: ela vai para o gabarito do professor, nunca para a prova.</small></div>';
-        } else {
+            corpo += '<small>Marque a bolinha da alternativa certa: ela vai para o gabarito do professor, nunca para a prova. Alternativa só com imagem: deixe o texto vazio.</small></div>';
+        } else if (q.tipo === 'discursiva') {
             corpo += '<div class="linha-campos"><label>Linhas para a resposta<input type="number" min="0" max="40" data-campo="linhas" value="' + (q.linhas | 0) + '"></label></div>';
         }
 
@@ -440,10 +631,19 @@
             '<button type="button" class="btn btn--pequeno" data-acao="q-duplicar">Duplicar</button>' +
             '<button type="button" class="btn btn--pequeno" data-acao="q-apagar">Apagar</button></div>';
 
-        return '<details class="questao" data-q="' + q.id + '"' + (abertas.has(q.id) ? ' open' : '') + '>' +
-            '<summary><span class="q-numero">' + (numero < 10 ? '0' : '') + numero + '</span>' +
+        const rotulo = texto ? '<span class="q-numero q-numero--texto">T</span>' : '<span class="q-numero">' + (numero < 10 ? '0' : '') + numero + '</span>';
+        return '<details class="questao' + (texto ? ' questao--texto' : '') + '" data-q="' + q.id + '"' + (abertas.has(q.id) ? ' open' : '') + '>' +
+            '<summary>' + rotulo +
             '<span class="q-resumo' + (r.vazio ? ' vazio-q' : '') + '">' + esc(r.texto) + '</span>' + etiqueta(q) + '</summary>' +
             '<div class="q-corpo">' + corpo + '</div></details>';
+    }
+
+    function opcoesIcone(secao) {
+        const detectado = Icones.detectar(secao.titulo);
+        const nomeDetectado = detectado ? Icones.lista().filter(function (i) { return i.chave === detectado; })[0].nome : 'nenhum';
+        return opcoesHtml([['auto', 'Ícone automático (' + nomeDetectado + ')']]
+            .concat(Icones.lista().map(function (i) { return [i.chave, i.nome]; }))
+            .concat([['nenhum', 'Sem ícone']]), secao.icone || 'auto');
     }
 
     function desenharSecoes() {
@@ -452,17 +652,25 @@
         const rolagem = $('editor').scrollTop;
         let n = 0;
         caixa.innerHTML = prova.secoes.map(function (s, i) {
+            const icone = Icones.resolver(s.icone, s.titulo);
             return '<div class="secao" data-s="' + s.id + '">' +
-                '<div class="secao-cab"><input type="text" data-campo="secao-titulo" value="' + esc(s.titulo || '') + '" placeholder="Título da seção (ex.: BIOLOGIA) — opcional">' +
+                '<div class="secao-cab"><span class="secao-icone">' + (icone ? Icones.svg(icone, 'icone-ui') : '') + '</span>' +
+                '<input type="text" data-campo="secao-titulo" value="' + esc(s.titulo || '') + '" placeholder="Título da seção (ex.: BIOLOGIA) — opcional">' +
                 '<button type="button" class="icone" data-acao="secao-subir" title="Subir a seção"' + (i === 0 ? ' disabled' : '') + '>↑</button>' +
                 '<button type="button" class="icone" data-acao="secao-descer" title="Descer a seção"' + (i === prova.secoes.length - 1 ? ' disabled' : '') + '>↓</button>' +
                 '<button type="button" class="icone icone--perigo" data-acao="secao-apagar" title="Apagar a seção">✕</button></div>' +
-                s.questoes.map(function (q) { n++; return questaoHtml(q, n, layout); }).join('') +
-                '<div class="secao-acoes"><button type="button" class="btn btn--pequeno" data-acao="add-objetiva">+ Questão objetiva</button>' +
-                '<button type="button" class="btn btn--pequeno" data-acao="add-discursiva">+ Questão discursiva</button></div></div>';
+                '<div class="secao-icone-escolha"><select data-campo="secao-icone" aria-label="Ícone da seção">' + opcoesIcone(s) + '</select></div>' +
+                s.questoes.map(function (q) {
+                    if (q.tipo !== 'texto') n++;
+                    return questaoHtml(q, n, layout);
+                }).join('') +
+                '<div class="secao-acoes"><button type="button" class="btn btn--pequeno" data-acao="add-objetiva">+ Objetiva</button>' +
+                '<button type="button" class="btn btn--pequeno" data-acao="add-discursiva">+ Discursiva</button>' +
+                '<button type="button" class="btn btn--pequeno" data-acao="add-texto">+ Texto de apoio</button></div></div>';
         }).join('');
         $('editor').scrollTop = rolagem;
         ajustarAlturas(caixa);
+        mostrarDisposicoes();
     }
 
     /* as caixas das alternativas crescem com o texto */
@@ -483,6 +691,18 @@
         questaoEl.querySelector('.q-tag').outerHTML = etiqueta(q);
     }
 
+    /* mostra, nas questões em "automática", o que a paginação escolheu */
+    function mostrarDisposicoes() {
+        if (!ultimoResultado) return;
+        document.querySelectorAll('#secoes [data-q]').forEach(function (qel) {
+            const alvo = qel.querySelector('[data-disp-auto]');
+            if (!alvo) return;
+            const achado = acharQuestao(qel.dataset.q);
+            const escolha = ultimoResultado.disposicoes[qel.dataset.q];
+            alvo.textContent = achado && achado.questao.disposicao === 'auto' && escolha ? 'na prova: ' + NOMES_DISPOSICAO[escolha] : '';
+        });
+    }
+
     const caixaSecoes = $('secoes');
 
     caixaSecoes.addEventListener('toggle', function (e) {
@@ -491,12 +711,29 @@
         if (d.open) { abertas.add(d.dataset.q); ajustarAlturas(d); } else abertas.delete(d.dataset.q);
     }, true);
 
+    function imagemDoElemento(qel, alvo) {
+        const achado = acharQuestao(qel.dataset.q);
+        const item = alvo.closest('[data-img]');
+        return { achado: achado, img: item ? achado.questao.imagens.find(function (i) { return i.id === item.dataset.img; }) : null };
+    }
+
     function aoEditarQuestao(e) {
         const campo = e.target.dataset.campo;
         if (!campo) return;
-        if (campo === 'secao-titulo') {
-            const s = prova.secoes.find(function (x) { return x.id === e.target.closest('[data-s]').dataset.s; });
-            s.titulo = e.target.value;
+        const secaoEl = e.target.closest('[data-s]');
+        if (campo === 'secao-titulo' || campo === 'secao-icone') {
+            const s = prova.secoes.find(function (x) { return x.id === secaoEl.dataset.s; });
+            if (campo === 'secao-titulo') {
+                s.titulo = e.target.value;
+                const icone = Icones.resolver(s.icone, s.titulo);
+                secaoEl.querySelector('.secao-icone').innerHTML = icone ? Icones.svg(icone, 'icone-ui') : '';
+                secaoEl.querySelector('[data-campo="secao-icone"]').innerHTML = opcoesIcone(s);
+            } else {
+                if (e.type !== 'change') return;
+                s.icone = e.target.value;
+                const icone = Icones.resolver(s.icone, s.titulo);
+                secaoEl.querySelector('.secao-icone').innerHTML = icone ? Icones.svg(icone, 'icone-ui') : '';
+            }
             mudou();
             return;
         }
@@ -509,6 +746,9 @@
             q.tipo = e.target.value;
             if (q.tipo === 'objetiva') while (q.alternativas.length < 5) q.alternativas.push('');
             desenharSecoes();
+        } else if (campo === 'disposicao') {
+            if (e.type !== 'change') return;
+            q.disposicao = e.target.value;
         } else if (campo === 'alt') {
             q.alternativas[Number(e.target.dataset.i)] = e.target.value.replace(/\n/g, ' ');
             crescer(e.target);
@@ -517,8 +757,14 @@
             atualizarResumo(qel, q);
         } else if (campo === 'linhas') {
             q.linhas = Math.max(0, Math.min(40, parseInt(e.target.value, 10) || 0));
-        } else if (campo === 'img-largura') {
-            q.imagem.largura = Number(e.target.value);
+        } else if (campo === 'img-largura' || campo === 'img-posicao') {
+            const img = imagemDoElemento(qel, e.target).img;
+            if (campo === 'img-largura') { img.largura = Number(e.target.value); e.target.nextElementSibling.textContent = img.largura + '%'; }
+            else img.posicao = e.target.value;
+        } else if (campo === 'alt-img-largura') {
+            const i = Number(e.target.closest('[data-i]').dataset.i);
+            q.altImagens[i].largura = Number(e.target.value);
+            e.target.nextElementSibling.textContent = e.target.value + '%';
         } else {
             q[campo] = e.target.value;
             atualizarResumo(qel, q);
@@ -528,26 +774,188 @@
 
     caixaSecoes.addEventListener('input', aoEditarQuestao);
     caixaSecoes.addEventListener('change', function (e) {
-        if (e.target.dataset.acao === 'img-arquivo') {
-            const arquivo = e.target.files[0];
-            const qel = e.target.closest('[data-q]');
-            if (arquivo && qel) definirImagem(qel.dataset.q, arquivo);
-            return;
-        }
         const campo = e.target.dataset.campo;
-        if (campo === 'tipo' || campo === 'correta' || campo === 'img-largura') aoEditarQuestao(e);
+        if (['tipo', 'correta', 'img-posicao', 'disposicao', 'secao-icone'].indexOf(campo) !== -1) aoEditarQuestao(e);
     });
+
+    /* ----- formatação: botões e atalhos ----- */
+
+    const MARCAS = { b: ['**', '**'], i: ['*', '*'], sub: ['~', '~'], sup: ['^', '^'] };
+    let ultimoCampoTexto = null;
+
+    caixaSecoes.addEventListener('focusin', function (e) {
+        if (e.target.tagName === 'TEXTAREA') ultimoCampoTexto = e.target;
+    });
+
+    function aplicarMarca(campo, tipo) {
+        const m = MARCAS[tipo];
+        const ini = campo.selectionStart;
+        const fim = campo.selectionEnd;
+        const selecionado = campo.value.slice(ini, fim);
+        if (selecionado) {
+            campo.setRangeText(m[0] + selecionado + m[1], ini, fim, 'end');
+        } else {
+            campo.setRangeText(m[0] + m[1], ini, fim, 'end');
+            campo.selectionStart = campo.selectionEnd = ini + m[0].length;
+        }
+        campo.focus();
+        campo.dispatchEvent(new Event('input', { bubbles: true }));
+    }
+
+    caixaSecoes.addEventListener('mousedown', function (e) {
+        /* o botão não rouba o foco (e a seleção) da caixa de texto */
+        if (e.target.closest('[data-fmt]')) e.preventDefault();
+    });
+
+    caixaSecoes.addEventListener('keydown', function (e) {
+        if (e.target.tagName !== 'TEXTAREA' || !(e.ctrlKey || e.metaKey)) return;
+        const tecla = e.key.toLowerCase();
+        if (tecla === 'b' || tecla === 'i') {
+            e.preventDefault();
+            aplicarMarca(e.target, tecla);
+        }
+    });
+
+    /* ----- imagens: colar, arrastar, escolher ----- */
+
+    let alvoImagem = null;
+
+    /* A imagem entra reduzida (até 1600 px no lado maior): dá nitidez de
+       sobra no papel e não pesa a prova guardada. */
+    async function carregarImagem(arquivo) {
+        const url = URL.createObjectURL(arquivo);
+        try {
+            const img = new Image();
+            img.src = url;
+            await img.decode();
+            const k = Math.min(1, 1600 / Math.max(img.naturalWidth, img.naturalHeight));
+            const w = Math.max(1, Math.round(img.naturalWidth * k));
+            const h = Math.max(1, Math.round(img.naturalHeight * k));
+            const canvas = document.createElement('canvas');
+            canvas.width = w;
+            canvas.height = h;
+            const ctx = canvas.getContext('2d');
+            ctx.fillStyle = '#fff';
+            ctx.fillRect(0, 0, w, h);
+            ctx.drawImage(img, 0, 0, w, h);
+            let src = canvas.toDataURL('image/png');
+            if (!/png|gif/.test(arquivo.type) || src.length > 1500000) src = canvas.toDataURL('image/jpeg', 0.88);
+            /* largura inicial: figura pequena não estica (a 96 dpi da tela) */
+            const larguraNatural = Math.round(Math.min(100, Math.max(25, (w / 330) * 100)) / 5) * 5;
+            return { id: Modelos.novoId('img'), src: src, w: w, h: h, largura: larguraNatural, posicao: 'abaixo' };
+        } finally {
+            URL.revokeObjectURL(url);
+        }
+    }
+
+    /* alvo: { qid, alt (índice da alternativa) | undefined } */
+    async function receberImagens(alvo, arquivos) {
+        arquivos = Array.from(arquivos || []).filter(function (f) { return /^image\//.test(f.type); });
+        if (!arquivos.length) return;
+        const achado = acharQuestao(alvo.qid);
+        if (!achado) return;
+        marcar();
+        try {
+            for (const arquivo of arquivos) {
+                const imagem = await carregarImagem(arquivo);
+                if (alvo.alt != null) {
+                    imagem.largura = 40;
+                    achado.questao.altImagens[alvo.alt] = imagem;
+                    break; /* uma por alternativa */
+                }
+                achado.questao.imagens.push(imagem);
+            }
+            abertas.add(alvo.qid);
+            desenharSecoes();
+            mudou();
+        } catch (erro) {
+            alert('Não consegui abrir esta imagem. Tente salvar como PNG ou JPG e enviar pelo botão.');
+        }
+    }
+
+    $('arquivo-imagem').addEventListener('change', function () {
+        if (alvoImagem) receberImagens(alvoImagem, this.files);
+        this.value = '';
+    });
+
+    function escolherImagem(alvo) {
+        alvoImagem = alvo;
+        $('arquivo-imagem').multiple = alvo.alt == null;
+        $('arquivo-imagem').click();
+    }
 
     caixaSecoes.addEventListener('paste', function (e) {
-        if (e.target.dataset.campo !== 'enunciado') return;
-        const itens = Array.from((e.clipboardData && e.clipboardData.files) || []);
-        const imagem = itens.find(function (f) { return /^image\//.test(f.type); });
-        if (!imagem) return;
-        e.preventDefault();
-        definirImagem(e.target.closest('[data-q]').dataset.q, imagem);
+        const qel = e.target.closest('[data-q]');
+        if (!qel) return;
+        const lido = Colar.ler(e);
+        const naAlternativa = e.target.dataset.campo === 'alt' ? Number(e.target.dataset.i) : null;
+        const ehTexto = e.target.tagName === 'TEXTAREA';
+
+        if (lido.imagens.length && !(ehTexto && lido.texto.trim())) {
+            e.preventDefault();
+            receberImagens({ qid: qel.dataset.q, alt: naAlternativa }, lido.imagens);
+            return;
+        }
+        if (lido.perdidas) $('ed-status').textContent = 'Imagem do Word não veio junto: copie a imagem sozinha e cole de novo';
+
+        const temHtml = e.clipboardData && e.clipboardData.getData('text/html');
+        if (ehTexto && temHtml && lido.texto) {
+            /* texto formatado do Word ou de um site: entra com a marcação */
+            e.preventDefault();
+            marcar();
+            const texto = e.target.dataset.campo === 'alt' ? lido.texto.replace(/\n/g, ' ') : lido.texto;
+            e.target.setRangeText(texto, e.target.selectionStart, e.target.selectionEnd, 'end');
+            e.target.dispatchEvent(new Event('input', { bubbles: true }));
+            return;
+        }
+        if (!ehTexto) {
+            /* a zona de colar não guarda nada: o texto vai para o fim do enunciado */
+            e.preventDefault();
+            if (!lido.texto.trim()) return;
+            marcar();
+            const q = acharQuestao(qel.dataset.q).questao;
+            q.enunciado = (q.enunciado ? q.enunciado.replace(/\s+$/, '') + '\n' : '') + lido.texto;
+            abertas.add(q.id);
+            desenharSecoes();
+            mudou();
+        }
     });
 
+    /* na zona de colar não se digita: ela só recebe o que é colado ou arrastado */
+    caixaSecoes.addEventListener('beforeinput', function (e) {
+        if (e.target.dataset && 'zona' in e.target.dataset && e.inputType !== 'insertFromPaste') e.preventDefault();
+    });
+
+    caixaSecoes.addEventListener('dragover', function (e) {
+        const qel = e.target.closest('[data-q]');
+        if (!qel || !e.dataTransfer) return;
+        if (Array.from(e.dataTransfer.types || []).indexOf('Files') === -1) return;
+        e.preventDefault();
+        qel.classList.add('arrastando');
+    });
+    caixaSecoes.addEventListener('dragleave', function (e) {
+        const qel = e.target.closest('[data-q]');
+        if (qel && !qel.contains(e.relatedTarget)) qel.classList.remove('arrastando');
+    });
+    caixaSecoes.addEventListener('drop', function (e) {
+        const qel = e.target.closest('[data-q]');
+        if (!qel || !e.dataTransfer || !e.dataTransfer.files.length) return;
+        e.preventDefault();
+        qel.classList.remove('arrastando');
+        const alt = e.target.closest('.alt');
+        receberImagens({ qid: qel.dataset.q, alt: alt ? Number(alt.dataset.i) : null }, e.dataTransfer.files);
+    });
+
+    /* ----- botões das seções e questões ----- */
+
     caixaSecoes.addEventListener('click', function (e) {
+        const fmt = e.target.closest('[data-fmt]');
+        if (fmt) {
+            const qel = fmt.closest('[data-q]');
+            const campo = (ultimoCampoTexto && qel.contains(ultimoCampoTexto)) ? ultimoCampoTexto : qel.querySelector('textarea[data-campo="enunciado"]');
+            aplicarMarca(campo, fmt.dataset.fmt);
+            return;
+        }
         const botao = e.target.closest('[data-acao]');
         if (!botao || botao.tagName === 'INPUT') return;
         const acao = botao.dataset.acao;
@@ -556,8 +964,12 @@
         const qel = botao.closest('[data-q]');
         const achado = qel && acharQuestao(qel.dataset.q);
 
-        if (acao === 'add-objetiva' || acao === 'add-discursiva') {
-            const q = Modelos.novaQuestao(acao === 'add-objetiva' ? 'objetiva' : 'discursiva', 5);
+        if (acao === 'img-escolher') { escolherImagem({ qid: qel.dataset.q }); return; }
+        if (acao === 'alt-img') { escolherImagem({ qid: qel.dataset.q, alt: Number(botao.closest('[data-i]').dataset.i) }); return; }
+
+        marcar();
+        if (acao === 'add-objetiva' || acao === 'add-discursiva' || acao === 'add-texto') {
+            const q = Modelos.novaQuestao(acao.slice(4), 5);
             secao.questoes.push(q);
             abertas.add(q.id);
             desenharSecoes();
@@ -571,7 +983,7 @@
             prova.secoes.splice(j, 0, secao);
             desenharSecoes();
         } else if (acao === 'secao-apagar') {
-            if (secao.questoes.length && !confirm('Apagar a seção "' + (secao.titulo || 'sem título') + '" com as ' + secao.questoes.length + ' questões dela?')) return;
+            if (secao.questoes.length && !confirm('Apagar a seção "' + (secao.titulo || 'sem título') + '" com as ' + secao.questoes.length + ' questões dela? (Dá para desfazer.)')) return;
             prova.secoes.splice(prova.secoes.indexOf(secao), 1);
             if (!prova.secoes.length) prova.secoes.push(Modelos.novaSecao(''));
             desenharSecoes();
@@ -585,13 +997,15 @@
             abertas.add(copia.id);
             desenharSecoes();
         } else if (acao === 'q-apagar') {
-            const q = achado.questao;
-            const temConteudo = String(q.enunciado || '').trim() || q.imagem || q.alternativas.some(function (a) { return String(a || '').trim(); });
-            if (temConteudo && !confirm('Apagar esta questão?')) return;
             achado.secao.questoes.splice(achado.indice, 1);
+            $('ed-status').textContent = 'Questão apagada — ↶ Desfazer traz de volta';
             desenharSecoes();
         } else if (acao === 'img-remover') {
-            achado.questao.imagem = null;
+            const img = imagemDoElemento(qel, botao).img;
+            achado.questao.imagens = achado.questao.imagens.filter(function (i) { return i !== img; });
+            desenharSecoes();
+        } else if (acao === 'alt-img-remover') {
+            achado.questao.altImagens[Number(botao.closest('[data-i]').dataset.i)] = null;
             desenharSecoes();
         } else {
             return;
@@ -617,47 +1031,8 @@
         else vizinha.questoes.unshift(achado.questao);
     }
 
-    /* A imagem entra reduzida (até 1600 px no lado maior): dá nitidez de
-       sobra no papel e não pesa a prova guardada. */
-    async function carregarImagem(arquivo) {
-        const url = URL.createObjectURL(arquivo);
-        try {
-            const img = new Image();
-            img.src = url;
-            await img.decode();
-            const k = Math.min(1, 1600 / Math.max(img.naturalWidth, img.naturalHeight));
-            const w = Math.max(1, Math.round(img.naturalWidth * k));
-            const h = Math.max(1, Math.round(img.naturalHeight * k));
-            const canvas = document.createElement('canvas');
-            canvas.width = w;
-            canvas.height = h;
-            const ctx = canvas.getContext('2d');
-            ctx.fillStyle = '#fff';
-            ctx.fillRect(0, 0, w, h);
-            ctx.drawImage(img, 0, 0, w, h);
-            let src = canvas.toDataURL('image/png');
-            if (!/png|gif/.test(arquivo.type) || src.length > 1500000) src = canvas.toDataURL('image/jpeg', 0.9);
-            return { src: src, w: w, h: h, largura: 100 };
-        } finally {
-            URL.revokeObjectURL(url);
-        }
-    }
-
-    async function definirImagem(qid, arquivo) {
-        try {
-            const imagem = await carregarImagem(arquivo);
-            const achado = acharQuestao(qid);
-            if (!achado) return;
-            achado.questao.imagem = imagem;
-            abertas.add(qid);
-            desenharSecoes();
-            mudou();
-        } catch (erro) {
-            alert('Não consegui abrir esta imagem. Tente salvar como PNG ou JPG.');
-        }
-    }
-
     $('add-secao').onclick = function () {
+        marcar();
         prova.secoes.push(Modelos.novaSecao(''));
         desenharSecoes();
         const inputs = caixaSecoes.querySelectorAll('[data-campo="secao-titulo"]');
@@ -665,27 +1040,44 @@
         mudou();
     };
     $('abrir-todas').onclick = function () {
-        Modelos.questoesNumeradas(prova).forEach(function (i) { abertas.add(i.questao.id); });
+        prova.secoes.forEach(function (s) { s.questoes.forEach(function (q) { abertas.add(q.id); }); });
         desenharSecoes();
     };
     $('fechar-todas').onclick = function () { abertas.clear(); desenharSecoes(); };
 
-    /* ----- prévia ----- */
+    /* ----- prévia e economia ----- */
+
+    function folhasPorAluno(paginas) { return Math.ceil(paginas / 2); }
 
     function repaginar() {
         if (!prova || $('tela-editor').hidden) return;
         const r = Paginar.montar(prova, $('paginas'), {});
+        ultimoResultado = r;
         const total = Modelos.questoesNumeradas(prova).length;
-        $('previa-info').textContent = r.paginas + (r.paginas === 1 ? ' página' : ' páginas') + ' · ' +
-            total + (total === 1 ? ' questão' : ' questões') + (r.paginas % 2 ? ' · número ímpar de páginas' : '');
+        const folhas = folhasPorAluno(r.paginas);
+        $('previa-info').innerHTML = '<strong>' + r.paginas + (r.paginas === 1 ? ' página' : ' páginas') + '</strong> · ' +
+            folhas + (folhas === 1 ? ' folha' : ' folhas') + ' por aluno (frente e verso) · ' + total + (total === 1 ? ' questão' : ' questões');
+        atualizarTotalFolhas();
         aplicarZoom($('paginas'), $('previa-escala'), $('previa'));
-        mostrarAvisos(r.avisos, Modelos.pendencias(prova));
+        mostrarAvisos(r, Modelos.pendencias(prova));
+        mostrarDisposicoes();
     }
 
-    function mostrarAvisos(graves, pendencias) {
+    function atualizarTotalFolhas() {
+        if (!ultimoResultado) return;
+        const copias = Math.max(1, parseInt($('copias').value, 10) || 1);
+        $('folhas-total').textContent = (folhasPorAluno(ultimoResultado.paginas) * copias) + ' folhas';
+    }
+    $('copias').addEventListener('input', function () { guardar('copias', this.value); atualizarTotalFolhas(); });
+
+    function mostrarAvisos(r, pendencias) {
         const caixa = $('avisos');
         caixa.innerHTML = '';
-        graves.forEach(function (a) { caixa.appendChild(el('div', 'aviso aviso--erro', esc(a))); });
+        r.avisos.forEach(function (a) { caixa.appendChild(el('div', 'aviso aviso--erro', esc(a))); });
+        if (r.paginas > 1 && r.ocupacaoUltima < 0.3) {
+            caixa.appendChild(el('div', 'aviso', 'A última página está ' + (r.ocupacaoUltima < 0.1 ? 'quase vazia' : 'com pouco conteúdo') +
+                '. Clique em <strong>Economizar papel</strong>, acima da prévia, para ver se dá para tirar essa página.'));
+        }
         if (pendencias.length) {
             const lista = pendencias.slice(0, 12).map(function (p) { return '<li>' + esc(p) + '</li>'; }).join('') +
                 (pendencias.length > 12 ? '<li>… e mais ' + (pendencias.length - 12) + '.</li>' : '');
@@ -693,6 +1085,67 @@
         }
         caixa.hidden = !caixa.childNodes.length;
     }
+
+    /* Procura o menor número de páginas sem sacrificar a leitura: tenta
+       espaçamento compacto e letra um pouco menor (nunca abaixo de 9 pt) e,
+       entre as que empatam no mínimo, fica com a mais legível. */
+    function economizar() {
+        if (paginar.pendente()) paginar.agora();
+        const atual = Modelos.layoutDaProva(prova);
+        const paginasAtuais = ultimoResultado.paginas;
+        const corpos = CORPOS.filter(function (c) { return c <= atual.corpoPt && c >= Math.min(9, atual.corpoPt) && c >= atual.corpoPt - 1; });
+        const espacos = ['amplo', 'normal', 'compacto'].filter(function (e, i, l) { return l.indexOf(atual.espacamento) <= i; });
+        const ordem = { amplo: 0, normal: 1, compacto: 2 };
+        const destino = $('simulacao');
+        let melhor = { paginas: paginasAtuais, corpoPt: atual.corpoPt, espacamento: atual.espacamento };
+        corpos.slice().sort(function (a, b) { return b - a; }).forEach(function (corpo) {
+            espacos.forEach(function (espacamento) {
+                if (corpo === atual.corpoPt && espacamento === atual.espacamento) return;
+                const n = Paginar.montar(prova, destino, { ajustes: { corpoPt: corpo, espacamento: espacamento } }).paginas;
+                const maisLegivel = corpo > melhor.corpoPt || (corpo === melhor.corpoPt && ordem[espacamento] < ordem[melhor.espacamento]);
+                if (n < melhor.paginas || (n === melhor.paginas && n < paginasAtuais && maisLegivel)) {
+                    melhor = { paginas: n, corpoPt: corpo, espacamento: espacamento };
+                }
+            });
+        });
+        destino.innerHTML = '';
+
+        const caixa = $('proposta');
+        const copias = Math.max(1, parseInt($('copias').value, 10) || 1);
+        const dicas = [];
+        const fixas = Modelos.questoesNumeradas(prova).filter(function (i) { return i.questao.tipo === 'objetiva' && i.questao.disposicao === 'lista'; }).length;
+        if (fixas) dicas.push(fixas + (fixas === 1 ? ' questão está' : ' questões estão') + ' com alternativas "uma por linha" fixo; em "automática" as curtas vão lado a lado.');
+        const grandes = [];
+        prova.secoes.forEach(function (s) { s.questoes.forEach(function (q) { (q.imagens || []).forEach(function (img) { if (img.largura > 70) grandes.push(img); }); }); });
+        if (grandes.length) dicas.push(grandes.length + (grandes.length === 1 ? ' imagem ocupa' : ' imagens ocupam') + ' mais de 70% da coluna; reduzir o tamanho ou pôr "ao lado do texto" costuma poupar espaço.');
+        if (!atual.imagensCinza) dicas.push('Ligue "Imagens em tons de cinza" no passo 2 para gastar menos tinta.');
+
+        if (melhor.paginas < paginasAtuais) {
+            const poupa = (folhasPorAluno(paginasAtuais) - folhasPorAluno(melhor.paginas)) * copias;
+            caixa.innerHTML = '<strong>Dá para fazer a prova em ' + melhor.paginas + (melhor.paginas === 1 ? ' página' : ' páginas') + '</strong> em vez de ' + paginasAtuais +
+                ' com ' + (Modelos.FONTES[atual.fonte] || {}).nome + ' ' + virgula(melhor.corpoPt) + ' pt e espaçamento ' + melhor.espacamento +
+                (poupa > 0 ? ' — economia de <strong>' + poupa + ' folhas</strong> para ' + copias + ' alunos.' : '.') +
+                (dicas.length ? '<ul>' + dicas.map(function (d) { return '<li>' + esc(d) + '</li>'; }).join('') + '</ul>' : '') +
+                '<div class="acoes-lista"><button type="button" class="btn btn--primary btn--pequeno" id="aplicar-proposta">Aplicar</button>' +
+                '<button type="button" class="btn btn--pequeno" id="fechar-proposta">Deixar como está</button></div>';
+            $('aplicar-proposta').onclick = function () {
+                marcar();
+                prova.ajustes.corpoPt = melhor.corpoPt;
+                prova.ajustes.espacamento = melhor.espacamento;
+                preencherAparencia();
+                caixa.hidden = true;
+                mudou();
+            };
+        } else {
+            caixa.innerHTML = '<strong>A prova já está no menor número de páginas</strong> sem descer a letra para menos de 9 pt.' +
+                (dicas.length ? '<ul>' + dicas.map(function (d) { return '<li>' + esc(d) + '</li>'; }).join('') + '</ul>' : '') +
+                '<div class="acoes-lista"><button type="button" class="btn btn--pequeno" id="fechar-proposta">Fechar</button></div>';
+        }
+        $('fechar-proposta').onclick = function () { caixa.hidden = true; };
+        caixa.hidden = false;
+        repaginar();
+    }
+    $('economizar').onclick = economizar;
 
     function aplicarZoom(paginas, escala, area) {
         const largura = paginas.offsetWidth;
@@ -727,12 +1180,15 @@
     function imprimir(chave) {
         salvar.agora();
         if (paginar.pendente()) paginar.agora();
+        const nome = Modelos.nomeArquivo(prova) + (chave ? '-GABARITO-PROFESSOR' : '');
         tituloAntesDeImprimir = document.title;
-        document.title = Modelos.nomeArquivo(prova) + (chave ? '-GABARITO-PROFESSOR' : '');
+        document.title = nome;
         if (chave) {
             Paginar.montarChave(prova, $('chave'));
             document.body.classList.add('imprimindo-chave');
         }
+        /* a versão que vai para a impressão fica guardada */
+        Armazem.guardarArquivo(prova, { nome: nome, tipo: chave ? 'gabarito' : 'prova', paginas: chave ? 1 : ultimoResultado.paginas });
         window.print();
         /* No Chrome o print() espera a janela fechar; nos outros, o afterprint
            arruma. */
@@ -750,6 +1206,19 @@
     $('ed-chave').onclick = function () { imprimir(true); };
     $('ed-exportar').onclick = function () { salvar.agora(); exportar(prova); };
 
+    /* ----- versão B ----- */
+
+    $('ed-versaob').onclick = async function () {
+        const objetivas = Modelos.questoesNumeradas(prova).filter(function (i) { return i.questao.tipo === 'objetiva'; }).length;
+        if (!objetivas) { alert('A versão B troca a ordem das alternativas, e esta prova ainda não tem questões objetivas.'); return; }
+        if (!confirm('Criar uma cópia desta prova com as alternativas em outra ordem (Tipo B)? A resposta certa acompanha, e o gabarito do professor da versão B sai certo. Esta prova não muda.')) return;
+        salvar.agora();
+        const r = Modelos.versaoEmbaralhada(prova, 'B');
+        await Armazem.salvar(r.prova);
+        if (r.presas.length) alert('Ficaram na ordem original as questões ' + r.presas.join(', ') + ', porque têm alternativas como "todas as anteriores" ou "a e b".');
+        location.hash = '#/prova/' + encodeURIComponent(r.prova.id);
+    };
+
     /* ----- colar várias questões ----- */
 
     function abrirColar() {
@@ -760,8 +1229,17 @@
         $('dialogo-colar').showModal();
         $('colar-texto').focus();
     }
-    $('ed-colar').onclick = abrirColar;
     $('add-colar').onclick = abrirColar;
+
+    $('colar-texto').addEventListener('paste', function (e) {
+        const html = e.clipboardData && e.clipboardData.getData('text/html');
+        if (!html) return;
+        const texto = Colar.htmlParaMarcacao(html);
+        if (!texto.trim()) return;
+        e.preventDefault();
+        this.setRangeText(texto, this.selectionStart, this.selectionEnd, 'end');
+        this.dispatchEvent(new Event('input', { bubbles: true }));
+    });
 
     $('colar-texto').addEventListener('input', debounce(function () {
         const layout = Modelos.layoutDaProva(prova);
@@ -779,43 +1257,107 @@
 
     function normalizar(t) { return String(t || '').normalize('NFD').replace(/[̀-ͯ]/g, '').trim().toUpperCase(); }
 
-    $('colar-acrescentar').onclick = function () {
-        if (!lidoColar || !lidoColar.total) return;
-        lidoColar.secoes.forEach(function (lida) {
+    function temConteudo(q) {
+        return String(q.enunciado || '').trim() || (q.imagens || []).length || (q.alternativas || []).some(function (a) { return String(a || '').trim(); });
+    }
+
+    /* Põe questões (já no formato da prova) na seção de mesmo título; sem
+       título, na última seção. */
+    function acrescentar(grupos) {
+        marcar();
+        grupos.forEach(function (grupo) {
             let alvo = null;
-            if (lida.titulo) {
-                alvo = prova.secoes.find(function (s) { return normalizar(s.titulo) === normalizar(lida.titulo); });
+            if (grupo.titulo) {
+                alvo = prova.secoes.find(function (s) { return normalizar(s.titulo) === normalizar(grupo.titulo); });
                 if (!alvo) {
                     alvo = prova.secoes.find(function (s) { return !String(s.titulo || '').trim() && !s.questoes.some(temConteudo); });
-                    if (alvo) alvo.titulo = lida.titulo;
+                    if (alvo) alvo.titulo = grupo.titulo;
                 }
-                if (!alvo) { alvo = Modelos.novaSecao(lida.titulo); prova.secoes.push(alvo); }
+                if (!alvo) { alvo = Modelos.novaSecao(grupo.titulo); prova.secoes.push(alvo); }
             } else {
                 alvo = prova.secoes[prova.secoes.length - 1];
             }
-            /* a questão vazia que a prova nova traz dá lugar às coladas */
-            alvo.questoes = alvo.questoes.filter(temConteudo);
-            lida.questoes.forEach(function (lq) {
-                const q = Modelos.novaQuestao(lq.tipo, 5);
-                q.fonte = lq.fonte;
-                q.enunciado = lq.enunciado;
-                if (lq.tipo === 'objetiva') {
-                    lq.alternativas.slice(0, 5).forEach(function (a, i) { q.alternativas[i] = a; });
-                    q.correta = lq.correta || '';
-                }
-                alvo.questoes.push(q);
-            });
+            alvo.questoes = alvo.questoes.filter(temConteudo).concat(grupo.questoes);
         });
         prova.secoes.forEach(function (s) { s.questoes = s.questoes.filter(temConteudo); });
-        $('dialogo-colar').close();
         abertas.clear();
         desenharSecoes();
         mudou();
+    }
+
+    $('colar-acrescentar').onclick = function () {
+        if (!lidoColar || !lidoColar.total) return;
+        acrescentar(lidoColar.secoes.map(function (lida) {
+            return {
+                titulo: lida.titulo,
+                questoes: lida.questoes.map(function (lq) {
+                    const q = Modelos.novaQuestao(lq.tipo, 5);
+                    q.fonte = lq.fonte;
+                    q.enunciado = lq.enunciado;
+                    if (lq.tipo === 'objetiva') {
+                        lq.alternativas.slice(0, 5).forEach(function (a, i) { q.alternativas[i] = a; });
+                        q.correta = lq.correta || '';
+                    }
+                    return q;
+                })
+            };
+        }));
+        $('dialogo-colar').close();
     };
 
-    function temConteudo(q) {
-        return String(q.enunciado || '').trim() || q.imagem || q.alternativas.some(function (a) { return String(a || '').trim(); });
+    /* ----- trazer de outra prova ----- */
+
+    let bancoProvas = [];
+
+    $('add-banco').onclick = async function () {
+        bancoProvas = (await Armazem.listar()).filter(function (p) { return p.id !== prova.id; }).map(Modelos.normalizarProva);
+        if (!bancoProvas.length) { alert('Ainda não há outras provas guardadas neste navegador.'); return; }
+        $('banco-prova').innerHTML = opcoesHtml(bancoProvas.map(function (p, i) {
+            return [i, (p.titulo || 'Prova sem título') + ' — ' + Modelos.questoesNumeradas(p).length + ' questões'];
+        }), 0);
+        $('banco-busca').value = '';
+        desenharBanco();
+        $('dialogo-banco').showModal();
+    };
+
+    function desenharBanco() {
+        const p = bancoProvas[Number($('banco-prova').value) || 0];
+        const termo = normalizar($('banco-busca').value);
+        let n = 0;
+        let html = '';
+        p.secoes.forEach(function (s, si) {
+            s.questoes.forEach(function (q, qi) {
+                if (q.tipo !== 'texto') n++;
+                const r = resumo(q);
+                if (termo && normalizar(q.enunciado + ' ' + q.fonte + ' ' + s.titulo).indexOf(termo) === -1) return;
+                html += '<label class="banco-item"><input type="checkbox" data-s="' + si + '" data-q="' + qi + '">' +
+                    '<span class="q-numero">' + (q.tipo === 'texto' ? 'T' : (n < 10 ? '0' : '') + n) + '</span>' +
+                    '<span class="banco-texto">' + esc(r.texto) + (s.titulo ? ' <small>' + esc(s.titulo) + '</small>' : '') + '</span>' + etiqueta(q) + '</label>';
+            });
+        });
+        $('banco-lista').innerHTML = html || '<p class="vazio">Nenhuma questão encontrada.</p>';
+        $('banco-acrescentar').disabled = true;
     }
+    $('banco-prova').addEventListener('change', desenharBanco);
+    $('banco-busca').addEventListener('input', desenharBanco);
+    $('banco-lista').addEventListener('change', function () {
+        $('banco-acrescentar').disabled = !$('banco-lista').querySelector('input:checked');
+    });
+    $('banco-acrescentar').onclick = function () {
+        const p = bancoProvas[Number($('banco-prova').value) || 0];
+        const grupos = [];
+        $('banco-lista').querySelectorAll('input:checked').forEach(function (c) {
+            const s = p.secoes[Number(c.dataset.s)];
+            const q = Modelos.copiar(s.questoes[Number(c.dataset.q)]);
+            q.id = Modelos.novoId('q');
+            (q.imagens || []).forEach(function (i) { i.id = Modelos.novoId('img'); });
+            let g = grupos.find(function (x) { return x.titulo === s.titulo; });
+            if (!g) { g = { titulo: s.titulo, questoes: [] }; grupos.push(g); }
+            g.questoes.push(q);
+        });
+        acrescentar(grupos);
+        $('dialogo-banco').close();
+    };
 
     /* ===================== editor de modelo ===================== */
 
@@ -847,7 +1389,7 @@
         document.querySelector('input[name="mo-secoes"][value="componente"]').checked = porComponente;
         document.querySelector('input[name="mo-secoes"][value="lista"]').checked = !porComponente;
         $('mo-lista-secoes').value = porComponente ? '' : (modeloEdit.secoesIniciais || []).join('\n');
-        formLayout($('mo-formato'), modeloEdit.layout, previaModelo);
+        formLayout($('mo-formato'), modeloEdit.layout, previaModelo, true);
         previaModelo();
     }
 
@@ -871,7 +1413,9 @@
                 const q = Modelos.novaQuestao(discursiva ? 'discursiva' : 'objetiva', 5);
                 q.fonte = n % 2 ? 'Enem' : '';
                 q.enunciado = EXEMPLO_TEXTO + (n % 3 === 0 ? '\n' + EXEMPLO_TEXTO : '');
-                q.alternativas = ['Primeira alternativa de exemplo.', 'Segunda alternativa, um pouco mais comprida que a primeira.', 'Terceira alternativa.', 'Quarta alternativa de exemplo.', 'Quinta alternativa.'];
+                q.alternativas = n % 2
+                    ? ['Primeira alternativa de exemplo.', 'Segunda alternativa, um pouco mais comprida que a primeira.', 'Terceira alternativa.', 'Quarta alternativa de exemplo.', 'Quinta alternativa.']
+                    : ['12', '15', '18', '21', '24'];
                 q.linhas = 5;
                 s.questoes.push(q);
             }
@@ -906,6 +1450,6 @@
 
     window.addEventListener('hashchange', rota);
     window.addEventListener('beforeunload', function () { if (prova && salvar.pendente()) salvar.agora(); });
-    window.MontadorProvas = { estado: function () { return prova; }, repaginar: repaginar };
+    window.MontadorProvas = { estado: function () { return prova; }, repaginar: repaginar, resultado: function () { return ultimoResultado; } };
     rota();
 })();
