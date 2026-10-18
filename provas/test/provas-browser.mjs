@@ -76,6 +76,10 @@ TURMA 3A
 const servidor = await servir(RAIZ, PORTA, 'provas/index.html');
 const navegador = await chromium.launch();
 const pagina = await navegador.newPage({ viewport: { width: 1280, height: 1000 } });
+/* O app só abre para a gestão: aqui entra um Supabase de mentira, já logado. */
+const CLIENTE_FALSO = join(APP, 'test', 'cliente-falso.js');
+await pagina.addInitScript(() => { window.ACESSO_SESSAO_INICIAL = 'gestao'; });
+await pagina.addInitScript({ path: CLIENTE_FALSO });
 
 const erros = [];
 pagina.on('pageerror', (erro) => erros.push(String(erro)));
@@ -85,7 +89,34 @@ pagina.on('requestfailed', (p) => { if (!RUIDO.test(p.url())) erros.push('pedido
 
 try {
     await mkdir(SAIDA, { recursive: true });
+    /* --- acesso: sem conta não entra; professor não entra; gestão entra --- */
+    const porta = await navegador.newPage();
+    await porta.addInitScript({ path: CLIENTE_FALSO });
+    await porta.goto(`http://127.0.0.1:${PORTA}/provas/`);
+    await porta.waitForSelector('#acesso-form', { state: 'visible' });
+    conferir(!(await porta.isVisible('.wrap')), 'sem login, o app fica escondido atrás da tela de acesso');
+    await porta.fill('#acesso-email', 'prof@teste.local');
+    await porta.fill('#acesso-senha', 'senha-prof');
+    await porta.click('#acesso-entrar');
+    await porta.waitForSelector('#acesso-erro', { state: 'visible' });
+    conferir((await porta.textContent('#acesso-erro')).includes('só da gestão') && !(await porta.isVisible('.wrap')),
+        'conta de professor não entra no Identificador');
+    await porta.fill('#acesso-email', 'gestao@teste.local');
+    await porta.fill('#acesso-senha', 'errada');
+    await porta.click('#acesso-entrar');
+    await porta.waitForFunction(() => document.getElementById('acesso-erro').textContent.includes('incorretos'));
+    conferir(!(await porta.isVisible('.wrap')), 'senha errada não entra');
+    await porta.fill('#acesso-senha', 'senha-gestao');
+    await porta.click('#acesso-entrar');
+    await porta.waitForSelector('.wrap', { state: 'visible' });
+    conferir((await porta.textContent('#conta-nome')).includes('Gestão Teste'), 'a gestão entra e vê o nome da conta');
+    await porta.click('#conta-sair');
+    await porta.waitForSelector('#acesso-form', { state: 'visible' });
+    conferir(!(await porta.isVisible('.wrap')), 'ao sair, o app volta a ficar trancado');
+    await porta.close();
+
     await pagina.goto(`http://127.0.0.1:${PORTA}/provas/`);
+    await pagina.waitForSelector('.wrap', { state: 'visible' });
 
     conferir(await pagina.isVisible('#voltar-ao-painel'),
         'servido em /provas/, o link de volta ao painel aparece');
@@ -255,11 +286,14 @@ try {
     const servidorProprio = await servir(APP, PORTA + 1, 'index.html');
     try {
         const sozinho = await navegador.newPage();
+        await sozinho.addInitScript(() => { window.ACESSO_SESSAO_INICIAL = 'gestao'; });
+        await sozinho.addInitScript({ path: CLIENTE_FALSO });
         const errosSozinho = [];
         sozinho.on('pageerror', (erro) => errosSozinho.push(String(erro)));
         sozinho.on('requestfailed', (p) => { if (!RUIDO.test(p.url())) errosSozinho.push('pedido falhou: ' + p.url()); });
 
         await sozinho.goto(`http://127.0.0.1:${PORTA + 1}/`);
+        await sozinho.waitForSelector('.wrap', { state: 'visible' });
         conferir(await sozinho.$('#voltar-ao-painel') === null,
             'em domínio próprio o link de volta ao painel sai de cena');
         conferir(await sozinho.evaluate(() => {

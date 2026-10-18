@@ -294,3 +294,32 @@ label small { font-weight: 400; font-size: 12px; color: var(--ink-soft); line-he
     .passo { padding: 16px 14px 18px; }
     .sub-opcoes { padding-left: 0; }
 }
+
+/* ===== Acesso (só a gestão entra) ===== */
+html.trancado .wrap { display: none; }
+html:not(.trancado) .acesso { display: none; }
+
+.acesso { min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 24px 16px; }
+.acesso-card {
+    width: 100%; max-width: 400px; background: var(--panel); border: 1px solid var(--line);
+    border-radius: var(--radius); box-shadow: var(--shadow); padding: 28px 24px; text-align: center;
+}
+.acesso-card img { width: 64px; height: 64px; object-fit: contain; margin-bottom: 10px; }
+.acesso-card h1 { font-size: 22px; font-weight: 800; line-height: 1.2; margin-bottom: 6px; }
+.acesso-sub { color: var(--ink-soft); font-size: 14px; margin-bottom: 18px; }
+.acesso-carregando { color: var(--ink-soft); font-size: 14px; margin-bottom: 12px; }
+#acesso-form { display: flex; flex-direction: column; gap: 12px; text-align: left; }
+#acesso-form label { display: flex; flex-direction: column; gap: 5px; }
+#acesso-form input {
+    font: inherit; font-size: 15px; color: var(--ink); background: #fcfbf7;
+    border: 1px solid var(--line); border-radius: var(--radius-sm); padding: 9px 11px; width: 100%;
+}
+#acesso-form .btn { justify-content: center; margin-top: 4px; }
+.acesso-erro { color: var(--danger); font-size: 13.5px; font-weight: 600; }
+.acesso-ajuda { color: var(--ink-soft); font-size: 13px; margin: 16px 0 6px; }
+.acesso-card .back-link { display: inline-block; }
+
+.conta-identificador {
+    display: flex; align-items: center; justify-content: flex-end; gap: 10px;
+    font-size: 13.5px; color: var(--ink-soft); margin-bottom: 10px; flex-wrap: wrap;
+}

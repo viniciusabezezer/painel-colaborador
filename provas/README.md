@@ -11,7 +11,7 @@ uma faixa em branco de uns 3 cm no alto da folha, que é onde o app escreve.
 
 ## Publicação
 
-O app se sustenta sozinho, então roda de dois jeitos sem mudar nada:
+O app se sustenta sozinho (o login vem de `vendor/supabase.js`, cópia própria), então roda de dois jeitos sem mudar nada:
 
 - **Dentro do Painel do Colaborador**, em `/provas/` — é o card 🔖 do painel. O
   `vercel.json` da raiz do repositório dá `no-cache` a `/provas` e `/provas/`,
@@ -33,6 +33,24 @@ gerados **não saem do computador**. A lista colada some ao fechar a aba; os
 **60 últimos arquivos gerados** ficam guardados no próprio navegador
 (IndexedDB, `js/historico.js`), na aba *Arquivos recentes*, para baixar de novo.
 Quando entra um novo, o mais antigo sai; dá para apagar um a um ou todos.
+
+## Acesso (só a gestão)
+
+O app abre trancado e pede **e-mail e senha**. Entram apenas as contas do
+**Montador de Provas** (projeto Supabase "MapaDeAulas", tabela
+`montador_perfis`) que estejam **ativas** e com papel **`gestao`**. Professor e
+PCA recebem o aviso de que o acesso é só da gestão. Para dar ou tirar acesso,
+a gestão cadastra a pessoa (ou muda o papel) pelo próprio Montador; os papéis
+aceitos ficam em `js/config.js`.
+
+- `js/acesso.js` confere a sessão antes de tirar a classe `trancado` do
+  `<html>`; o botão **Sair** tranca de novo.
+- A sessão usa a mesma chave do Montador, então em `/provas/` do painel quem já
+  entrou no Montador entra direto. Sem internet, vale o perfil conferido na
+  última vez.
+- É uma trava na página: como tudo roda no navegador e nada vai para um
+  servidor, ela impede o uso por quem não tem conta, mas o código do app
+  continua público como qualquer site estático.
 
 ## O caminho
 
