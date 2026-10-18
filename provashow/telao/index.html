@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ProvaShow Malu — Telão</title>
+    <meta name="description" content="A tela da aula ao vivo, para o projetor ou a TV.">
+    <meta name="robots" content="noindex">
+    <link rel="icon" href="../icone.svg" type="image/svg+xml">
+    <link rel="manifest" href="../manifest.webmanifest">
+    <link rel="stylesheet" href="../estilo.css">
+    <link rel="stylesheet" href="telao.css">
+</head>
+<body>
+
+<section class="espera" id="espera">
+    <div class="marca"><span class="marca-icone" aria-hidden="true"><i></i><i></i><i></i><i></i></span><span>ProvaShow <small>Malu</small></span></div>
+    <h1 id="espera-titulo">Telão</h1>
+    <p id="espera-texto">Digite o código da aula ao vivo (aparece no app do professor).</p>
+    <form id="form-codigo" autocomplete="off">
+        <input type="text" id="campo-codigo" maxlength="7" placeholder="ABC123" aria-label="Código da aula" required>
+        <button class="btn btn-principal" type="submit">Abrir</button>
+    </form>
+</section>
+
+<main class="palco" id="palco" hidden>
+    <header class="palco-topo">
+        <div class="marca"><span class="marca-icone" aria-hidden="true"><i></i><i></i><i></i><i></i></span><span id="t-turma"></span></div>
+        <div class="progresso"><span id="t-progresso"></span><span class="aluno-aparelho" id="t-aparelho" hidden></span></div>
+        <div class="relogio-telao" id="t-relogio" hidden></div>
+        <div class="responderam" id="t-responderam"><strong id="t-n">0</strong><span id="t-de">de 0</span></div>
+    </header>
+    <div class="faixa" id="t-faixa" hidden></div>
+    <section class="palco-questao" id="t-questao"></section>
+    <footer class="palco-chamada" id="t-chamada"></footer>
+    <div class="cantinho">
+        <button id="modo-compartilhar" title="Modo tela compartilhada: esconde a chamada e a contagem (atalho S)">👁</button>
+        <button id="tela-cheia" title="Tela cheia (atalho F)">⛶</button>
+    </div>
+</main>
+<div class="ampliada" id="ampliada" hidden></div>
+
+<script src="../vendor/katex.min.js"></script>
+<script src="../js/texto.js"></script>
+<script src="../js/midia.js"></script>
+<script src="../js/slide.js"></script>
+<script src="../vendor/supabase.js"></script>
+<script src="../js/config.js"></script>
+<script src="../js/canal.js"></script>
+<script src="telao.js"></script>
+</body>
+</html>

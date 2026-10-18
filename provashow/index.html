@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ProvaShow Malu — avaliação em tempo real com cartões de papel</title>
+    <meta name="description" content="Faça uma pergunta, os alunos levantam o cartão e você lê a sala inteira com o celular. Respostas na hora, no telão e nos relatórios — sem celular para os alunos.">
+    <meta name="theme-color" content="#4c2a85">
+    <link rel="manifest" href="manifest.webmanifest">
+    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='24' fill='%234c2a85'/%3E%3Crect x='18' y='18' width='29' height='29' rx='7' fill='%23e4572e'/%3E%3Crect x='53' y='18' width='29' height='29' rx='7' fill='%232e86de'/%3E%3Crect x='18' y='53' width='29' height='29' rx='7' fill='%2317a589'/%3E%3Crect x='53' y='53' width='29' height='29' rx='7' fill='%23f5a623'/%3E%3C/svg%3E">
+    <link rel="stylesheet" href="estilo.css">
+    <link rel="stylesheet" href="site.css">
+</head>
+<body>
+
+<header class="nav">
+    <a class="marca" href="./"><span class="marca-icone" aria-hidden="true"><i></i><i></i><i></i><i></i></span><span>ProvaShow <small>Malu</small></span></a>
+    <nav>
+        <a href="#como-funciona">Como funciona</a>
+        <a href="#recursos">Recursos</a>
+        <a href="#cartoes">Cartões</a>
+        <a href="#celular">No celular</a>
+        <a href="ajuda/">Ajuda</a>
+    </nav>
+    <a class="btn btn-principal" href="app/">Abrir o app</a>
+</header>
+
+<section class="hero">
+    <div class="hero-texto">
+        <span class="selo">Feito na EEMTI Prof. Maria Luiza Saboia</span>
+        <h1>A turma inteira responde.<br><span class="destaque">Você vê na hora.</span></h1>
+        <p>Faça uma pergunta, os alunos levantam o cartão de papel e você lê a sala toda com a câmera do celular. As respostas aparecem no telão e ficam guardadas nos relatórios — sem celular, sem internet para os alunos.</p>
+        <div class="hero-botoes">
+            <a class="btn btn-principal btn-grande" href="app/">Começar agora — é grátis</a>
+            <a class="btn btn-grande" href="cartoes/">🖨 Imprimir os cartões</a>
+        </div>
+    </div>
+    <div class="hero-cena" aria-hidden="true">
+        <div class="cena-telao">
+            <p class="cena-pergunta">Qual é a capital do Ceará?</p>
+            <div class="cena-barras">
+                <div><span class="letra letra-A">A</span><i style="--v:18%" class="letra-A"></i></div>
+                <div class="certa"><span class="letra letra-B">B</span><i style="--v:86%" class="letra-B"></i></div>
+                <div><span class="letra letra-C">C</span><i style="--v:9%" class="letra-C"></i></div>
+                <div><span class="letra letra-D">D</span><i style="--v:4%" class="letra-D"></i></div>
+            </div>
+        </div>
+        <div class="cena-cartoes" id="cena-cartoes"></div>
+        <div class="cena-celular"><div class="tela-celular"><span>27 de 30</span><small>leram</small></div></div>
+    </div>
+</section>
+
+<section class="secao" id="como-funciona">
+    <h2>Como funciona</h2>
+    <p class="secao-sub">Três passos, e a aula vira uma conversa com todos — não só com quem levanta a mão.</p>
+    <div class="passos">
+        <article>
+            <span class="passo-n">1</span>
+            <h3>Prepare</h3>
+            <p>Monte conjuntos de perguntas de múltipla escolha, verdadeiro ou falso ou enquete. Cole as perguntas de uma vez, com o gabarito, e ponha na fila da turma.</p>
+        </article>
+        <article>
+            <span class="passo-n">2</span>
+            <h3>Pergunte</h3>
+            <p>Abra o telão no projetor. Cada aluno gira o cartão para deixar em cima a letra que escolheu e levanta. Ninguém vê a resposta do colega.</p>
+        </article>
+        <article>
+            <span class="passo-n">3</span>
+            <h3>Leia a sala</h3>
+            <p>Passe a câmera do celular pela turma: em segundos, todos os cartões são lidos. Mostre o gráfico, revele a resposta e discuta na hora.</p>
+        </article>
+    </div>
+</section>
+
+<section class="secao secao-clara" id="recursos">
+    <h2>Tudo o que a aula precisa</h2>
+    <div class="recursos">
+        <article><span>📱</span><h3>Só o professor precisa de aparelho</h3><p>Os alunos usam cartões de papel. Nada de celular na mão da turma, nada de cadastro de aluno em site.</p></article>
+        <article><span>⚡</span><h3>Leitura instantânea</h3><p>Dezenas de cartões no mesmo quadro, de longe, com luz desigual. Confere duas vezes antes de registrar e ignora o cartão que ficou levantado da pergunta anterior.</p></article>
+        <article><span>🖥</span><h3>Telão ao vivo</h3><p>Pergunta, cronômetro, quem já respondeu, gráfico e resposta certa — quando você decide. Modo tela compartilhada para aulas por vídeo.</p></article>
+        <article><span>✍️</span><h3>Editor completo</h3><p>Negrito, itálico, índices, equações em LaTeX, imagens, gifs, vídeos do YouTube com início e fim, áudio gravado, imagens nas alternativas e mais de uma resposta certa.</p></article>
+        <article><span>📋</span><h3>Cole perguntas prontas</h3><p>Do Word, do PDF ou de uma planilha: o ProvaShow separa enunciado, alternativas e gabarito, com prévia antes de importar.</p></article>
+        <article><span>📁</span><h3>Biblioteca organizada</h3><p>Pastas dentro de pastas, busca, lixeira de 30 dias, pacotes para levar a colegas e uma biblioteca pública para começar.</p></article>
+        <article><span>⏱</span><h3>Cronômetro e encerramento</h3><p>Cronômetro ou contagem regressiva no telão; ao zerar, as respostas podem se encerrar sozinhas.</p></article>
+        <article><span>📊</span><h3>Relatórios de verdade</h3><p>Placar por dia, semana, mês, bimestre ou ano; relatório de cada aula e de cada aluno, para imprimir; planilha para o diário; perguntas para retomar.</p></article>
+        <article><span>🏠</span><h3>Aula remota e híbrida</h3><p>Quem está em casa responde pelo próprio aparelho, com link pessoal; quem está na sala, com o cartão — tudo na mesma pergunta.</p></article>
+    </div>
+</section>
+
+<section class="secao" id="celular">
+    <h2>No celular, no computador — ou nos dois</h2>
+    <p class="secao-sub">O mesmo ProvaShow, do jeito que a sua sala permite.</p>
+    <div class="modos">
+        <article class="cartao-painel">
+            <span class="modo-icone">📱</span>
+            <h3>Só o celular</h3>
+            <p>Abra o app no celular: monte as perguntas, comece a aula e leia os cartões com a câmera do próprio aparelho. O telão (no computador do projetor) mostra tudo pelo código da aula.</p>
+            <a class="btn btn-p" href="app/">Abrir no celular</a>
+        </article>
+        <article class="cartao-painel">
+            <span class="modo-icone">💻 + 📱</span>
+            <h3>Computador + celular</h3>
+            <p>O app fica aberto no computador ligado ao projetor; o celular vira o controle: lê os cartões e passa as perguntas, mostra o gráfico e a resposta.</p>
+            <a class="btn btn-p" href="scanner/">Abrir o scanner</a>
+        </article>
+        <article class="cartao-painel">
+            <span class="modo-icone">📲</span>
+            <h3>Instalado como app</h3>
+            <p>Adicione à tela inicial (Android e iPhone) e o ProvaShow abre como aplicativo, até sem internet. Para lojas, há também a versão nativa (Android e iOS), com o mesmo app por dentro.</p>
+            <a class="btn btn-p" href="ajuda/#instalar">Como instalar</a>
+        </article>
+    </div>
+</section>
+
+<section class="secao secao-clara" id="gratis">
+    <h2>Sem plano pago. Sem limite.</h2>
+    <div class="sem-limite">
+        <div><strong>∞</strong><span>perguntas por conjunto</span></div>
+        <div><strong>∞</strong><span>turmas e alunos (até 63 por turma)</span></div>
+        <div><strong>∞</strong><span>período do placar</span></div>
+        <div><strong>R$ 0</strong><span>para sempre, para toda a escola</span></div>
+    </div>
+</section>
+
+<section class="secao" id="cartoes">
+    <div class="cartoes-bloco">
+        <div class="cartao-exemplo" id="cartao-exemplo"></div>
+        <div>
+            <h2>Um cartão, quatro respostas</h2>
+            <p>Cada aluno recebe um cartão com um número. Os quatro lados têm as letras A, B, C e D: a letra que fica <strong>em cima</strong> é a resposta. O desenho no meio é diferente em cada cartão, e é por ele que o celular sabe quem respondeu o quê.</p>
+            <ul class="lista-check">
+                <li>63 cartões por jogo — o mesmo jogo serve para todas as turmas</li>
+                <li>Quatro tamanhos (1, 2, 4 ou 9 por folha A4) e o modelo discreto, de letras pequenas</li>
+                <li>Cartões com o nome do aluno, se você preferir</li>
+                <li>Desenho próprio do ProvaShow Malu, com correção de erros: mesmo um cartão amassado ou meio coberto é lido certo</li>
+            </ul>
+            <a class="btn btn-principal" href="cartoes/">🖨 Imprimir os cartões</a>
+        </div>
+    </div>
+</section>
+
+<section class="secao secao-clara" id="perguntas">
+    <h2>Dúvidas frequentes</h2>
+    <div class="faq">
+        <details><summary>Preciso instalar alguma coisa?</summary><p>Não. O app do professor, o scanner e o telão abrem no navegador. No celular, você pode "Adicionar à tela inicial" o scanner para abri-lo como um aplicativo.</p></details>
+        <details><summary>Como o celular e o telão conversam com o app?</summary><p>Quando você começa uma aula ao vivo, o app mostra um código de 6 letras e um QR code. Abra o scanner no celular com esse código; o telão abre direto do app. Com internet, tudo se fala pelo canal da aula; sem internet, use a webcam do próprio computador e o telão numa janela ao lado.</p></details>
+        <details><summary>Os alunos veem a resposta dos colegas?</summary><p>Não. O telão mostra só quem já respondeu, nunca a letra de cada um. O gráfico e a resposta certa aparecem apenas quando você decide.</p></details>
+        <details><summary>Onde ficam guardados os dados?</summary><p>No navegador do computador do professor. Nada é gravado em servidor: no canal da aula passam apenas a pergunta da vez, os números dos cartões e o primeiro nome (com a inicial do sobrenome) de cada aluno. Use "Baixar cópia de segurança" para levar os dados a outro computador.</p></details>
+        <details><summary>E se o aluno mudar de ideia?</summary><p>É só girar o cartão e mostrar de novo: vale a última leitura. Você também pode tocar no nome do aluno, no app, para lançar ou trocar a resposta à mão.</p></details>
+        <details><summary>Dá para usar só o celular, sem computador?</summary><p>Sim. O app inteiro funciona no celular: biblioteca, turmas, aula ao vivo com a câmera lendo os cartões e relatórios. Se quiser telão, abra o endereço do telão no computador do projetor e digite o código da aula. Para levar os dados entre celular e computador, use “Computador ⇄ celular”.</p></details>
+        <details><summary>E os alunos que estão em casa?</summary><p>Cada aluno tem um link pessoal (em Turmas → Alunos). Na aula, ele digita o código que aparece no telão e responde pelo celular ou computador. Quem está na sala usa o cartão. Tudo entra na mesma pergunta e no mesmo relatório.</p></details>
+        <details><summary>Quantos alunos por turma?</summary><p>Até 63, um cartão para cada. Para salas grandes, use o cartão grande (1 por folha).</p></details>
+    </div>
+</section>
+
+<section class="chamada-final">
+    <h2>Pronto para a próxima aula?</h2>
+    <p>Imprima os cartões, cadastre a turma e faça a primeira pergunta em menos de 10 minutos.</p>
+    <div class="hero-botoes">
+        <a class="btn btn-grande btn-branco" href="app/">Abrir o app do professor</a>
+        <a class="btn btn-grande btn-contorno" href="scanner/">📷 Abrir o scanner (celular)</a>
+        <a class="btn btn-grande btn-contorno" href="telao/">🖥 Abrir o telão</a>
+        <a class="btn btn-grande btn-contorno" href="ajuda/">❓ Central de ajuda</a>
+    </div>
+</section>
+
+<footer class="rodape">
+    <p><strong>ProvaShow Malu</strong> · EEMTI Prof. Maria Luiza Saboia Ribeiro</p>
+    <p><a href="ajuda/">Ajuda</a> · <a href="ajuda/#privacidade">Privacidade</a> · <a href="cartoes/">Cartões</a> · <a href="../index.html">Painel do Colaborador</a></p>
+</footer>
+
+<script src="js/cartao.js"></script>
+<script>if ('serviceWorker' in navigator && location.protocol === 'https:') navigator.serviceWorker.register('sw.js').catch(() => {});</script>
+<script>
+    document.getElementById('cartao-exemplo').innerHTML = Cartao.svg(7);
+    const letras = ['A', 'B', 'B', 'D', 'B', 'C', 'B', 'B'];
+    const giro = { A: 0, B: -90, C: 180, D: 90 };
+    document.getElementById('cena-cartoes').innerHTML = letras.map((l, i) =>
+        `<div class="mini-cartao" style="--g:${giro[l]}deg;--i:${i}">${Cartao.svg(i * 5 + 3)}</div>`).join('');
+</script>
+</body>
+</html>

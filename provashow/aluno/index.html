@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>ProvaShow Malu — Responder</title>
+    <meta name="description" content="Responda às perguntas da aula pelo seu aparelho.">
+    <meta name="robots" content="noindex">
+    <meta name="theme-color" content="#2b1650">
+    <link rel="icon" href="../icone.svg" type="image/svg+xml">
+    <link rel="stylesheet" href="../estilo.css">
+    <link rel="stylesheet" href="aluno.css">
+</head>
+<body>
+<main class="aluno">
+    <header class="aluno-topo">
+        <div class="marca"><span class="marca-icone" aria-hidden="true"><i></i><i></i><i></i><i></i></span><span>ProvaShow <small>Malu</small></span></div>
+        <span class="selo" id="quem" hidden></span>
+    </header>
+
+    <section class="cartao-painel caixa" id="sem-link" hidden>
+        <h1>Peça o seu link ao professor</h1>
+        <p>Para responder pelo aparelho, abra primeiro o <strong>link pessoal</strong> que o professor enviou para você. Ele fica guardado neste aparelho.</p>
+    </section>
+
+    <section class="cartao-painel caixa" id="entrar" hidden>
+        <h1>Entrar na aula</h1>
+        <p>Digite o código que aparece no telão.</p>
+        <form id="form-codigo" autocomplete="off"><input type="text" id="campo-codigo" maxlength="7" placeholder="ABC123" autocapitalize="characters" aria-label="Código da aula" required><button class="btn btn-principal">Entrar</button></form>
+    </section>
+
+    <section class="caixa" id="esperando" hidden>
+        <div class="girando" aria-hidden="true"></div>
+        <h1 id="esperando-titulo">Conectando…</h1>
+        <p id="esperando-texto"></p>
+    </section>
+
+    <section class="pergunta" id="pergunta" hidden>
+        <p class="progresso" id="progresso"></p>
+        <div class="enunciado" id="enunciado"></div>
+        <div class="midia-aluno" id="midia"></div>
+        <div class="botoes-resposta" id="botoes"></div>
+        <p class="situacao" id="situacao" role="status"></p>
+    </section>
+</main>
+<script src="../vendor/katex.min.js"></script>
+<script src="../js/texto.js"></script>
+<script src="../js/midia.js"></script>
+<script src="../vendor/supabase.js"></script>
+<script src="../js/config.js"></script>
+<script src="../js/canal.js"></script>
+<script src="aluno.js"></script>
+</body>
+</html>
