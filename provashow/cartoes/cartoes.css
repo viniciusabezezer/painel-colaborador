@@ -32,3 +32,4 @@
     .folha:last-child { break-after: auto; page-break-after: auto; }
     .lugar { border-color: #eee; }
 }
+.logo-escola-cartoes { width: 56px; height: 56px; object-fit: contain; }

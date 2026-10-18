@@ -47,7 +47,7 @@
         <li><strong>Perguntas:</strong> Biblioteca → + Conjunto, escreva ou cole as perguntas; ou traga um pacote pronto em Explorar.</li>
         <li><strong>Aula:</strong> Aula ao vivo → escolha a turma e o conjunto → Telão (no projetor) → Ler cartões.</li>
     </ul></div></details>
-    <details><summary>Preciso de conta, senha ou internet?</summary><div><p>Não há conta. Tudo fica guardado no aparelho em que você usa o app. Internet só é necessária para o telão e os scanners em aparelhos diferentes (eles conversam pelo código da aula) e para vídeos do YouTube. No mesmo computador (webcam + telão numa janela), funciona sem internet.</p></div></details>
+    <details><summary>Preciso de conta, senha ou internet?</summary><div><p>Sim, para entrar: use a mesma conta do Montador de Provas. Quem não tem conta ou esqueceu a senha fala com a gestão, que cria e redefine senhas em Montador → Professores. Depois de entrar uma vez com “Lembrar neste aparelho”, o app abre e funciona sem internet; o que você fizer offline sobe para a nuvem quando a conexão voltar (o selo ☁ no topo mostra se falta enviar algo). Telão e scanners em aparelhos diferentes precisam de internet durante a aula.</p></div></details>
 
     <h2 id="biblioteca">Biblioteca e editor</h2>
     <details><summary>Conjuntos, pastas, pacotes e lixeira</summary><div><ul>
@@ -96,7 +96,7 @@
         <li><strong>Computador (Chrome/Edge):</strong> ícone de instalar na barra de endereço.</li>
     </ul><p>Instalado, abre em tela cheia e funciona sem internet depois da primeira abertura.</p></div></details>
     <details><summary>Versão nativa (lojas Android/iOS)</summary><div><p>Existe um projeto de app nativo (Capacitor) que embala o mesmo ProvaShow para gerar o APK/AAB do Android e o app do iOS — útil para distribuir pela loja ou por MDM da escola. Os dados, a câmera e o telão funcionam igual. Veja <code>provashow/nativo/README.md</code> no repositório.</p></div></details>
-    <details><summary>Levar os dados entre computador e celular</summary><div><p>Mais → “Computador ⇄ celular”. Abra a tela nos dois aparelhos, gere o código num e digite no outro. Os dois juntam o que têm; se a mesma coisa foi mudada nos dois, vence a mudança mais nova. Nada é apagado.</p></div></details>
+    <details><summary>Usar no computador e no celular</summary><div><p>Entre com a mesma conta nos dois: turmas, perguntas e relatórios aparecem nos dois aparelhos. Se a mesma coisa foi mudada nos dois, vence a mudança mais nova. Para forçar o envio, Mais → “Sincronizar agora”.</p></div></details>
 
     <h2 id="aluno">Modo aluno (aula remota ou híbrida)</h2>
     <details><summary>Como os alunos respondem pelo aparelho</summary><div><p>Em Turmas → Alunos → “📱 Links para responder pelo aparelho”, copie ou imprima (com QR code) o link pessoal de cada aluno. O aluno abre o link uma vez; nas aulas, digita o código que aparece no telão e toca na resposta. Não há conta nem senha. Quem está na sala usa o cartão; quem está em casa, o aparelho — tudo na mesma pergunta.</p></div></details>
@@ -109,7 +109,7 @@
     <details><summary>Perguntas para retomar</summary><div><p>Abaixo do placar, as perguntas com menor acerto no período — boas candidatas para revisar na próxima aula (dá para apresentá-las de novo).</p></div></details>
 
     <h2 id="dados">Dados e cópias de segurança</h2>
-    <details><summary>Onde ficam os dados?</summary><div><p>No aparelho, no armazenamento do navegador (IndexedDB). Limpar os dados do navegador apaga o ProvaShow: baixe uma cópia em Mais → “Baixar cópia” de vez em quando. “Restaurar cópia” junta com o que existe ou substitui tudo.</p></div></details>
+    <details><summary>Onde ficam os dados?</summary><div><p>Na nuvem da escola (Supabase), ligados à sua conta, e uma cópia no aparelho para funcionar sem internet. Trocar de aparelho, limpar o navegador ou perder o celular não apaga nada: é só entrar de novo. Na nuvem nada pode ser apagado — apagar no app só esconde — e cada versão anterior de turmas, aulas e relatórios fica guardada. A gestão da escola pode consultar os relatórios. Num computador compartilhado, desmarque “Lembrar neste aparelho” ou use Mais → “Sair” apagando a cópia deste aparelho. “Baixar cópia” continua disponível para guardar um arquivo.</p></div></details>
 
     <h2 id="problemas">Problemas comuns</h2>
     <details><summary>O cartão não é lido</summary><div><ul>
@@ -124,7 +124,7 @@
     <details><summary>A imagem da pergunta não aparece no telão</summary><div><p>Imagens e áudios só vão para o telão aberto no mesmo aparelho do app (o canal pela internet leva só texto e vídeos do YouTube). Com o telão em outro computador, prefira vídeos do YouTube ou abra o telão numa janela do próprio computador do app.</p></div></details>
 
     <h2 id="privacidade">Privacidade</h2>
-    <details><summary>O que é enviado e para onde</summary><div><p>Turmas, perguntas e notas ficam no aparelho do professor; nada é gravado em servidor. Durante a aula ao vivo, passam pelo canal da aula (tempo real do Supabase da escola) a pergunta da vez, os números dos cartões, o primeiro nome e a inicial do sobrenome de cada aluno e as contagens — sem gravação. O código da aula é aleatório e muda a cada aula; o telão não mostra a letra de cada aluno. As imagens dos cartões nunca saem do celular: a leitura é feita no próprio aparelho. Vídeos do YouTube usam o modo de privacidade reforçada (youtube-nocookie).</p></div></details>
+    <details><summary>O que é enviado e para onde</summary><div><p>Turmas, perguntas e notas ficam na conta do professor na nuvem da escola (Supabase): cada professor só lê e grava o que é seu, e a gestão pode ler todos os relatórios. Durante a aula ao vivo, passam pelo canal da aula (tempo real do Supabase da escola) a pergunta da vez, os números dos cartões, o primeiro nome e a inicial do sobrenome de cada aluno e as contagens — sem gravação. O código da aula é aleatório e muda a cada aula; o telão não mostra a letra de cada aluno. As imagens dos cartões nunca saem do celular: a leitura é feita no próprio aparelho. Vídeos do YouTube usam o modo de privacidade reforçada (youtube-nocookie).</p></div></details>
 </main>
 <script>
     const busca = document.getElementById('busca');
