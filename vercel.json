@@ -6,6 +6,28 @@
   "redirects": [
     {
       "source": "/",
+      "has": [
+        {
+          "type": "host",
+          "value": "montador-provas-malu.vercel.app"
+        }
+      ],
+      "destination": "/montar/",
+      "permanent": false
+    },
+    {
+      "source": "/instapensa/:path*",
+      "has": [
+        {
+          "type": "host",
+          "value": "montador-provas-malu.vercel.app"
+        }
+      ],
+      "destination": "/montar/",
+      "permanent": false
+    },
+    {
+      "source": "/",
       "destination": "/instapensa/",
       "permanent": false
     },
@@ -54,6 +76,42 @@
     },
     {
       "source": "/provas/",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "no-cache, must-revalidate"
+        }
+      ]
+    },
+    {
+      "source": "/montar",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "no-cache, must-revalidate"
+        }
+      ]
+    },
+    {
+      "source": "/montar/",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "no-cache, must-revalidate"
+        }
+      ]
+    },
+    {
+      "source": "/provashow",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "no-cache, must-revalidate"
+        }
+      ]
+    },
+    {
+      "source": "/provashow/",
       "headers": [
         {
           "key": "Cache-Control",

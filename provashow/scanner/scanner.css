@@ -1,0 +1,77 @@
+/* Scanner: tela cheia, pensado para o celular na mão do professor. */
+
+html, body { height: 100%; }
+body { background: var(--palco-escuro); color: #fff; overflow: hidden; }
+
+.entrar {
+    min-height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center;
+    gap: 14px; padding: 24px; text-align: center;
+}
+.entrar .marca { color: #fff; }
+.entrar .marca small { color: #cbb8f2; }
+.entrar h1 { font-size: 32px; }
+.entrar p { color: #d9d0ee; max-width: 32ch; }
+.entrar form { display: flex; gap: 8px; width: min(340px, 100%); }
+.entrar input {
+    text-align: center; font-size: 26px; font-weight: 800; letter-spacing: 6px; text-transform: uppercase;
+    background: rgba(255, 255, 255, .95);
+}
+.dica { font-size: 14px; }
+.dica a { color: #cbb8f2; }
+
+.ler { height: 100%; display: flex; flex-direction: column; }
+.barra-topo {
+    display: flex; justify-content: space-between; align-items: center; gap: 10px;
+    padding: calc(10px + env(safe-area-inset-top)) 14px 10px; background: rgba(0, 0, 0, .25);
+}
+.barra-topo .info { display: flex; flex-direction: column; min-width: 0; }
+.barra-topo .turma { font-weight: 800; font-size: 17px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.barra-topo .pergunta { font-size: 13px; color: #d9d0ee; }
+
+.camera { position: relative; flex: 1; min-height: 0; background: #000; overflow: hidden; }
+.camera video, .camera canvas { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+.camera-aviso {
+    position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center;
+    gap: 16px; padding: 24px; text-align: center; background: rgba(43, 22, 80, .85);
+}
+.camera-aviso p { max-width: 34ch; color: #eee; }
+.contador {
+    position: absolute; top: 12px; right: 12px; background: rgba(28, 22, 48, .82); border-radius: 14px;
+    padding: 6px 14px; display: flex; align-items: baseline; gap: 6px;
+}
+.contador strong { font-size: 30px; }
+.contador span { color: #d9d0ee; font-size: 14px; }
+
+.painel-baixo {
+    background: #fff; color: var(--tinta); border-radius: 18px 18px 0 0;
+    padding: 12px 14px calc(12px + env(safe-area-inset-bottom)); display: flex; flex-direction: column; gap: 8px;
+    max-height: 55%; overflow: auto;
+}
+.enunciado-mini { font-weight: 600; font-size: 15px; display: -webkit-box; -webkit-line-clamp: 2; line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.grafico-mini { display: flex; flex-direction: column; gap: 4px; }
+.grafico-mini .g { display: grid; grid-template-columns: auto 1fr 28px; gap: 8px; align-items: center; padding: 2px 4px; border-radius: 8px; }
+.grafico-mini .g.certa { background: var(--verde-claro); }
+.grafico-mini .letra { width: 24px; height: 24px; font-size: 12px; border-radius: 7px; }
+.grafico-mini b { text-align: right; }
+.barra { height: 12px; background: #f0eef5; border-radius: 999px; overflow: hidden; }
+.barra i { display: block; height: 100%; border-radius: 999px; transition: width .3s ease; }
+.controles { display: flex; gap: 6px; justify-content: space-between; flex-wrap: wrap; }
+.controles .btn { flex: 1; min-width: 0; }
+.lista { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; }
+.lista .item { display: flex; gap: 6px; align-items: center; font-size: 13.5px; padding: 4px 6px; border-radius: 8px; background: #f6f4fb; }
+.lista .item .n { font-size: 11px; color: var(--tinta-suave); font-weight: 700; min-width: 16px; }
+.lista .item .nome { flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.lista .item .r { font-weight: 800; }
+.lista .item.ok { background: var(--palco-claro); }
+.lista .item.acertou { background: var(--verde-claro); }
+.lista .item.errou { background: #fdecea; }
+.lista .item.falta { color: var(--tinta-suave); }
+
+.relogio-mini { font-weight: 800; font-variant-numeric: tabular-nums; background: rgba(255,255,255,.15); padding: 2px 10px; border-radius: 999px; }
+.faixa-travada { position: absolute; top: 12px; left: 12px; background: #c0392b; padding: 6px 12px; border-radius: 12px; font-weight: 800; }
+.ferramentas { position: absolute; left: 12px; bottom: 12px; display: flex; gap: 8px; align-items: center; }
+.ferramentas button { width: 42px; height: 42px; border-radius: 50%; border: 0; background: rgba(28,22,48,.75); color: #fff; font-size: 18px; }
+.ferramentas button.ativo { background: var(--amarelo); }
+.ferramentas input { width: 120px; }
+.botao-ler { font: inherit; font-weight: 800; font-size: 17px; border: 0; border-radius: 999px; padding: 12px; background: #fff; color: #1e88e5; box-shadow: inset 0 0 0 2px #1e88e5; }
+.botao-ler.pausado { background: #1e88e5; color: #fff; }

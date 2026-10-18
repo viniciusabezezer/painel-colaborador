@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ProvaShow Malu — Central de ajuda</title>
+    <meta name="description" content="Como usar o ProvaShow Malu: primeiros passos, biblioteca, turmas, cartões, aula ao vivo, celular, modo aluno, relatórios e problemas comuns.">
+    <link rel="manifest" href="../manifest.webmanifest">
+    <link rel="icon" href="../icone.svg" type="image/svg+xml">
+    <link rel="stylesheet" href="../estilo.css">
+    <style>
+        .ajuda { max-width: 920px; margin: 0 auto; padding: 24px 20px 70px; }
+        .ajuda header { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; margin-bottom: 18px; }
+        .ajuda h1 { font-size: clamp(28px, 4vw, 40px); margin: 6px 0 14px; }
+        .busca-ajuda { font-size: 18px !important; padding: 14px 18px !important; border-radius: 999px !important; margin-bottom: 18px; }
+        .categorias { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 20px; }
+        .categorias a { text-decoration: none; padding: 6px 12px; border-radius: 999px; background: var(--palco-claro); font-weight: 600; font-size: 14px; }
+        .ajuda h2 { font-size: 22px; margin: 28px 0 10px; scroll-margin-top: 20px; }
+        .ajuda details { background: #fff; border: 1px solid var(--linha); border-radius: 14px; padding: 12px 16px; margin-bottom: 8px; }
+        .ajuda summary { font-weight: 700; cursor: pointer; font-size: 16.5px; }
+        .ajuda details > div { color: var(--tinta-suave); margin-top: 8px; }
+        .ajuda details li { margin: 4px 0 4px 18px; }
+        .ajuda details p + p, .ajuda details p + ul, .ajuda details ul + p { margin-top: 8px; }
+        .ajuda code { background: #eceade; padding: 1px 5px; border-radius: 5px; font-size: .92em; }
+        .nada { display: none; color: var(--tinta-suave); text-align: center; padding: 20px; }
+    </style>
+</head>
+<body>
+<main class="ajuda">
+    <header>
+        <a class="marca" href="../"><span class="marca-icone" aria-hidden="true"><i></i><i></i><i></i><i></i></span><span>ProvaShow <small>Malu</small></span></a>
+        <a class="btn btn-principal" href="../app/">Abrir o app</a>
+    </header>
+    <h1>Central de ajuda</h1>
+    <input type="search" class="busca-ajuda" id="busca" placeholder="Busque: cartão não lê, cronômetro, colar perguntas…" aria-label="Buscar na ajuda">
+    <nav class="categorias">
+        <a href="#comecar">Primeiros passos</a><a href="#biblioteca">Biblioteca e editor</a><a href="#turmas">Turmas e cartões</a><a href="#aula">Aula ao vivo</a>
+        <a href="#instalar">Celular e instalação</a><a href="#aluno">Modo aluno</a><a href="#relatorios">Relatórios</a><a href="#dados">Dados e cópias</a><a href="#problemas">Problemas comuns</a><a href="#privacidade">Privacidade</a>
+    </nav>
+    <p class="nada" id="nada">Nada encontrado. Tente outra palavra.</p>
+
+    <h2 id="comecar">Primeiros passos</h2>
+    <details open><summary>Como funciona o ProvaShow?</summary><div><p>Você projeta uma pergunta de múltipla escolha. Cada aluno tem um cartão de papel com um desenho único e as letras A, B, C e D nos quatro lados; ele gira o cartão para deixar em cima a letra que escolheu e levanta. Você passa a câmera do celular (ou a webcam) pela sala e cada cartão é lido na hora: quem respondeu, o quê, e se acertou. Os alunos não precisam de aparelho.</p></div></details>
+    <details><summary>Em 10 minutos: da instalação à primeira pergunta</summary><div><ul>
+        <li><strong>Cartões:</strong> imprima em <a href="../cartoes/">Cartões</a> (2 por folha é o mais usado).</li>
+        <li><strong>Turma:</strong> no app, Turmas → + Nova turma → Alunos → Colar lista (um nome por linha). Cada aluno ganha um número; entregue o cartão com esse número.</li>
+        <li><strong>Perguntas:</strong> Biblioteca → + Conjunto, escreva ou cole as perguntas; ou traga um pacote pronto em Explorar.</li>
+        <li><strong>Aula:</strong> Aula ao vivo → escolha a turma e o conjunto → Telão (no projetor) → Ler cartões.</li>
+    </ul></div></details>
+    <details><summary>Preciso de conta, senha ou internet?</summary><div><p>Não há conta. Tudo fica guardado no aparelho em que você usa o app. Internet só é necessária para o telão e os scanners em aparelhos diferentes (eles conversam pelo código da aula) e para vídeos do YouTube. No mesmo computador (webcam + telão numa janela), funciona sem internet.</p></div></details>
+
+    <h2 id="biblioteca">Biblioteca e editor</h2>
+    <details><summary>Conjuntos, pastas, pacotes e lixeira</summary><div><ul>
+        <li><strong>Conjunto:</strong> um grupo de perguntas apresentado de uma vez (uma “aula”).</li>
+        <li><strong>Pastas:</strong> organize os conjuntos; pastas podem ficar dentro de pastas. Use ⋯ → Mover para…</li>
+        <li><strong>Pacotes:</strong> juntam conjuntos de um tema para levar a outro computador ou a colegas (Exportar arquivo / Importar pacote). Quem recebe ganha uma cópia para editar.</li>
+        <li><strong>Explorar:</strong> pacotes prontos (rotina, matemática, português, ciências, geografia…).</li>
+        <li><strong>Lixeira:</strong> o que você exclui fica 30 dias e pode ser restaurado. Ao excluir, aparece também “Desfazer”.</li>
+        <li><strong>Busca:</strong> procura no título, nos enunciados e nas alternativas, sem se importar com acentos.</li>
+    </ul></div></details>
+    <details><summary>Formatar o texto e escrever equações</summary><div><p>Use os botões acima do enunciado ou digite: <code>**negrito**</code>, <code>*itálico*</code>, <code>__sublinhado__</code>, <code>x^2^</code> (expoente), <code>H~2~O</code> (índice). Equações em LaTeX vão entre cifrões: <code>$\frac{1}{2}$</code>. O botão ∑ abre um assistente com fração, raiz, potência, somatório e símbolos, com prévia. Para um cifrão de verdade, escreva <code>\$</code>. Atalhos: Ctrl+B, Ctrl+I, Ctrl+U, Ctrl+E (equação) e Ctrl+Enter (nova pergunta).</p></div></details>
+    <details><summary>Imagens, gifs, vídeos e áudio</summary><div><ul>
+        <li><strong>Imagem/GIF:</strong> escolha um arquivo. Fotos são reduzidas para não pesar; gifs vão como estão (até 4 MB). “Caber” mostra inteira; “Preencher” ocupa o espaço.</li>
+        <li><strong>Vídeo:</strong> cole o endereço do YouTube e, se quiser, onde começa e termina (ex.: 1:30). Toca no telão.</li>
+        <li><strong>Áudio:</strong> grave pelo microfone (leitura da pergunta, pronúncia, trecho de música) ou envie um arquivo.</li>
+        <li><strong>Posição:</strong> ◧ ▣ ◨ colocam a mídia à direita, no centro ou à esquerda do texto.</li>
+        <li><strong>Imagem na alternativa:</strong> botão 🖼 ao lado de cada alternativa.</li>
+    </ul></div></details>
+    <details><summary>Resposta certa, várias certas e enquete</summary><div><p>Toque na letra da alternativa para marcá-la como certa; dá para marcar mais de uma. “Enquete” é pergunta sem resposta certa (opinião, autoavaliação): ninguém erra e ela não entra na nota.</p></div></details>
+    <details><summary>Colar várias perguntas de uma vez</summary><div><p>No editor, “📋 Colar várias”. Formato:</p>
+        <p><code>1) Qual é a capital do Ceará?</code><br><code>a) Recife</code><br><code>*b) Fortaleza</code><br><code>c) Natal</code></p>
+        <p>A certa pode ser marcada com <code>*</code> antes (ou depois) da alternativa, ou com uma linha <code>Resposta: B</code> (várias: <code>Resposta: A, C</code>; V/F: <code>Resposta: V</code>). Aceita “Questão 1:”, “Q1 -”, “1.”, “(A)”, “A.”. De planilha: colunas pergunta, A, B, C, D, certa (separadas por tabulação — é o que acontece ao copiar do Excel/Planilhas). Dá para escolher quantas alternativas usar e tirar um texto que se repete (ex.: “(ENEM 2019)”). A prévia mostra o resultado antes de adicionar.</p></div></details>
+    <details><summary>Embaralhar as alternativas</summary><div><p>Ligue “Embaralhar as alternativas ao apresentar” no conjunto. Cada aula sorteia uma ordem nova (a resposta certa acompanha). Verdadeiro/Falso e “todas/nenhuma das anteriores” não são embaralhadas. O relatório guarda a ordem que a turma viu.</p></div></details>
+    <details><summary>Prévia e impressão das perguntas</summary><div><p>“👁 Prévia” mostra cada pergunta como sai no telão. ⋯ → “Imprimir perguntas” gera uma lista com o gabarito.</p></div></details>
+
+    <h2 id="turmas">Turmas e cartões</h2>
+    <details><summary>Números de cartão</summary><div><p>Cada aluno ativo tem um número de 1 a 63. Ao colar a lista, os números saem em ordem. Mudar o número para um que já é de outro aluno faz os dois trocarem. O mesmo jogo de cartões serve para todas as turmas: o cartão 7 é da Ana no 1º A e do Pedro no 2º B.</p></div></details>
+    <details><summary>Aluno que saiu ou está afastado</summary><div><p>Use 🗄 Arquivar: ele sai da chamada e o cartão fica livre, mas as respostas continuam nos relatórios. Para voltar, “Voltar para a turma”. Excluir apaga o aluno (o app avisa se ele tem resultados).</p></div></details>
+    <details><summary>Fila, cor e turma arquivada</summary><div><p>A fila é o que será apresentado na turma, na ordem; ao encerrar uma aula, você escolhe se o conjunto sai da fila. A cor ajuda a reconhecer a turma. No fim do ano, ⋯ → Arquivar turma (os relatórios ficam). “Duplicar turma” copia os alunos para o ano seguinte.</p></div></details>
+    <details><summary>Imprimir os cartões</summary><div><p>Em <a href="../cartoes/">Cartões</a>: tamanho (1, 2, 4 ou 9 por folha), modelo padrão ou discreto (letras pequenas, que o colega do lado não lê), com ou sem os nomes de uma turma. Imprima sem “ajustar à página”, de preferência em papel mais grosso e fosco. Não plastifique com plástico brilhante — o reflexo atrapalha a leitura.</p></div></details>
+
+    <h2 id="aula">Aula ao vivo</h2>
+    <details><summary>Telão</summary><div><p>Na aula, “🖥 Telão”: abra nesta tela (e arraste a janela para o projetor) ou, no computador do projetor, abra o endereço do telão e digite o código. F = tela cheia. Clique na imagem para ampliar. 👁 (ou S) = modo tela compartilhada, que esconde a chamada e a contagem — ideal para projetar numa chamada de vídeo.</p></div></details>
+    <details><summary>Ler os cartões</summary><div><p>“📷 Ler cartões aqui” liga a câmera deste aparelho; “Pausar leitura” para de registrar sem desligar a câmera. Cartão lido fica verde; amarelo = conferindo; cinza = cartão sem aluno, ou levantado desde a pergunta anterior (“baixe o cartão”). Há bipe e vibração a cada cartão novo, lanterna e zoom (quando o aparelho permite) e troca de câmera. Para ler com outro celular, abra o scanner por QR code ou código.</p></div></details>
+    <details><summary>Gráfico, resposta certa e lista no telão</summary><div><p>📊 Gráfico mostra quantos escolheram cada letra; ✔ Revelar destaca a certa. Em ⚙: a lista de alunos no telão aparece só durante a leitura, sempre ou nunca; e as respostas individuais ficam escondidas (normal) ou aparecem ao revelar, com quem acertou. O telão nunca mostra o que cada um respondeu antes de você decidir.</p></div></details>
+    <details><summary>Cronômetro e encerrar respostas</summary><div><p>⏱ inicia/pausa (atalho T). Escolha cronômetro (conta para cima) ou contagem regressiva de 15 s a 5 min; ela aparece no telão e apita ao zerar. Em ⚙ dá para encerrar as respostas automaticamente quando a contagem zerar. 🔓/🔒 encerra ou reabre as respostas à mão.</p></div></details>
+    <details><summary>Lançar ou trocar uma resposta à mão</summary><div><p>Toque no nome do aluno na lista “Responderam” e escolha a letra (ou “Sem resposta”). Respostas à mão aparecem com ✋; pelo aparelho, com 📱.</p></div></details>
+    <details><summary>Atalhos de teclado na aula</summary><div><p>← → perguntas · G gráfico · R resposta · T cronômetro · L ou espaço ler/pausar.</p></div></details>
+    <details><summary>Ler de novo e encerrar</summary><div><p>“Ler de novo” apaga as respostas da pergunta e zera os scanners. “Encerrar” fecha a aula, avisa o telão e os celulares e abre o relatório da aula.</p></div></details>
+
+    <h2 id="instalar">Celular e instalação</h2>
+    <details><summary>Dá para usar só o celular?</summary><div><p>Sim — é o modo mais simples. Abra o app no celular: biblioteca, turmas, aula ao vivo com a câmera do próprio celular e relatórios. Se houver projetor, abra o telão no computador dele e digite o código da aula.</p></div></details>
+    <details><summary>Instalar como aplicativo</summary><div><ul>
+        <li><strong>Android (Chrome):</strong> no app, Mais → “Instalar o app neste aparelho”, ou menu ⋮ → Instalar app.</li>
+        <li><strong>iPhone/iPad (Safari):</strong> Compartilhar □↑ → Adicionar à Tela de Início.</li>
+        <li><strong>Computador (Chrome/Edge):</strong> ícone de instalar na barra de endereço.</li>
+    </ul><p>Instalado, abre em tela cheia e funciona sem internet depois da primeira abertura.</p></div></details>
+    <details><summary>Versão nativa (lojas Android/iOS)</summary><div><p>Existe um projeto de app nativo (Capacitor) que embala o mesmo ProvaShow para gerar o APK/AAB do Android e o app do iOS — útil para distribuir pela loja ou por MDM da escola. Os dados, a câmera e o telão funcionam igual. Veja <code>provashow/nativo/README.md</code> no repositório.</p></div></details>
+    <details><summary>Levar os dados entre computador e celular</summary><div><p>Mais → “Computador ⇄ celular”. Abra a tela nos dois aparelhos, gere o código num e digite no outro. Os dois juntam o que têm; se a mesma coisa foi mudada nos dois, vence a mudança mais nova. Nada é apagado.</p></div></details>
+
+    <h2 id="aluno">Modo aluno (aula remota ou híbrida)</h2>
+    <details><summary>Como os alunos respondem pelo aparelho</summary><div><p>Em Turmas → Alunos → “📱 Links para responder pelo aparelho”, copie ou imprima (com QR code) o link pessoal de cada aluno. O aluno abre o link uma vez; nas aulas, digita o código que aparece no telão e toca na resposta. Não há conta nem senha. Quem está na sala usa o cartão; quem está em casa, o aparelho — tudo na mesma pergunta.</p></div></details>
+    <details><summary>Link vazou ou aluno trocou de aparelho</summary><div><p>“Novo link” gera outro endereço para o aluno; o antigo deixa de valer. Trocar de aparelho é só abrir o link de novo.</p></div></details>
+    <details><summary>Desligar as respostas pelo aparelho</summary><div><p>Na aula, ⚙ → desmarque “Aceitar respostas pelo aparelho dos alunos”.</p></div></details>
+
+    <h2 id="relatorios">Relatórios</h2>
+    <details><summary>Placar da turma</summary><div><p>Alunos × perguntas, com ✓/✗, % de cada aluno e acerto de cada pergunta. Escolha o período (hoje, semana, mês, bimestre, ano, tudo ou datas) e a ordem (nome, nota, cartão). Clique em “Q3” para ver a pergunta, as respostas de cada aluno, tirá-la da nota ou corrigir o gabarito daquela aula. Imprima ou baixe a planilha (CSV, abre no Excel e no Planilhas).</p></div></details>
+    <details><summary>Relatório de cada aula e de cada aluno</summary><div><p>“Aulas dadas” lista cada conjunto apresentado, com gráfico de cada pergunta. O relatório do aluno (clique no nome) mostra cada pergunta, a resposta dele e a certa, a nota e a média da turma — pronto para imprimir ou salvar em PDF. “📄 Relatórios dos alunos” imprime o da turma toda de uma vez.</p></div></details>
+    <details><summary>Perguntas para retomar</summary><div><p>Abaixo do placar, as perguntas com menor acerto no período — boas candidatas para revisar na próxima aula (dá para apresentá-las de novo).</p></div></details>
+
+    <h2 id="dados">Dados e cópias de segurança</h2>
+    <details><summary>Onde ficam os dados?</summary><div><p>No aparelho, no armazenamento do navegador (IndexedDB). Limpar os dados do navegador apaga o ProvaShow: baixe uma cópia em Mais → “Baixar cópia” de vez em quando. “Restaurar cópia” junta com o que existe ou substitui tudo.</p></div></details>
+
+    <h2 id="problemas">Problemas comuns</h2>
+    <details><summary>O cartão não é lido</summary><div><ul>
+        <li>Aproxime-se ou use o zoom; o cartão precisa aparecer com pelo menos uns 3 cm na tela.</li>
+        <li>Evite contraluz (janela atrás dos alunos) e reflexo de plástico brilhante.</li>
+        <li>Peça para segurarem o cartão pelas bordas brancas, sem cobrir o quadrado preto.</li>
+        <li>Cartão cinza com “sem aluno”: o número não está cadastrado na turma.</li>
+        <li>Cartão cinza com “baixe o cartão”: estava levantado na pergunta anterior; peça para abaixar e levantar de novo.</li>
+    </ul></div></details>
+    <details><summary>A câmera não liga</summary><div><p>Permita a câmera para o site (cadeado na barra de endereço). A câmera só funciona em endereço seguro (https). No iPhone, use o Safari ou o app instalado.</p></div></details>
+    <details><summary>O telão ou o celular não recebem nada</summary><div><p>Confira o código. Com aparelhos diferentes, os dois precisam de internet (o selo da aula mostra “internet ligada”). Redes da escola que bloqueiam conexões em tempo real podem impedir; nesse caso, use o telão numa janela do mesmo computador e a webcam, ou o celular sozinho.</p></div></details>
+    <details><summary>A imagem da pergunta não aparece no telão</summary><div><p>Imagens e áudios só vão para o telão aberto no mesmo aparelho do app (o canal pela internet leva só texto e vídeos do YouTube). Com o telão em outro computador, prefira vídeos do YouTube ou abra o telão numa janela do próprio computador do app.</p></div></details>
+
+    <h2 id="privacidade">Privacidade</h2>
+    <details><summary>O que é enviado e para onde</summary><div><p>Turmas, perguntas e notas ficam no aparelho do professor; nada é gravado em servidor. Durante a aula ao vivo, passam pelo canal da aula (tempo real do Supabase da escola) a pergunta da vez, os números dos cartões, o primeiro nome e a inicial do sobrenome de cada aluno e as contagens — sem gravação. O código da aula é aleatório e muda a cada aula; o telão não mostra a letra de cada aluno. As imagens dos cartões nunca saem do celular: a leitura é feita no próprio aparelho. Vídeos do YouTube usam o modo de privacidade reforçada (youtube-nocookie).</p></div></details>
+</main>
+<script>
+    const busca = document.getElementById('busca');
+    const tirar = (t) => t.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
+    busca.addEventListener('input', () => {
+        const t = tirar(busca.value.trim());
+        let algum = false;
+        document.querySelectorAll('.ajuda details').forEach((d) => {
+            const ok = !t || tirar(d.textContent).includes(t);
+            d.hidden = !ok;
+            if (t && ok) d.open = true;
+            algum = algum || ok;
+        });
+        document.querySelectorAll('.ajuda h2').forEach((h) => {
+            let el = h.nextElementSibling, visivel = false;
+            while (el && el.tagName === 'DETAILS') { if (!el.hidden) visivel = true; el = el.nextElementSibling; }
+            h.hidden = !visivel;
+        });
+        document.getElementById('nada').style.display = algum ? 'none' : 'block';
+    });
+    if (location.hash) { const alvo = document.querySelector(location.hash); if (alvo && alvo.nextElementSibling) alvo.nextElementSibling.open = true; }
+</script>
+</body>
+</html>

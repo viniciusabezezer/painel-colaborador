@@ -1,0 +1,15 @@
+{
+  "appId": "br.ce.eemti.provashow",
+  "appName": "ProvaShow Malu",
+  "webDir": "www",
+  "server": {
+    "androidScheme": "https",
+    "iosScheme": "https"
+  },
+  "android": {
+    "allowMixedContent": false
+  },
+  "ios": {
+    "contentInset": "always"
+  }
+}

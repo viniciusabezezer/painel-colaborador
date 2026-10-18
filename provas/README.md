@@ -36,6 +36,11 @@ Quando entra um novo, o mais antigo sai; dá para apagar um a um ou todos.
 
 ## O caminho
 
+A prova pode vir pronta do **Montador de Provas** (`/montar/`): a Avaliação
+Bimestral Malu sai de lá com um espaço em branco de 2,5 cm exatamente onde
+este app cola o cabeçalho com os valores padrão da tela (19 × 2,5 cm, a 0,6 cm
+do alto e 1 cm da esquerda), então basta subir o PDF.
+
 1. **A avaliação** — bimestre, ano e a *chave da escola*.
 2. **Os alunos** — cola-se tudo de uma vez, todas as turmas juntas. A turma pode
    vir como título de bloco (`TURMA 3B`) ou na própria linha (`3B; João da
@@ -106,6 +111,11 @@ natureza, `HUM` ciências humanas, `MAT` matemática.
 └────────────────────────────────────────────────────┴────────┘
 ```
 
+O **brasão da escola** é padrão e sai sempre, à esquerda (ou do lado oposto ao
+QR). Ele é lido do `logo.png`; se o arquivo não vier — pasta aberta direto do
+computador, sem internet —, vale a cópia embutida em `js/brasao.js`, gerada do
+mesmo `logo.png`. Trocando o logo, gere de novo o `brasao.js`.
+
 O nome é o maior elemento, porque é ele que impede a prova de rodar de carteira
 em carteira, e nunca sai cortado: a fonte diminui até o nome inteiro caber. O QR
 fica encaixado na altura do bloco, à direita ou à esquerda. Escola, componente e
@@ -124,6 +134,44 @@ Três modelos:
 Medidas em centímetros, contadas da borda superior esquerda, como se mede numa
 folha impressa. Se a prova tiver sido reduzida para abrir espaço, uma marca
 colada sobre ela passa pela mesma redução sozinha.
+
+## Gabaritos identificados (aba própria, opcional)
+
+Para quando a folha de respostas vem separada da prova. O gabarito recebe a
+**mesma identificação** da prova daquele aluno — inclusive o **mesmo código e o
+mesmo QR** —, de modo que as duas folhas se cruzem e nenhuma sirva para outro
+aluno. Sai uma via por aluno, com **todas as páginas** do arquivo enviado e o
+cabeçalho na primeira, mais um gabarito reserva sem identificação.
+
+A aba anda sozinha: o campo de carregar o arquivo fica sempre à vista — escolhe-se
+a série e o componente e envia-se o PDF, sem precisar de prova nenhuma nem de
+lista colada. A lista de alunos do **passo 2** só faz falta na hora de gerar,
+porque é dela que sai a identificação.
+
+Sai **quatro gabaritos por folha A4**, cada um ocupando um quarto da folha, em
+pé, para recortar — é o formato usual da folha de respostas da escola. Marcas de
+corte curtas nas bordas do meio mostram onde cortar, sem passar por cima de
+nada impresso. Uma folha de até um quarto de A4 entra em **tamanho original**;
+maior que isso, é reduzida para caber, e o rótulo do arquivo diz em quanto
+ficou, porque redução mexe com a leitura óptica. Desmarcando a opção, sai um
+gabarito por página, no tamanho do arquivo enviado.
+
+O cabeçalho do gabarito tem **medidas próprias**, porque a folha de respostas
+costuma ser bem menor que a prova — um quarto de uma folha A4, por exemplo, onde
+o bloco de 19 cm da capa não caberia. Quando um arquivo é enviado, largura,
+altura e posição se ajustam sozinhas ao tamanho real da folha, até a coordenação
+mexer nelas. Nesse formato reduzido o cabeçalho dispensa os quadros de acertos e
+pontos e a linha da data, que são da capa da prova, e o QR encolhe junto com o
+bloco.
+
+O gabarito **nunca é redimensionado**: ele é copiado em tamanho original e o
+cabeçalho é sobreposto, para as marcas quadradas de alinhamento da leitura
+óptica ficarem exatamente onde estavam. Por isso vale conferir na prévia que o
+retângulo não cobre nenhuma marca nem as bolhas; não havendo espaço livre, o
+caminho é deixar uma faixa em branco no gabarito antes de subir o arquivo.
+
+Um botão em cada arquivo enviado repete aquele gabarito nos cinco componentes da
+série, que é o caso comum de uma folha de respostas servir para todas as provas.
 
 ## Prova no Word
 
@@ -155,8 +203,8 @@ leve. O SHA-256 é implementação própria em `js/sha256.js`, porque o
 ## Testes
 
 ```bash
-node --test provas/test/provas.test.cjs   # 28 verificações: código, lista, QR, posição e PDF
-node provas/test/provas-browser.mjs       # 25 verificações na tela, com Chromium
+node --test provas/test/provas.test.cjs   # 41 verificações: código, lista, QR, posição e PDF
+node provas/test/provas-browser.mjs       # 38 verificações na tela, com Chromium
 ```
 
 O teste de navegador precisa do `playwright` instalado (global serve), sobe um

@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>ProvaShow Malu — App do professor</title>
+    <meta name="description" content="Monte perguntas, cadastre turmas e conduza a aula ao vivo com os cartões do ProvaShow Malu — no computador ou no celular.">
+    <meta name="robots" content="noindex">
+    <meta name="theme-color" content="#4c2a85">
+    <link rel="manifest" href="../manifest.webmanifest">
+    <link rel="apple-touch-icon" href="../icone-192.png">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-title" content="ProvaShow">
+    <link rel="icon" href="../icone.svg" type="image/svg+xml">
+    <link rel="stylesheet" href="../estilo.css">
+    <link rel="stylesheet" href="app.css">
+</head>
+<body>
+
+<header class="topo">
+    <a class="marca" href="#inicio" title="Início">
+        <span class="marca-icone" aria-hidden="true"><i></i><i></i><i></i><i></i></span>
+        <span>ProvaShow <small>Malu</small></span>
+    </a>
+    <nav class="abas" aria-label="Seções">
+        <a href="#inicio" data-aba="inicio">Início</a>
+        <a href="#biblioteca" data-aba="biblioteca">Biblioteca</a>
+        <a href="#turmas" data-aba="turmas">Turmas</a>
+        <a href="#aula" data-aba="aula">Aula ao vivo <span class="ponto-vivo" hidden></span></a>
+        <a href="#relatorios" data-aba="relatorios">Relatórios</a>
+    </nav>
+    <div class="topo-direita">
+        <a class="btn btn-p esconder-celular" href="../cartoes/" target="_blank" rel="noopener">🖨 Cartões</a>
+        <a class="btn btn-p btn-icone" href="#mais" data-aba="mais" title="Mais: ajustes, instalar, cópia de segurança">⋯</a>
+    </div>
+</header>
+
+<main class="conteudo" id="conteudo" aria-live="polite"></main>
+
+<nav class="abas-baixo" aria-label="Seções">
+    <a href="#inicio" data-aba="inicio"><span>🏠</span>Início</a>
+    <a href="#biblioteca" data-aba="biblioteca"><span>📚</span>Biblioteca</a>
+    <a href="#aula" data-aba="aula" class="aba-aula"><span>▶<i class="ponto-vivo" hidden></i></span>Aula</a>
+    <a href="#turmas" data-aba="turmas"><span>👥</span>Turmas</a>
+    <a href="#relatorios" data-aba="relatorios"><span>📊</span>Relatórios</a>
+</nav>
+
+<dialog id="dialogo" class="dialogo"></dialog>
+<div class="aviso" id="aviso" role="status" hidden></div>
+<div id="menu-mais" hidden></div>
+
+<script src="../js/cartao.js"></script>
+<script src="../js/leitor.js"></script>
+<script src="../js/camera.js"></script>
+<script src="../vendor/katex.min.js"></script>
+<script src="../js/texto.js"></script>
+<script src="../js/midia.js"></script>
+<script src="../js/slide.js"></script>
+<script src="../js/dados.js"></script>
+<script src="../js/armazem.js"></script>
+<script src="../js/explorar.js"></script>
+<script src="../vendor/supabase.js"></script>
+<script src="../js/config.js"></script>
+<script src="../js/canal.js"></script>
+<script src="../vendor/qrcode.js"></script>
+<script src="js/nucleo.js"></script>
+<script src="js/biblioteca.js"></script>
+<script src="js/editor.js"></script>
+<script src="js/turmas.js"></script>
+<script src="js/aula.js"></script>
+<script src="js/relatorios.js"></script>
+<script src="js/ajustes.js"></script>
+<script>PS.iniciar();</script>
+</body>
+</html>
