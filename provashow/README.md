@@ -69,9 +69,18 @@ cada aluno e a origem (cartão, aparelho, à mão); imprimir; CSV; relatório de
 cada aula; relatório do aluno imprimível, um ou a turma toda; ★ perguntas para
 retomar.
 
-**Dados** — tudo no aparelho (IndexedDB), sem conta; cópia de segurança (juntar
-ou substituir); ★ "Computador ⇄ celular": os dois aparelhos trocam os dados pelo
-código e juntam (vence a alteração mais nova), sem servidor de dados.
+**Dados e login** — ★ entrada com a conta do Montador de Provas (Supabase Auth;
+só quem tem perfil ativo em `montador_perfis` entra; a gestão cria as contas e
+redefine senhas); "Lembrar neste aparelho" opcional; trocar senha pedindo a
+atual. ★ Tudo vai para a nuvem da escola (`provashow_itens`) e fica também no
+aparelho (IndexedDB, uma cópia por conta) para funcionar sem internet: o app
+baixa, junta (vence a alteração mais nova) e envia o que falta a cada mudança,
+a cada 45 s e ao voltar a conexão. ★ Nada se apaga na nuvem: não existe DELETE
+(nem política nem permissão), apagar no app só marca `removido`, e toda versão
+anterior de turma, aula e sessão vai para `provashow_versoes`. ★ A gestão vê os
+relatórios de todos os professores em Mais → "Relatórios da escola". Sair pode
+apagar a cópia do aparelho (computador compartilhado). Cópia de segurança em
+arquivo continua (juntar ou substituir).
 
 ## Webapp no celular ou app nativo?
 
@@ -101,9 +110,12 @@ As duas possibilidades estão prontas:
 - `js/dados.js` — modelo (pastas, conjuntos, pacotes, turmas, aulas, sessões),
   migração da versão 1, relatórios, períodos, colar perguntas, embaralhar,
   pacotes, junção para a sincronização.
+- `js/nuvem.js` — login e sincronização com o Supabase; `supabase/001_provashow.sql`
+  — tabelas, gatilhos (versão mais velha não sobrescreve a nova; histórico) e RLS.
 - `js/armazem.js` (IndexedDB), `js/texto.js` (marcação + LaTeX), `js/midia.js`,
   `js/slide.js` (o slide comum ao telão, à prévia e à aula), `js/explorar.js`.
-- `app/js/` — núcleo, biblioteca, editor, turmas, aula, relatórios, ajustes.
+- `app/js/` — núcleo, biblioteca, editor, turmas, aula, relatórios, ajustes,
+  conta (login, selo da nuvem, relatórios da escola).
 
 > O canal pela internet usa canais públicos do Realtime: quem souber o código
 > entra enquanto a aula durar; o código é aleatório e muda a cada aula. As

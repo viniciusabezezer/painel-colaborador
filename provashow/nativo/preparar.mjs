@@ -7,7 +7,7 @@ import { join, resolve, basename } from 'node:path';
 const AQUI = resolve(import.meta.dirname);
 const ORIGEM = resolve(AQUI, '..');
 const DESTINO = join(AQUI, 'www');
-const FORA = new Set(['nativo', 'test', 'vercel.json', 'README.md', 'node_modules']);
+const FORA = new Set(['nativo', 'test', 'supabase', 'vercel.json', 'README.md', 'node_modules']);
 
 await rm(DESTINO, { recursive: true, force: true });
 await mkdir(DESTINO);

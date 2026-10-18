@@ -357,3 +357,20 @@ kbd { font-family: inherit; font-size: 12px; padding: 1px 6px; border: 1px solid
     .placar .fixa { position: static; }
     .relatorio-aluno { border: 0; padding: 0; }
 }
+
+/* login e conta */
+body.sem-login .topo, body.sem-login .abas-baixo, body.sem-login .conteudo { display: none !important; }
+.tela-login { min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 24px 16px; background: linear-gradient(160deg, var(--fundo), var(--palco-claro)); }
+.login-caixa { width: min(420px, 100%); background: #fff; border-radius: 22px; box-shadow: var(--sombra); padding: 28px 24px; display: flex; flex-direction: column; align-items: center; gap: 10px; text-align: center; }
+.login-escola { width: 110px; height: 110px; object-fit: contain; }
+.login-caixa form { width: 100%; display: flex; flex-direction: column; gap: 4px; text-align: left; margin-top: 8px; }
+.login-caixa form .btn { margin-top: 8px; padding: 12px; font-size: 16px; }
+.login-mensagem { color: var(--perigo); font-weight: 600; min-height: 1.4em; text-align: center; }
+.voltar-site { font-size: 14px; }
+.logo-escola { width: 40px; height: 40px; object-fit: contain; flex: none; }
+.estado-nuvem { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 700; padding: 6px 10px; border-radius: 999px; text-decoration: none; background: #eeecf3; color: var(--tinta-suave); white-space: nowrap; }
+.estado-nuvem.ok { background: var(--verde-claro); color: var(--verde); }
+.estado-nuvem.enviando, .estado-nuvem.pendente { background: #fff4d6; color: #8a6200; }
+.estado-nuvem.offline, .estado-nuvem.erro { background: #fdecea; color: var(--perigo); }
+.conta-cartao p { margin: 6px 0; }
+@media (max-width: 720px) { .estado-nuvem .texto-selo { display: none; } .logo-escola { width: 32px; height: 32px; } }
