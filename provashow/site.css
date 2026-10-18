@@ -90,3 +90,14 @@
 .chamada-final .hero-botoes { justify-content: center; }
 
 .rodape { text-align: center; padding: 26px 20px 40px; color: var(--tinta-suave); font-size: 14px; display: flex; flex-direction: column; gap: 4px; }
+
+.modos { display: grid; grid-template-columns: repeat(3, 1fr); gap: 18px; margin-top: 30px; }
+@media (max-width: 860px) { .modos { grid-template-columns: 1fr; } }
+.modos article { display: flex; flex-direction: column; gap: 8px; align-items: flex-start; }
+.modos p { color: var(--tinta-suave); flex: 1; }
+.modo-icone { font-size: 30px; }
+.sem-limite { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-top: 30px; text-align: center; }
+@media (max-width: 760px) { .sem-limite { grid-template-columns: 1fr 1fr; } }
+.sem-limite div { background: var(--fundo); border-radius: var(--raio); padding: 22px 12px; display: flex; flex-direction: column; gap: 4px; }
+.sem-limite strong { font-size: 40px; color: var(--palco); font-weight: 800; }
+.sem-limite span { color: var(--tinta-suave); }

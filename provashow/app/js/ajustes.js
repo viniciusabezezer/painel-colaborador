@@ -1,0 +1,222 @@
+/* Início, Mais (ajustes, instalar, cópia de segurança) e a sincronização
+   entre aparelhos do professor (computador <-> celular), sem conta e sem
+   servidor de dados: os dois aparelhos abrem o mesmo código e trocam tudo
+   pelo canal; cada um junta o que veio do outro (vence a alteração mais nova). */
+(function () {
+    'use strict';
+    const { esc } = PS;
+
+    /* ----- início ----- */
+    PS.telas.inicio = function () {
+        const turmas = Dados.ativos(PS.d.turmas).filter((t) => !t.arquivada);
+        const recentes = Dados.ativos(PS.d.conjuntos).sort((a, b) => (b.alterado || '').localeCompare(a.alterado || '')).slice(0, 5);
+        const aulas = PS.d.aulas.slice().sort((a, b) => b.inicio.localeCompare(a.inicio)).slice(0, 4);
+        const aula = PS.aulaViva;
+        PS.$('#conteudo').innerHTML = `
+            ${aula ? `<a class="faixa-ao-vivo" href="#aula">● Aula ao vivo em andamento — ${esc((PS.turma(aula.turmaId) || {}).nome || '')} · código ${aula.codigo} <strong>Voltar à aula →</strong></a>` : ''}
+            <div class="cabeca"><div><h1>Olá, professor(a)!</h1><p class="sub">Prepare as perguntas, escolha a turma e leia a sala inteira com o celular.</p></div>
+            <div class="botoes"><button class="btn btn-principal" data-acao="novo-conjunto-inicio">+ Novo conjunto</button></div></div>
+            <h2 class="titulo-secao">Suas turmas</h2>
+            <div class="grade-cartoes">${turmas.map((t) => {
+                const prox = t.fila.map(PS.conjunto).find((c) => c && !c.removido);
+                return `<section class="cartao-painel item-turma" style="--cor:${t.cor}">
+                    <a href="#turma/${t.id}"><h3>${esc(t.nome)}</h3></a>
+                    <p>${PS.plural(PS.alunosAtivos(t).length, 'aluno')}</p>
+                    ${prox ? `<button class="btn btn-verde btn-p" data-acao="comecar-aula" data-turma="${t.id}" data-conjunto="${prox.id}">▶ ${esc(prox.titulo)}</button>` : `<a class="btn btn-p" href="#turma/${t.id}/fila">Pôr algo na fila</a>`}
+                </section>`;
+            }).join('')}<button class="cartao-painel item-novo" data-acao="nova-turma">+ Nova turma</button></div>
+            <div class="duas-colunas">
+                <section><h2 class="titulo-secao">Editados recentemente</h2><div class="lista-itens">${recentes.map((c) => `<a class="linha-item linha-principal" href="#conjunto/${c.id}"><span class="icone-item conjunto-icone">${c.questoes.length}</span><span class="linha-texto"><strong>${esc(c.titulo)}</strong><small>${PS.dataCurta(c.alterado)}</small></span></a>`).join('') || '<p class="vazio">—</p>'}</div></section>
+                <section><h2 class="titulo-secao">Últimas aulas</h2><div class="lista-itens">${aulas.map((a) => `<a class="linha-item linha-principal" href="#relatorio-aula/${a.id}"><span class="icone-item">📊</span><span class="linha-texto"><strong>${esc(a.titulo)}</strong><small>${esc((PS.turma(a.turmaId) || {}).nome || '')} · ${PS.dataCurta(a.inicio)}</small></span></a>`).join('') || '<p class="vazio">Nenhuma aula ainda.</p>'}</div></section>
+            </div>
+            <div class="atalhos-inicio">
+                <a class="cartao-painel" href="../cartoes/" target="_blank" rel="noopener"><span>🖨</span><strong>Imprimir cartões</strong><small>63 cartões, 4 modelos</small></a>
+                <a class="cartao-painel" href="#explorar"><span>🌐</span><strong>Explorar</strong><small>pacotes prontos</small></a>
+                <a class="cartao-painel" href="#sincronizar"><span>🔄</span><strong>Computador ⇄ celular</strong><small>levar os dados</small></a>
+                <a class="cartao-painel" href="#mais"><span>📲</span><strong>Instalar no celular</strong><small>usa sem internet</small></a>
+            </div>`;
+    };
+    PS.acoes['novo-conjunto-inicio'] = () => { const c = PS.novoConjunto(null); PS.ir('conjunto/' + c.id); };
+
+    /* ----- mais / ajustes ----- */
+    let pedidoInstalar = null;
+    window.addEventListener('beforeinstallprompt', (e) => { e.preventDefault(); pedidoInstalar = e; });
+
+    PS.telas.mais = PS.telas.ajustes = async function () {
+        const cfg = PS.d.config;
+        const ios = /iphone|ipad|ipod/i.test(navigator.userAgent);
+        const instalado = matchMedia('(display-mode: standalone)').matches || navigator.standalone;
+        PS.$('#conteudo').innerHTML = `
+            <div class="cabeca"><h1>Mais</h1></div>
+            <div class="duas-colunas">
+                <section class="cartao-painel">
+                    <h2>📲 Usar no celular</h2>
+                    <p class="sub">O ProvaShow inteiro funciona no celular do professor: crie perguntas, abra a aula ao vivo e leia os cartões com a câmera do próprio aparelho. O telão (no computador do projetor) recebe tudo pelo código da aula.</p>
+                    ${instalado ? '<p class="selo selo-verde">✓ Instalado neste aparelho</p>' :
+                        ios ? '<p>No iPhone/iPad: toque em <strong>Compartilhar</strong> (□↑) e depois em <strong>Adicionar à Tela de Início</strong>.</p>' :
+                        `<button class="btn btn-principal" data-acao="instalar" ${pedidoInstalar ? '' : 'disabled'}>Instalar o app neste aparelho</button>
+                        <p class="sub">${pedidoInstalar ? '' : 'Se o botão estiver apagado, use o menu do navegador → “Instalar app” ou “Adicionar à tela inicial”.'}</p>`}
+                    <p class="sub">Depois de aberto uma vez com internet, o app abre e funciona sem internet (a aula com telão em outro aparelho precisa de internet).</p>
+                    <a class="btn" href="#sincronizar">🔄 Levar os dados entre computador e celular</a>
+                </section>
+                <section class="cartao-painel">
+                    <h2>⚙ Padrões da aula</h2>
+                    <label for="cfg-lista">Lista de alunos no telão</label>
+                    <select id="cfg-lista"><option value="leitura">Só durante a leitura</option><option value="sempre">Sempre</option><option value="nunca">Nunca</option></select>
+                    <label class="interruptor"><input type="checkbox" id="cfg-esconder" ${cfg.telao.esconderRespostas ? 'checked' : ''}> Esconder respostas individuais no telão</label>
+                    <label for="cfg-cron">Cronômetro</label>
+                    <select id="cfg-cron"><option value="livre">Cronômetro (conta para cima)</option>${[15, 30, 45, 60, 90, 120, 180, 300].map((s) => `<option value="${s}">Contagem regressiva de ${Midia.tempo(s)}</option>`).join('')}</select>
+                    <label class="interruptor"><input type="checkbox" id="cfg-travar" ${cfg.cronometro.travarAoZerar ? 'checked' : ''}> Encerrar respostas quando a contagem zerar</label>
+                    <label class="interruptor"><input type="checkbox" id="cfg-som" ${cfg.leitura.som ? 'checked' : ''}> Bipe a cada cartão lido</label>
+                </section>
+                <section class="cartao-painel">
+                    <h2>💾 Cópia de segurança</h2>
+                    <p class="sub">Tudo fica neste aparelho. Baixe uma cópia de vez em quando — e antes de trocar de computador.</p>
+                    <div class="botoes"><button class="btn" data-acao="exportar-backup">⬇ Baixar cópia</button><button class="btn" data-acao="importar-backup">⬆ Restaurar cópia</button></div>
+                    <p class="sub" id="uso-armazenamento"></p>
+                </section>
+                <section class="cartao-painel">
+                    <h2>Ajuda</h2>
+                    <p><a href="../ajuda/" target="_blank" rel="noopener">Central de ajuda do ProvaShow</a> · <a href="../" target="_blank" rel="noopener">Site</a> · <a href="../cartoes/" target="_blank" rel="noopener">Cartões</a></p>
+                    <h3 class="margem">Zona de perigo</h3>
+                    <button class="btn btn-perigo" data-acao="recomecar">Apagar tudo deste aparelho</button>
+                </section>
+            </div>`;
+        PS.$('#cfg-lista').value = cfg.telao.lista;
+        PS.$('#cfg-cron').value = cfg.cronometro.modo === 'livre' ? 'livre' : String(cfg.cronometro.segundos);
+        const salvarCfg = () => {
+            cfg.telao.lista = PS.$('#cfg-lista').value;
+            cfg.telao.esconderRespostas = PS.$('#cfg-esconder').checked;
+            const v = PS.$('#cfg-cron').value;
+            cfg.cronometro.modo = v === 'livre' ? 'livre' : 'regressivo';
+            if (v !== 'livre') cfg.cronometro.segundos = +v;
+            cfg.cronometro.travarAoZerar = PS.$('#cfg-travar').checked;
+            cfg.leitura.som = PS.$('#cfg-som').checked;
+            PS.salvar();
+            PS.avisar('Ajustes salvos.');
+        };
+        PS.$$('#conteudo select, #conteudo input[type=checkbox]').forEach((x) => { x.onchange = salvarCfg; });
+        if (navigator.storage && navigator.storage.estimate) {
+            const e = await navigator.storage.estimate();
+            const el = PS.$('#uso-armazenamento');
+            if (el) el.textContent = `Usando ${(e.usage / 1048576).toFixed(1)} MB deste aparelho.`;
+        }
+    };
+
+    Object.assign(PS.acoes, {
+        'instalar': async () => { if (!pedidoInstalar) return; pedidoInstalar.prompt(); await pedidoInstalar.userChoice; pedidoInstalar = null; PS.desenhar(); },
+        'exportar-backup': () => PS.baixar(`provashow-malu-${new Date().toISOString().slice(0, 10)}.json`, JSON.stringify(PS.d), 'application/json'),
+        'importar-backup': async () => {
+            const arquivo = await PS.escolherArquivo('application/json,.json');
+            if (!arquivo) return;
+            try {
+                const novo = JSON.parse(await arquivo.text());
+                if (!novo || !Array.isArray(novo.conjuntos) || !Array.isArray(novo.turmas)) throw new Error('formato');
+                PS.dialogo('<h2>Restaurar a cópia de segurança</h2><p class="sub">Juntar com o que já está aqui (vence a alteração mais nova) ou substituir tudo?</p><label class="interruptor"><input type="checkbox" id="substituir"> Substituir tudo (apaga o que está neste aparelho)</label>', (dlg) => {
+                    if (dlg.querySelector('#substituir').checked) PS.d = Dados.migrar(novo);
+                    else Dados.mesclar(PS.d, novo);
+                    PS.salvar(true); PS.desenhar(); PS.avisar('Cópia de segurança restaurada.');
+                }, { confirmar: 'Restaurar' });
+            } catch (erro) { PS.avisar('Esse arquivo não é uma cópia de segurança do ProvaShow.'); }
+        },
+        'recomecar': () => PS.confirmar('Apagar todas as turmas, perguntas e relatórios deste aparelho?', () => {
+            PS.d = Dados.exemplo(); PS.salvar(true); PS.ir('inicio');
+        }, 'Baixe uma cópia de segurança antes, se quiser guardar algo.')
+    });
+
+    /* ----- sincronizar aparelhos ----- */
+    let sinc = null;
+
+    PS.telas.sincronizar = function () {
+        PS.$('#conteudo').innerHTML = `
+            <a class="voltar" href="#mais">&larr; Mais</a>
+            <div class="cabeca"><div><h1>🔄 Computador ⇄ celular</h1>
+            <p class="sub">Leve as turmas, perguntas e relatórios de um aparelho para o outro. Abra esta tela nos dois aparelhos: num deles toque em <strong>Gerar código</strong>; no outro, digite o código. Os dois juntam o que têm — nada se perde (se a mesma coisa foi mudada nos dois, vence a mudança mais nova).</p></div></div>
+            <div class="duas-colunas">
+                <section class="cartao-painel centro">
+                    <h2>Este aparelho mostra o código</h2>
+                    <button class="btn btn-principal" data-acao="sinc-gerar">Gerar código</button>
+                    <p class="codigo-aula" id="sinc-codigo"></p>
+                </section>
+                <section class="cartao-painel centro">
+                    <h2>Este aparelho digita o código</h2>
+                    <form id="sinc-form" class="linha-add"><input type="text" id="sinc-campo" maxlength="7" placeholder="ABC123" autocapitalize="characters" aria-label="Código"><button class="btn btn-principal">Conectar</button></form>
+                </section>
+            </div>
+            <div class="cartao-painel" id="sinc-estado" hidden></div>`;
+        PS.$('#sinc-form').onsubmit = (e) => { e.preventDefault(); const c = Canal.normalizarCodigo(PS.$('#sinc-campo').value); if (c.length === 6) comecarSinc(c); };
+    };
+
+    function mostrarSinc(html) {
+        const el = PS.$('#sinc-estado');
+        if (el) { el.hidden = false; el.innerHTML = html; }
+    }
+
+    function comecarSinc(codigo) {
+        pararSinc();
+        const eu = Math.random().toString(36).slice(2, 10);
+        const chegando = new Map();
+        const enviados = new Set();
+        let recebeuDe = null, confirmouPara = null;
+        const canal = Canal.abrir('S' + codigo.slice(1), 'sync', receber, (c) => {
+            mostrarSinc(`Conectado ao código <strong>${codigo}</strong> ${c.nuvem === 'ligada' ? '(pela internet)' : c.nuvem === 'conectando' ? '(conectando à internet…)' : '(só neste aparelho — sem internet)'}. Esperando o outro aparelho…`);
+        });
+        const ola = setInterval(() => canal.enviar('sync-ola', { de: eu }), 1500);
+        sinc = { canal, ola, codigo };
+        canal.enviar('sync-ola', { de: eu });
+
+        async function enviarTudo(para) {
+            if (enviados.has(para)) return;
+            enviados.add(para);
+            const texto = JSON.stringify(PS.d);
+            const partes = Dados.fatiar(texto, 60000);
+            const id = eu + Date.now().toString(36);
+            for (let i = 0; i < partes.length; i++) {
+                canal.enviar('sync-parte', { de: eu, para, id, i, total: partes.length, texto: partes[i] });
+                mostrarSinc(`Enviando… ${Math.round((i + 1) / partes.length * 100)}%`);
+                await new Promise((ok) => setTimeout(ok, 80));
+            }
+        }
+
+        function receber(tipo, dados) {
+            if (!dados || dados.de === eu) return;
+            if (tipo === 'sync-ola') enviarTudo(dados.de);
+            if (tipo === 'sync-parte' && dados.para === eu) {
+                const pacote = chegando.get(dados.id) || { partes: [], n: 0 };
+                if (!pacote.partes[dados.i]) { pacote.partes[dados.i] = dados.texto; pacote.n++; }
+                chegando.set(dados.id, pacote);
+                mostrarSinc(`Recebendo… ${Math.round(pacote.n / dados.total * 100)}%`);
+                if (pacote.n === dados.total && recebeuDe !== dados.id) {
+                    recebeuDe = dados.id;
+                    try {
+                        const mudou = Dados.mesclar(PS.d, JSON.parse(pacote.partes.join('')));
+                        PS.salvar(true);
+                        canal.enviar('sync-ok', { de: eu, para: dados.de, mudou });
+                        mostrarSinc(`✓ Recebido: ${PS.plural(mudou, 'item novo ou atualizado', 'itens novos ou atualizados')}. ${confirmouPara ? 'Pronto, os dois aparelhos estão iguais.' : 'Terminando de enviar…'}`);
+                    } catch (erro) { mostrarSinc('Não consegui ler os dados recebidos. Tente de novo.'); }
+                }
+            }
+            if (tipo === 'sync-ok' && dados.para === eu) {
+                confirmouPara = dados.de;
+                if (recebeuDe) {
+                    mostrarSinc('✓ Pronto, os dois aparelhos estão com os mesmos dados.');
+                    setTimeout(pararSinc, 4000);
+                }
+            }
+        }
+    }
+
+    function pararSinc() {
+        if (!sinc) return;
+        clearInterval(sinc.ola);
+        sinc.canal.fechar();
+        sinc = null;
+    }
+
+    PS.acoes['sinc-gerar'] = () => {
+        const c = Canal.novoCodigo();
+        PS.$('#sinc-codigo').textContent = c;
+        comecarSinc(c);
+    };
+    PS.aoTrocarTela.push((r) => { if (r.nome !== 'sincronizar') pararSinc(); });
+})();

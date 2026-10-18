@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>ProvaShow Malu — Cartões para imprimir</title>
     <meta name="description" content="Imprima o jogo de cartões do ProvaShow Malu: 63 cartões, um por aluno, em três tamanhos.">
+    <link rel="manifest" href="../manifest.webmanifest">
     <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='24' fill='%234c2a85'/%3E%3Crect x='18' y='18' width='29' height='29' rx='7' fill='%23e4572e'/%3E%3Crect x='53' y='18' width='29' height='29' rx='7' fill='%232e86de'/%3E%3Crect x='18' y='53' width='29' height='29' rx='7' fill='%2317a589'/%3E%3Crect x='53' y='53' width='29' height='29' rx='7' fill='%23f5a623'/%3E%3C/svg%3E">
     <link rel="stylesheet" href="../estilo.css">
     <link rel="stylesheet" href="cartoes.css">
@@ -20,7 +21,9 @@
                 <option value="1">Grande — 1 por folha (salas grandes)</option>
                 <option value="2" selected>Médio — 2 por folha</option>
                 <option value="4">Pequeno — 4 por folha (salas pequenas)</option>
+                <option value="9">Mini — 9 por folha (só de perto)</option>
             </select></div>
+        <div><label for="estilo">Modelo</label><select id="estilo"><option value="padrao">Padrão (letras visíveis)</option><option value="discreto">Discreto (letras pequenas)</option></select></div>
         <div><label for="turma">Nomes</label><select id="turma"><option value="">Sem nomes (cartões 1 a 63)</option></select></div>
         <div><label for="de">Do cartão</label><input type="number" id="de" min="1" max="63" value="1"></div>
         <div><label for="ate">Até</label><input type="number" id="ate" min="1" max="63" value="63"></div>
@@ -31,16 +34,23 @@
 <div id="folhas"></div>
 
 <script src="../js/cartao.js"></script>
+<script src="../js/texto.js"></script>
 <script src="../js/dados.js"></script>
+<script src="../js/armazem.js"></script>
 <script>
 (function () {
     'use strict';
     const $ = (s) => document.querySelector(s);
-    const d = Dados.carregar();
+    let d = Dados.vazio();
     const p = new URLSearchParams(location.search);
     const seletor = $('#turma');
-    d.turmas.forEach((t) => seletor.insertAdjacentHTML('beforeend', `<option value="${t.id}">${t.nome.replace(/[<>&"]/g, '')}</option>`));
-    if (p.get('turma')) seletor.value = p.get('turma');
+    function preencherTurmas() {
+        const atual = seletor.value || p.get('turma') || '';
+        seletor.length = 1;
+        Dados.ativos(d.turmas).forEach((t) => seletor.insertAdjacentHTML('beforeend', `<option value="${t.id}">${Texto.esc(t.nome)}</option>`));
+        seletor.value = atual;
+        if (seletor.selectedIndex < 0) seletor.value = '';
+    }
 
     function desenhar() {
         const porFolha = +$('#tamanho').value;
@@ -48,8 +58,8 @@
         let numeros;
         const nomes = new Map();
         if (t) {
-            t.alunos.forEach((a) => nomes.set(a.cartao, a.nome));
-            numeros = t.alunos.map((a) => a.cartao).sort((a, b) => a - b);
+            t.alunos.filter((a) => !a.arquivado).forEach((a) => nomes.set(a.cartao, a.nome));
+            numeros = [...nomes.keys()].sort((a, b) => a - b);
             $('#de').disabled = $('#ate').disabled = true;
         } else {
             $('#de').disabled = $('#ate').disabled = false;
@@ -62,12 +72,13 @@
         for (let i = 0; i < numeros.length; i += porFolha) folhas.push(numeros.slice(i, i + porFolha));
         $('#folhas').className = 'por-' + porFolha;
         $('#folhas').innerHTML = folhas.map((f) => `<section class="folha">${f.map((n) =>
-            `<div class="lugar">${Cartao.svg(n, { nome: nomes.get(n) || '' })}</div>`).join('')}</section>`).join('');
+            `<div class="lugar">${Cartao.svg(n, { nome: nomes.get(n) || '', discreto: $('#estilo').value === 'discreto' })}</div>`).join('')}</section>`).join('');
         $('#resumo').textContent = `${numeros.length} cartões em ${folhas.length} folha${folhas.length === 1 ? '' : 's'}.`;
     }
     $('#opcoes').addEventListener('input', desenhar);
     $('#imprimir').addEventListener('click', () => window.print());
     desenhar();
+    Armazem.carregar().then((x) => { d = x; preencherTurmas(); desenhar(); });
 })();
 </script>
 </body>

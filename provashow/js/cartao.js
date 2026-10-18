@@ -96,7 +96,7 @@
     /* O cartão para imprimir, em SVG. Unidade = uma casa; a folga branca em
        volta (1,6 casa) é o que separa o cartão da mão e da roupa do aluno. */
     function svg(numero, opcoes) {
-        const o = Object.assign({ nome: '', tamanho: '100%' }, opcoes);
+        const o = Object.assign({ nome: '', tamanho: '100%', discreto: false }, opcoes);
         const folga = 1.6;
         const total = LADO + folga * 2;
         const g = grade(numero);
@@ -107,8 +107,10 @@
             }
         }
         const m = total / 2;
+        /* discreto: letras pequenas e claras, que o colega do lado não lê de longe */
+        const corpo = o.discreto ? 0.32 : 0.62, cor = o.discreto ? '#9a9a9a' : '#555';
         const letra = (l, x, y, giro) =>
-            `<text x="${x}" y="${y}" transform="rotate(${giro} ${x} ${y})" text-anchor="middle" dominant-baseline="central" font-size="0.62" font-weight="700" fill="#555">${l}</text>`;
+            `<text x="${x}" y="${y}" transform="rotate(${giro} ${x} ${y})" text-anchor="middle" dominant-baseline="central" font-size="${corpo}" font-weight="700" fill="${cor}">${l}</text>`;
         const rotulo = `${numero}${o.nome ? ' · ' + o.nome : ''}`;
         return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${total} ${total}" width="${o.tamanho}" class="cartao-svg" role="img" aria-label="Cartão ${numero}">` +
             `<rect width="${total}" height="${total}" fill="#fff"/>` +

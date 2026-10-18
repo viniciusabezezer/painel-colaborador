@@ -1,0 +1,20 @@
+{
+  "name": "provashow-malu-nativo",
+  "version": "2.0.0",
+  "private": true,
+  "description": "ProvaShow Malu como app nativo (Android e iOS): o mesmo app web, embalado pelo Capacitor.",
+  "scripts": {
+    "preparar": "node preparar.mjs",
+    "android": "node preparar.mjs && (test -d android || npx cap add android) && node permissoes.mjs && npx cap sync android",
+    "ios": "node preparar.mjs && (test -d ios || npx cap add ios) && node permissoes.mjs && npx cap sync ios",
+    "apk": "npm run android && cd android && ./gradlew assembleDebug"
+  },
+  "dependencies": {
+    "@capacitor/android": "7.4.5",
+    "@capacitor/core": "7.4.5",
+    "@capacitor/ios": "7.4.5"
+  },
+  "devDependencies": {
+    "@capacitor/cli": "7.4.5"
+  }
+}
