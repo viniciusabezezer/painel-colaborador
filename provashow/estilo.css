@@ -1,0 +1,122 @@
+/* ProvaShow Malu — identidade comum ao site, ao app, ao scanner, ao telão e
+   aos cartões. Mesma família dos apps da escola (Outfit), com um roxo de
+   "palco" e as quatro cores das alternativas. */
+
+@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap');
+
+:root {
+    --palco: #4c2a85;
+    --palco-escuro: #2b1650;
+    --palco-claro: #efe9fb;
+    --verde: hsl(130, 50%, 36%);
+    --verde-claro: #e3f4e6;
+    --amarelo: #f5b700;
+
+    --opcao-a: #e4572e;
+    --opcao-b: #2e86de;
+    --opcao-c: #f5a623;
+    --opcao-d: #17a589;
+
+    --fundo: #f6f4fb;
+    --painel: #ffffff;
+    --tinta: #1c1630;
+    --tinta-suave: #5f5876;
+    --linha: #e4dff0;
+    --perigo: #c0392b;
+
+    --raio: 16px;
+    --raio-p: 10px;
+    --sombra: 0 18px 40px -24px rgba(43, 22, 80, .4);
+    --sombra-p: 0 6px 16px -10px rgba(43, 22, 80, .45);
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+[hidden] { display: none !important; }
+
+body {
+    font-family: 'Outfit', system-ui, sans-serif;
+    background: var(--fundo);
+    color: var(--tinta);
+    line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+}
+
+a { color: var(--palco); }
+h1, h2, h3 { line-height: 1.15; letter-spacing: -.3px; }
+
+/* ===== Botões e campos ===== */
+.btn {
+    display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+    font: inherit; font-weight: 600; font-size: 15px;
+    padding: 10px 18px; border-radius: 999px; border: 1.5px solid var(--linha);
+    background: var(--painel); color: var(--tinta); cursor: pointer; text-decoration: none;
+    transition: transform .12s ease, background .12s ease, border-color .12s ease;
+    white-space: nowrap;
+}
+.btn:hover { border-color: var(--palco); }
+.btn:active { transform: scale(.97); }
+.btn:disabled { opacity: .45; cursor: not-allowed; }
+.btn-principal { background: var(--palco); border-color: var(--palco); color: #fff; }
+.btn-principal:hover { background: var(--palco-escuro); }
+.btn-verde { background: var(--verde); border-color: var(--verde); color: #fff; }
+.btn-perigo { color: var(--perigo); }
+.btn-perigo:hover { border-color: var(--perigo); }
+.btn-p { padding: 6px 12px; font-size: 13.5px; }
+.btn-icone { padding: 6px 9px; border-radius: 10px; }
+
+input[type=text], input[type=search], input[type=number], input[type=date], textarea, select {
+    font: inherit; font-size: 15px; color: var(--tinta);
+    border: 1.5px solid var(--linha); border-radius: var(--raio-p);
+    padding: 9px 12px; background: #fff; width: 100%;
+}
+input:focus, textarea:focus, select:focus { outline: 2px solid var(--palco); outline-offset: 1px; border-color: transparent; }
+textarea { resize: vertical; min-height: 70px; }
+label { font-weight: 600; font-size: 14px; color: var(--tinta-suave); display: block; margin-bottom: 4px; }
+
+.cartao-painel {
+    background: var(--painel); border: 1px solid var(--linha); border-radius: var(--raio);
+    box-shadow: var(--sombra); padding: 20px;
+}
+
+.selo {
+    display: inline-flex; align-items: center; gap: 6px;
+    font-size: 12.5px; font-weight: 700; letter-spacing: .3px;
+    padding: 3px 10px; border-radius: 999px; background: var(--palco-claro); color: var(--palco);
+}
+.selo-verde { background: var(--verde-claro); color: var(--verde); }
+.selo-cinza { background: #eeecf3; color: var(--tinta-suave); }
+
+.vazio { color: var(--tinta-suave); text-align: center; padding: 30px 10px; }
+
+/* Letras das alternativas, com as quatro cores */
+.letra {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 30px; height: 30px; border-radius: 9px; flex: none;
+    font-weight: 800; color: #fff; font-size: 15px;
+}
+.letra-A { background: var(--opcao-a); }
+.letra-B { background: var(--opcao-b); }
+.letra-C { background: var(--opcao-c); }
+.letra-D { background: var(--opcao-d); }
+
+.marca {
+    display: inline-flex; align-items: center; gap: 10px;
+    font-weight: 800; font-size: 20px; color: var(--tinta); text-decoration: none; letter-spacing: -.4px;
+}
+.marca-icone {
+    width: 34px; height: 34px; border-radius: 10px; background: var(--palco);
+    display: grid; grid-template-columns: 1fr 1fr; gap: 3px; padding: 6px;
+}
+.marca-icone i { border-radius: 3px; display: block; }
+.marca-icone i:nth-child(1) { background: var(--opcao-a); }
+.marca-icone i:nth-child(2) { background: var(--opcao-b); }
+.marca-icone i:nth-child(3) { background: var(--opcao-d); }
+.marca-icone i:nth-child(4) { background: var(--opcao-c); }
+.marca small { font-weight: 600; color: var(--palco); }
+
+.aviso {
+    position: fixed; left: 50%; bottom: 22px; transform: translateX(-50%);
+    background: var(--tinta); color: #fff; padding: 10px 18px; border-radius: 999px;
+    font-weight: 600; font-size: 14.5px; box-shadow: var(--sombra); z-index: 100;
+    max-width: calc(100vw - 32px);
+}

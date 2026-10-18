@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ProvaShow Malu — App do professor</title>
+    <meta name="description" content="Monte perguntas, cadastre turmas e conduza a aula ao vivo com os cartões do ProvaShow Malu.">
+    <meta name="robots" content="noindex">
+    <meta name="theme-color" content="#4c2a85">
+    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='24' fill='%234c2a85'/%3E%3Crect x='18' y='18' width='29' height='29' rx='7' fill='%23e4572e'/%3E%3Crect x='53' y='18' width='29' height='29' rx='7' fill='%232e86de'/%3E%3Crect x='18' y='53' width='29' height='29' rx='7' fill='%2317a589'/%3E%3Crect x='53' y='53' width='29' height='29' rx='7' fill='%23f5a623'/%3E%3C/svg%3E">
+    <link rel="stylesheet" href="../estilo.css">
+    <link rel="stylesheet" href="app.css">
+</head>
+<body>
+
+<header class="topo">
+    <a class="marca" href="../index.html" title="Site do ProvaShow Malu">
+        <span class="marca-icone" aria-hidden="true"><i></i><i></i><i></i><i></i></span>
+        <span>ProvaShow <small>Malu</small></span>
+    </a>
+    <nav class="abas" id="abas">
+        <a href="#biblioteca" data-aba="biblioteca">Biblioteca</a>
+        <a href="#turmas" data-aba="turmas">Turmas</a>
+        <a href="#aula" data-aba="aula">Aula ao vivo <span class="ponto-vivo" id="ponto-vivo" hidden></span></a>
+        <a href="#relatorios" data-aba="relatorios">Relatórios</a>
+    </nav>
+    <div class="topo-direita">
+        <a class="btn btn-p" href="../cartoes/" target="_blank" rel="noopener">🖨 Cartões</a>
+        <button class="btn btn-p btn-icone" id="botao-mais" aria-haspopup="true" aria-expanded="false" title="Mais opções">⋯</button>
+        <div class="menu" id="menu-mais" hidden>
+            <button data-acao="exportar-backup">⬇ Baixar cópia de segurança</button>
+            <button data-acao="importar-backup">⬆ Restaurar cópia de segurança</button>
+            <button data-acao="recomecar" class="btn-perigo">Apagar tudo e recomeçar</button>
+        </div>
+    </div>
+</header>
+
+<main class="conteudo" id="conteudo" aria-live="polite"></main>
+
+<input type="file" id="arquivo-backup" accept="application/json,.json" hidden>
+<input type="file" id="arquivo-imagem" accept="image/*" hidden>
+
+<dialog id="dialogo" class="dialogo"></dialog>
+<div class="aviso" id="aviso" role="status" hidden></div>
+
+<script src="../js/cartao.js"></script>
+<script src="../js/dados.js"></script>
+<script src="../vendor/supabase.js"></script>
+<script src="../js/config.js"></script>
+<script src="../js/canal.js"></script>
+<script src="../vendor/qrcode.js"></script>
+<script src="app.js"></script>
+</body>
+</html>

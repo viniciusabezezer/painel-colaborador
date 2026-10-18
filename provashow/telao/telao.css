@@ -1,0 +1,48 @@
+/* Telão: letras grandes, alto contraste, para ler do fundo da sala. */
+
+html, body { height: 100%; }
+body { background: var(--palco-escuro); color: #fff; overflow: hidden; }
+
+.espera { height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 16px; text-align: center; padding: 24px; }
+.espera .marca, .palco .marca { color: #fff; }
+.espera .marca small { color: #cbb8f2; }
+.espera h1 { font-size: clamp(32px, 5vw, 60px); }
+.espera p { font-size: clamp(16px, 2vw, 24px); color: #d9d0ee; max-width: 40ch; }
+.espera form { display: flex; gap: 8px; }
+.espera input { text-align: center; font-size: 26px; font-weight: 800; letter-spacing: 6px; text-transform: uppercase; width: 220px; }
+
+.palco { height: 100%; display: flex; flex-direction: column; padding: 2.2vh 3vw; gap: 2vh; }
+.palco-topo { display: flex; align-items: center; gap: 2vw; }
+.palco-topo .marca { font-size: clamp(16px, 1.6vw, 26px); }
+.progresso { flex: 1; color: #cbb8f2; font-size: clamp(14px, 1.4vw, 22px); text-align: center; }
+.responderam { display: flex; align-items: baseline; gap: 8px; background: rgba(255, 255, 255, .1); padding: .6vh 1.4vw; border-radius: 16px; }
+.responderam strong { font-size: clamp(28px, 3.4vw, 56px); }
+.responderam span { color: #d9d0ee; font-size: clamp(14px, 1.3vw, 22px); }
+
+.palco-questao { flex: 1; min-height: 0; display: flex; flex-direction: column; gap: 3vh; background: #fff; color: var(--tinta); border-radius: 26px; padding: 4vh 4vw; }
+.palco-questao h1 { font-size: clamp(26px, 3.6vw, 64px); font-weight: 700; }
+.palco-questao img { max-height: 30vh; max-width: 60%; object-fit: contain; align-self: center; border-radius: 14px; }
+.opcoes { display: grid; grid-template-columns: 1fr 1fr; gap: 2vh 2vw; margin-top: auto; }
+.opcoes.com-grafico { grid-template-columns: 1fr; gap: 1.4vh; }
+.opcao {
+    display: flex; align-items: center; gap: 1.4vw; padding: 1.6vh 1.4vw; border-radius: 18px;
+    border: 3px solid var(--linha); font-size: clamp(18px, 2.3vw, 40px); font-weight: 600; position: relative;
+    transition: opacity .3s ease, border-color .3s ease, background .3s ease;
+}
+.opcao .letra { width: clamp(38px, 4vw, 70px); height: clamp(38px, 4vw, 70px); font-size: clamp(20px, 2.3vw, 38px); border-radius: 14px; }
+.opcao .texto { flex: 1; }
+.com-grafico .opcao .texto { flex: 0 0 34%; }
+.opcao .barra { flex: 1; height: 3vh; background: #f0eef5; border-radius: 999px; overflow: hidden; }
+.opcao .barra i { display: block; height: 100%; border-radius: 999px; transition: width .5s ease; }
+.opcao .conta { min-width: 2.4em; text-align: right; font-weight: 800; }
+.opcao.certa { border-color: var(--verde); background: var(--verde-claro); }
+.opcao.apagada { opacity: .35; }
+.selo-certa { background: var(--verde); color: #fff; font-size: .6em; padding: .2em .7em; border-radius: 999px; font-weight: 800; }
+
+.palco-chamada { display: flex; flex-wrap: wrap; gap: .8vh .5vw; justify-content: center; max-height: 16vh; overflow: hidden; }
+.chip { font-size: clamp(11px, 1vw, 17px); padding: .3vh .7vw; border-radius: 999px; background: rgba(255, 255, 255, .1); color: #bfb3da; }
+.chip b { opacity: .7; }
+.chip.feito { background: #fff; color: var(--palco-escuro); font-weight: 700; }
+
+.tela-cheia { position: fixed; right: 12px; bottom: 12px; background: rgba(255, 255, 255, .12); color: #fff; border: 0; border-radius: 10px; width: 38px; height: 38px; font-size: 20px; cursor: pointer; opacity: .5; }
+.tela-cheia:hover { opacity: 1; }

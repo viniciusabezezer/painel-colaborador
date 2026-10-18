@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>ProvaShow Malu — Scanner</title>
+    <meta name="description" content="Leia os cartões dos alunos com a câmera do celular.">
+    <meta name="robots" content="noindex">
+    <meta name="theme-color" content="#2b1650">
+    <link rel="manifest" href="manifest.webmanifest">
+    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='24' fill='%234c2a85'/%3E%3Crect x='18' y='18' width='29' height='29' rx='7' fill='%23e4572e'/%3E%3Crect x='53' y='18' width='29' height='29' rx='7' fill='%232e86de'/%3E%3Crect x='18' y='53' width='29' height='29' rx='7' fill='%2317a589'/%3E%3Crect x='53' y='53' width='29' height='29' rx='7' fill='%23f5a623'/%3E%3C/svg%3E">
+    <link rel="stylesheet" href="../estilo.css">
+    <link rel="stylesheet" href="scanner.css">
+</head>
+<body>
+
+<!-- Entrar com o código da aula -->
+<section class="entrar" id="tela-entrar">
+    <div class="marca"><span class="marca-icone" aria-hidden="true"><i></i><i></i><i></i><i></i></span><span>ProvaShow <small>Malu</small></span></div>
+    <h1>Scanner</h1>
+    <p>Digite o código que aparece na tela da aula ao vivo, no computador.</p>
+    <form id="form-codigo" autocomplete="off">
+        <input type="text" id="campo-codigo" inputmode="text" autocapitalize="characters" maxlength="7" placeholder="ABC123" aria-label="Código da aula" required>
+        <button class="btn btn-principal" type="submit">Entrar</button>
+    </form>
+    <a class="voltar-site" href="../index.html">Conhecer o ProvaShow Malu</a>
+</section>
+
+<!-- Leitura -->
+<section class="ler" id="tela-ler" hidden>
+    <header class="barra-topo">
+        <div class="info">
+            <span class="turma" id="info-turma">Conectando…</span>
+            <span class="pergunta" id="info-pergunta"></span>
+        </div>
+        <span class="selo" id="info-conexao">…</span>
+    </header>
+
+    <div class="camera" id="camera">
+        <video id="video" playsinline muted autoplay></video>
+        <canvas id="sobreposicao"></canvas>
+        <div class="camera-aviso" id="camera-aviso">
+            <p id="texto-camera">Aponte a câmera para a turma. Os cartões lidos ficam marcados na tela.</p>
+            <button class="btn btn-principal" id="ligar-camera">📷 Ligar a câmera</button>
+        </div>
+        <div class="contador" id="contador" hidden><strong id="n-responderam">0</strong><span id="n-total">de 0</span></div>
+    </div>
+
+    <footer class="painel-baixo">
+        <div class="enunciado-mini" id="enunciado-mini"></div>
+        <div class="grafico-mini" id="grafico-mini"></div>
+        <div class="controles">
+            <button class="btn btn-p" data-comando="anterior" aria-label="Pergunta anterior">←</button>
+            <button class="btn btn-p" data-comando="grafico" id="botao-grafico">📊 Gráfico</button>
+            <button class="btn btn-p" data-comando="revelar" id="botao-revelar">✔ Revelar</button>
+            <button class="btn btn-p" data-comando="proxima" aria-label="Próxima pergunta">→</button>
+            <button class="btn btn-p" id="botao-lista" aria-expanded="false">👥 Lista</button>
+        </div>
+        <div class="lista" id="lista" hidden></div>
+    </footer>
+</section>
+
+<section class="entrar" id="tela-fim" hidden>
+    <h1>Aula encerrada</h1>
+    <p>O professor encerrou a aula ao vivo. As respostas estão guardadas nos relatórios.</p>
+    <a class="btn btn-principal" href="./">Entrar em outra aula</a>
+</section>
+
+<script src="../js/cartao.js"></script>
+<script src="../js/leitor.js"></script>
+<script src="../vendor/supabase.js"></script>
+<script src="../js/config.js"></script>
+<script src="../js/canal.js"></script>
+<script src="scanner.js"></script>
+</body>
+</html>
