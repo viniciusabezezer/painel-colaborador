@@ -12,7 +12,7 @@
 </head>
 <body>
 <div class="controles-impressao">
-    <a class="marca" href="../index.html"><span class="marca-icone" aria-hidden="true"><i></i><i></i><i></i><i></i></span><span>ProvaShow <small>Malu</small></span></a>
+    <img src="../escola.png" alt="EEMTI Prof. Maria Luiza Saboia Ribeiro" class="logo-escola-cartoes"> <a class="marca" href="../index.html"><span class="marca-icone" aria-hidden="true"><i></i><i></i><i></i><i></i></span><span>ProvaShow <small>Malu</small></span></a>
     <h1>Cartões para imprimir</h1>
     <p class="sub">Imprima em papel A4 comum (de preferência mais grosso), sem "ajustar à página". Cada aluno fica com um número — o mesmo cartão serve em todas as turmas. A letra que o aluno deixar <strong>em cima</strong> é a resposta.</p>
     <form id="opcoes" class="opcoes-impressao">
@@ -37,6 +37,9 @@
 <script src="../js/texto.js"></script>
 <script src="../js/dados.js"></script>
 <script src="../js/armazem.js"></script>
+<script src="../vendor/supabase.js"></script>
+<script src="../js/config.js"></script>
+<script src="../js/nuvem.js"></script>
 <script>
 (function () {
     'use strict';
@@ -78,7 +81,11 @@
     $('#opcoes').addEventListener('input', desenhar);
     $('#imprimir').addEventListener('click', () => window.print());
     desenhar();
-    Armazem.carregar().then((x) => { d = x; preencherTurmas(); desenhar(); });
+    /* os nomes vêm da cópia da conta logada no app (neste aparelho) */
+    Nuvem.iniciar().catch(() => null).then((quem) => {
+        Armazem.usar(quem ? quem.usuario.id : null);
+        return Armazem.carregar();
+    }).then((x) => { d = x; preencherTurmas(); desenhar(); });
 })();
 </script>
 </body>

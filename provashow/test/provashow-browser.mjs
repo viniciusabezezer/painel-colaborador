@@ -11,7 +11,9 @@
    aparelho, cronômetro, gráfico e resposta comandados pelo celular,
    resposta à mão, travar, próxima pergunta); relatórios (placar, fora da
    nota, CSV, relatório do aluno, relatório da aula); a aula inteira só no
-   celular, com a câmera do próprio app; cartões para imprimir.
+   celular, com a câmera do próprio app; cartões para imprimir; login (senha
+   errada, conta sem acesso), dados na nuvem, outro aparelho com os mesmos
+   relatórios, sair apagando a cópia do aparelho e a gestão vendo tudo.
    Uso:  node provashow/test/provashow-browser.mjs
    Precisa do playwright (global serve). Capturas em provashow/test/saida/. */
 import { createServer } from 'node:http';
@@ -19,6 +21,7 @@ import { readFile, writeFile, mkdir } from 'node:fs/promises';
 import { existsSync, statSync } from 'node:fs';
 import { extname, join, resolve } from 'node:path';
 import { createRequire } from 'node:module';
+import { criarSupabaseFalso } from './supabase-falso.mjs';
 
 const exigir = createRequire(import.meta.url);
 function carregarPlaywright() {
@@ -37,8 +40,26 @@ const SAIDA = join(APP, 'test', 'saida');
 const PORTA = 8752;
 const TIPOS = { '.html': 'text/html; charset=utf-8', '.css': 'text/css; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.mjs': 'text/javascript; charset=utf-8', '.png': 'image/png', '.svg': 'image/svg+xml', '.webmanifest': 'application/manifest+json', '.json': 'application/json' };
 
+/* a nuvem de mentira: contas da escola como no Montador */
+const nuvem = criarSupabaseFalso();
+const ANA = { email: 'ana@escola.ce.gov.br', senha: 'senha-da-ana-123' };
+const BETO = { email: 'beto@escola.ce.gov.br', senha: 'senha-do-beto-123' };
+const GESTAO = { email: 'gestao@escola.ce.gov.br', senha: 'senha-da-gestao-1' };
+const SEM_PERFIL = { email: 'visitante@exemplo.com', senha: 'senha-qualquer-1' };
+const idAna = nuvem.conta(ANA.email, ANA.senha, { nome: 'Ana Professora', papel: 'pca', area: 'NAT' });
+nuvem.conta(BETO.email, BETO.senha, { nome: 'Beto Professor', papel: 'professor', area: 'MAT' });
+nuvem.conta(GESTAO.email, GESTAO.senha, { nome: 'Gestão da Escola', papel: 'gestao' });
+nuvem.conta(SEM_PERFIL.email, SEM_PERFIL.senha, null);
+
 function servir(raiz, porta) {
     const servidor = createServer(async (pedido, resposta) => {
+        if (pedido.method === 'POST' && pedido.url === '/__falso') {
+            let corpo = '';
+            for await (const pedaco of pedido) corpo += pedaco;
+            resposta.writeHead(200, { 'Content-Type': 'application/json' });
+            resposta.end(JSON.stringify(nuvem.tratar(JSON.parse(corpo))));
+            return;
+        }
         const caminho = decodeURIComponent(new URL(pedido.url, 'http://x').pathname);
         let arquivo = join(raiz, caminho);
         if (!arquivo.startsWith(raiz)) { resposta.writeHead(403).end(); return; }
@@ -112,7 +133,17 @@ const base = `http://127.0.0.1:${PORTA}/provashow/`;
 async function novoContexto(opcoes) {
     const c = await navegador.newContext(Object.assign({ viewport: { width: 1360, height: 900 }, permissions: ['camera'], acceptDownloads: true }, opcoes));
     await c.route(/supabase\.co|fonts\.(googleapis|gstatic)\.com|youtube/, (r) => r.abort());
+    /* o Supabase de mentira no lugar do de verdade */
+    await c.route(/\/vendor\/supabase\.js$/, async (r) => r.fulfill({ contentType: 'text/javascript', body: await readFile(join(APP, 'test', 'cliente-falso.js'), 'utf8') }));
     return c;
+}
+async function entrar(pagina, conta, lembrar) {
+    await pagina.waitForSelector('#tela-login:not([hidden])');
+    await pagina.fill('#login-email', conta.email);
+    await pagina.fill('#login-senha', conta.senha);
+    if (lembrar === false) await pagina.uncheck('#login-lembrar');
+    await pagina.click('#form-login button[type=submit]');
+    await espera(pagina, () => window.PS && PS.d && document.querySelector('#tela-login').hidden && PS.conta.estado === 'ok', null, 10000);
 }
 function vigiar(pagina, nome) {
     pagina.on('pageerror', (e) => erros.push(nome + ': ' + e.message));
@@ -146,7 +177,26 @@ try {
     const app = await contexto.newPage();
     vigiar(app, 'app');
     await app.goto(base + 'app/');
-    await espera(app, () => window.PS && PS.d);
+    /* login */
+    await app.waitForSelector('#tela-login:not([hidden])');
+    confere(await app.locator('.topo').isHidden() && await app.locator('.login-escola').isVisible(), 'sem login: só a tela de entrar, com o logotipo da escola');
+    await app.fill('#login-email', ANA.email);
+    await app.fill('#login-senha', 'senha-errada');
+    await app.click('#form-login button[type=submit]');
+    await espera(app, () => document.querySelector('#login-mensagem').textContent.includes('incorretos'));
+    confere(true, 'senha errada é recusada');
+    await app.fill('#login-email', SEM_PERFIL.email);
+    await app.fill('#login-senha', SEM_PERFIL.senha);
+    await app.click('#form-login button[type=submit]');
+    await espera(app, () => document.querySelector('#login-mensagem').textContent.includes('não tem acesso'));
+    confere(true, 'conta sem perfil ativo no Montador não entra');
+    await app.fill('#login-email', ANA.email);
+    await app.fill('#login-senha', ANA.senha);
+    await app.click('#form-login button[type=submit]');
+    await espera(app, () => window.PS && PS.d && document.querySelector('#tela-login').hidden && PS.conta.estado === 'ok', null, 10000);
+    confere(await app.locator('.topo .logo-escola').isVisible(), 'entrou; logotipo da escola no topo do app');
+    await espera(app, () => PS.d.turmas.some((t) => t.nome === 'Turma de exemplo'));
+    confere(true, 'conta nova começa com a turma e o conjunto de exemplo');
     confere((await app.locator('h1').innerText()).includes('Olá'), 'tela inicial');
     await app.goto(base + 'app/#biblioteca');
     await app.click('[data-acao="nova-pasta"]');
@@ -353,6 +403,59 @@ try {
     await app.click('.placar .fixa a >> text=Bruno');
     confere((await app.locator('.relatorio-aluno h2').innerText()) === 'Bruno', 'relatório do aluno');
 
+    /* ===== nuvem: tudo guardado fora do aparelho ===== */
+    console.log('Nuvem da escola');
+    await app.evaluate(() => PS.sincronizarNuvem());
+    await espera(app, () => PS.conta.estado === 'ok');
+    const naNuvem = nuvem.db.itens.filter((x) => x.dono === idAna);
+    confere(naNuvem.some((x) => x.tipo === 'sessao' && x.dados.respostas[2] === 'B') && naNuvem.some((x) => x.tipo === 'aula') && naNuvem.some((x) => x.tipo === 'turma' && x.dados.nome === '2º ano A'),
+        `turmas, aulas e respostas estão na nuvem (${naNuvem.length} itens)`);
+    confere(await app.locator('#estado-nuvem.ok').count() === 1, 'selo “Salvo” no topo');
+    /* mudar um relatório já salvo: volta para a nota; a versão anterior fica no histórico */
+    await app.evaluate(() => { const s = PS.d.sessoes[0]; s.ignorada = false; s.alterado = new Date().toISOString(); return PS.salvar(true); });
+    await app.evaluate(() => PS.sincronizarNuvem());
+    await espera(app, () => PS.conta.estado === 'ok');
+    confere(nuvem.db.versoes.some((v) => v.tipo === 'sessao' && v.dados.ignorada === true), 'a mudança no relatório guardou a versão anterior no histórico');
+    /* outro aparelho, mesma conta: os mesmos relatórios, sem nada copiado à mão */
+    const outro = await novoContexto();
+    const pc2 = await outro.newPage();
+    vigiar(pc2, 'outro aparelho');
+    await pc2.goto(base + 'app/');
+    await entrar(pc2, ANA, false);
+    await pc2.goto(base + 'app/#relatorios/' + turmaEx.id);
+    await pc2.waitForSelector('.placar tbody tr');
+    const linhas2 = await pc2.locator('.placar tbody tr').allInnerTexts();
+    confere(linhas2.some((l) => l.includes('Bruno') && l.includes('100%')) && linhas2.some((l) => l.includes('Ana') && l.includes('0%')),
+        'outro aparelho, mesma conta: o mesmo placar, já com a última mudança');
+    /* sair apagando a cópia deste aparelho (computador compartilhado) */
+    await pc2.goto(base + 'app/#mais');
+    await pc2.click('[data-acao="sair"]');
+    await pc2.check('#apagar-copia');
+    await confirmarDialogo(pc2);
+    await pc2.waitForSelector('#tela-login:not([hidden])');
+    const sobrou = await pc2.evaluate(() => new Promise((ok) => {
+        const r = indexedDB.open('provashow-malu', 1);
+        r.onsuccess = () => { const g = r.result.transaction('dados').objectStore('dados').getAllKeys(); g.onsuccess = () => ok(g.result); };
+    }));
+    confere(!sobrou.some((k) => String(k).startsWith('conta:')), 'ao sair com “apagar a cópia”, os dados saem do aparelho (continuam na nuvem)');
+    await outro.close();
+    /* gestão: relatórios de todos os professores */
+    const gest = await novoContexto();
+    const pg = await gest.newPage();
+    vigiar(pg, 'gestão');
+    await pg.goto(base + 'app/');
+    await entrar(pg, GESTAO);
+    await pg.goto(base + 'app/#escola');
+    await pg.waitForSelector('#escola-prof');
+    await pg.selectOption('#escola-prof', { label: 'Ana Professora' });
+    await pg.waitForSelector('#escola-turma:not([disabled])');
+    await pg.selectOption('#escola-turma', { label: 'Turma de exemplo' });
+    await pg.waitForSelector('.placar tbody tr');
+    confere((await pg.locator('.placar tbody tr').allInnerTexts()).some((l) => l.includes('Bruno')), 'gestão vê os relatórios da professora (só leitura)');
+    await pg.screenshot({ path: join(SAIDA, 'app-escola.png'), fullPage: true });
+    confere(!nuvem.db.itens.some((x) => x.dono !== idAna && x.dados && x.dados.nome === '2º ano A'), 'a gestão não grava nada nos dados da professora');
+    await gest.close();
+
     /* ===== cartões ===== */
     console.log('Cartões');
     const cartoes = await contexto.newPage();
@@ -384,7 +487,8 @@ try {
     const cel = await celular.newPage();
     vigiar(cel, 'celular');
     await cel.goto(base + 'app/');
-    await espera(cel, () => window.PS && PS.d);
+    await entrar(cel, BETO);
+    await cel.screenshot({ path: join(SAIDA, 'celular-inicio.png') });
     confere(await cel.locator('.abas-baixo').isVisible(), 'abas embaixo, como app de celular');
     const [t, c] = await cel.evaluate(() => [PS.d.turmas[0].id, PS.d.conjuntos[0].id]);
     await cel.evaluate(([x, y]) => PS.comecarAula(x, y), [t, c]);

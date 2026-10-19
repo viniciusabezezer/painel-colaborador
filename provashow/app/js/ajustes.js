@@ -1,7 +1,5 @@
-/* Início, Mais (ajustes, instalar, cópia de segurança) e a sincronização
-   entre aparelhos do professor (computador <-> celular), sem conta e sem
-   servidor de dados: os dois aparelhos abrem o mesmo código e trocam tudo
-   pelo canal; cada um junta o que veio do outro (vence a alteração mais nova). */
+/* Início e Mais (conta, ajustes, instalar, cópia de segurança). Os dados
+   entre os aparelhos do professor vão pela nuvem da escola (conta.js). */
 (function () {
     'use strict';
     const { esc } = PS;
@@ -32,7 +30,7 @@
             <div class="atalhos-inicio">
                 <a class="cartao-painel" href="../cartoes/" target="_blank" rel="noopener"><span>🖨</span><strong>Imprimir cartões</strong><small>63 cartões, 4 modelos</small></a>
                 <a class="cartao-painel" href="#explorar"><span>🌐</span><strong>Explorar</strong><small>pacotes prontos</small></a>
-                <a class="cartao-painel" href="#sincronizar"><span>🔄</span><strong>Computador ⇄ celular</strong><small>levar os dados</small></a>
+                <a class="cartao-painel" href="#mais"><span>☁</span><strong>Nuvem da escola</strong><small>tudo salvo, em qualquer aparelho</small></a>
                 <a class="cartao-painel" href="#mais"><span>📲</span><strong>Instalar no celular</strong><small>usa sem internet</small></a>
             </div>`;
     };
@@ -49,6 +47,7 @@
         PS.$('#conteudo').innerHTML = `
             <div class="cabeca"><h1>Mais</h1></div>
             <div class="duas-colunas">
+                ${PS.htmlConta()}
                 <section class="cartao-painel">
                     <h2>📲 Usar no celular</h2>
                     <p class="sub">O ProvaShow inteiro funciona no celular do professor: crie perguntas, abra a aula ao vivo e leia os cartões com a câmera do próprio aparelho. O telão (no computador do projetor) recebe tudo pelo código da aula.</p>
@@ -57,7 +56,7 @@
                         `<button class="btn btn-principal" data-acao="instalar" ${pedidoInstalar ? '' : 'disabled'}>Instalar o app neste aparelho</button>
                         <p class="sub">${pedidoInstalar ? '' : 'Se o botão estiver apagado, use o menu do navegador → “Instalar app” ou “Adicionar à tela inicial”.'}</p>`}
                     <p class="sub">Depois de aberto uma vez com internet, o app abre e funciona sem internet (a aula com telão em outro aparelho precisa de internet).</p>
-                    <a class="btn" href="#sincronizar">🔄 Levar os dados entre computador e celular</a>
+                    <p class="sub">Com login, os mesmos dados aparecem em qualquer aparelho em que você entrar: é só entrar com a sua conta.</p>
                 </section>
                 <section class="cartao-painel">
                     <h2>⚙ Padrões da aula</h2>
@@ -71,7 +70,7 @@
                 </section>
                 <section class="cartao-painel">
                     <h2>💾 Cópia de segurança</h2>
-                    <p class="sub">Tudo fica neste aparelho. Baixe uma cópia de vez em quando — e antes de trocar de computador.</p>
+                    <p class="sub">Tudo fica guardado na nuvem da escola (e uma cópia neste aparelho, para funcionar sem internet). Os relatórios nunca são apagados de verdade: há histórico de cada mudança. Se quiser, baixe também uma cópia para guardar.</p>
                     <div class="botoes"><button class="btn" data-acao="exportar-backup">⬇ Baixar cópia</button><button class="btn" data-acao="importar-backup">⬆ Restaurar cópia</button></div>
                     <p class="sub" id="uso-armazenamento"></p>
                 </section>
@@ -121,102 +120,8 @@
         },
         'recomecar': () => PS.confirmar('Apagar todas as turmas, perguntas e relatórios deste aparelho?', () => {
             PS.d = Dados.exemplo(); PS.salvar(true); PS.ir('inicio');
-        }, 'Baixe uma cópia de segurança antes, se quiser guardar algo.')
+        }, 'Apaga a cópia deste aparelho. O que já está na nuvem da escola volta na próxima sincronização.')
     });
 
-    /* ----- sincronizar aparelhos ----- */
-    let sinc = null;
 
-    PS.telas.sincronizar = function () {
-        PS.$('#conteudo').innerHTML = `
-            <a class="voltar" href="#mais">&larr; Mais</a>
-            <div class="cabeca"><div><h1>🔄 Computador ⇄ celular</h1>
-            <p class="sub">Leve as turmas, perguntas e relatórios de um aparelho para o outro. Abra esta tela nos dois aparelhos: num deles toque em <strong>Gerar código</strong>; no outro, digite o código. Os dois juntam o que têm — nada se perde (se a mesma coisa foi mudada nos dois, vence a mudança mais nova).</p></div></div>
-            <div class="duas-colunas">
-                <section class="cartao-painel centro">
-                    <h2>Este aparelho mostra o código</h2>
-                    <button class="btn btn-principal" data-acao="sinc-gerar">Gerar código</button>
-                    <p class="codigo-aula" id="sinc-codigo"></p>
-                </section>
-                <section class="cartao-painel centro">
-                    <h2>Este aparelho digita o código</h2>
-                    <form id="sinc-form" class="linha-add"><input type="text" id="sinc-campo" maxlength="7" placeholder="ABC123" autocapitalize="characters" aria-label="Código"><button class="btn btn-principal">Conectar</button></form>
-                </section>
-            </div>
-            <div class="cartao-painel" id="sinc-estado" hidden></div>`;
-        PS.$('#sinc-form').onsubmit = (e) => { e.preventDefault(); const c = Canal.normalizarCodigo(PS.$('#sinc-campo').value); if (c.length === 6) comecarSinc(c); };
-    };
-
-    function mostrarSinc(html) {
-        const el = PS.$('#sinc-estado');
-        if (el) { el.hidden = false; el.innerHTML = html; }
-    }
-
-    function comecarSinc(codigo) {
-        pararSinc();
-        const eu = Math.random().toString(36).slice(2, 10);
-        const chegando = new Map();
-        const enviados = new Set();
-        let recebeuDe = null, confirmouPara = null;
-        const canal = Canal.abrir('S' + codigo.slice(1), 'sync', receber, (c) => {
-            mostrarSinc(`Conectado ao código <strong>${codigo}</strong> ${c.nuvem === 'ligada' ? '(pela internet)' : c.nuvem === 'conectando' ? '(conectando à internet…)' : '(só neste aparelho — sem internet)'}. Esperando o outro aparelho…`);
-        });
-        const ola = setInterval(() => canal.enviar('sync-ola', { de: eu }), 1500);
-        sinc = { canal, ola, codigo };
-        canal.enviar('sync-ola', { de: eu });
-
-        async function enviarTudo(para) {
-            if (enviados.has(para)) return;
-            enviados.add(para);
-            const texto = JSON.stringify(PS.d);
-            const partes = Dados.fatiar(texto, 60000);
-            const id = eu + Date.now().toString(36);
-            for (let i = 0; i < partes.length; i++) {
-                canal.enviar('sync-parte', { de: eu, para, id, i, total: partes.length, texto: partes[i] });
-                mostrarSinc(`Enviando… ${Math.round((i + 1) / partes.length * 100)}%`);
-                await new Promise((ok) => setTimeout(ok, 80));
-            }
-        }
-
-        function receber(tipo, dados) {
-            if (!dados || dados.de === eu) return;
-            if (tipo === 'sync-ola') enviarTudo(dados.de);
-            if (tipo === 'sync-parte' && dados.para === eu) {
-                const pacote = chegando.get(dados.id) || { partes: [], n: 0 };
-                if (!pacote.partes[dados.i]) { pacote.partes[dados.i] = dados.texto; pacote.n++; }
-                chegando.set(dados.id, pacote);
-                mostrarSinc(`Recebendo… ${Math.round(pacote.n / dados.total * 100)}%`);
-                if (pacote.n === dados.total && recebeuDe !== dados.id) {
-                    recebeuDe = dados.id;
-                    try {
-                        const mudou = Dados.mesclar(PS.d, JSON.parse(pacote.partes.join('')));
-                        PS.salvar(true);
-                        canal.enviar('sync-ok', { de: eu, para: dados.de, mudou });
-                        mostrarSinc(`✓ Recebido: ${PS.plural(mudou, 'item novo ou atualizado', 'itens novos ou atualizados')}. ${confirmouPara ? 'Pronto, os dois aparelhos estão iguais.' : 'Terminando de enviar…'}`);
-                    } catch (erro) { mostrarSinc('Não consegui ler os dados recebidos. Tente de novo.'); }
-                }
-            }
-            if (tipo === 'sync-ok' && dados.para === eu) {
-                confirmouPara = dados.de;
-                if (recebeuDe) {
-                    mostrarSinc('✓ Pronto, os dois aparelhos estão com os mesmos dados.');
-                    setTimeout(pararSinc, 4000);
-                }
-            }
-        }
-    }
-
-    function pararSinc() {
-        if (!sinc) return;
-        clearInterval(sinc.ola);
-        sinc.canal.fechar();
-        sinc = null;
-    }
-
-    PS.acoes['sinc-gerar'] = () => {
-        const c = Canal.novoCodigo();
-        PS.$('#sinc-codigo').textContent = c;
-        comecarSinc(c);
-    };
-    PS.aoTrocarTela.push((r) => { if (r.nome !== 'sincronizar') pararSinc(); });
 })();

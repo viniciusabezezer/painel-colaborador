@@ -29,6 +29,8 @@
     function nuvem() {
         const cfg = global.PROVASHOW_NUVEM;
         if (!cfg || !global.supabase || !global.supabase.createClient) return null;
+        /* no app do professor, o mesmo cliente do login (Nuvem) */
+        if (global.ProvaShowCliente) return global.ProvaShowCliente;
         if (!clienteNuvem) {
             clienteNuvem = global.supabase.createClient(cfg.url, cfg.chave, {
                 auth: { persistSession: false, autoRefreshToken: false },

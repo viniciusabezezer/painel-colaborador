@@ -10,6 +10,7 @@
         acoes: {},
         atalhos: [],
         aoTrocarTela: [],
+        aoSalvar: [],
         $: (s, r) => (r || document).querySelector(s),
         $$: (s, r) => Array.from((r || document).querySelectorAll(s)),
         esc: Texto.esc,
@@ -24,7 +25,8 @@
     PS.salvar = function (agora) {
         clearTimeout(tempoSalvar);
         const fazer = () => {
-            salvando = salvando.then(() => Armazem.salvar(PS.d)).catch(() => PS.avisar('Não foi possível guardar neste aparelho. Baixe uma cópia de segurança.'));
+            salvando = salvando.then(() => Armazem.salvar(PS.d)).then(() => PS.aoSalvar.forEach((f) => f()))
+                .catch(() => PS.avisar('Não foi possível guardar neste aparelho. Baixe uma cópia de segurança.'));
             return salvando;
         };
         if (agora) return fazer();
@@ -113,7 +115,7 @@
     const ABA_DA_TELA = {
         inicio: 'inicio', biblioteca: 'biblioteca', conjunto: 'biblioteca', busca: 'biblioteca', lixeira: 'biblioteca', pacotes: 'biblioteca', pacote: 'biblioteca', explorar: 'biblioteca',
         turmas: 'turmas', turma: 'turmas', aula: 'aula', relatorios: 'relatorios', aulas: 'relatorios', 'relatorio-aula': 'relatorios', 'relatorio-aluno': 'relatorios',
-        sincronizar: 'mais', ajustes: 'mais', mais: 'mais'
+        escola: 'mais', ajustes: 'mais', mais: 'mais'
     };
 
     PS.desenhar = function () {
@@ -157,6 +159,11 @@
 
     /* ----- início ----- */
     PS.iniciar = async function () {
+        /* no app nativo (Capacitor) os arquivos já estão no aparelho: sem service worker */
+        if ('serviceWorker' in navigator && location.protocol === 'https:' && !window.Capacitor) navigator.serviceWorker.register('../sw.js').catch(() => {});
+        /* login primeiro: cada conta tem os seus dados (na nuvem e no aparelho) */
+        const quem = await PS.conta.garantirLogin();
+        Armazem.usar(quem.usuario.id);
         PS.d = await Armazem.carregar();
         Dados.limparLixeira(PS.d);
         Armazem.aoMudarFora(async () => {
@@ -166,8 +173,7 @@
         });
         PS.prontos.forEach((f) => f());
         PS.desenhar();
-        /* no app nativo (Capacitor) os arquivos já estão no aparelho: sem service worker */
-        if ('serviceWorker' in navigator && location.protocol === 'https:' && !window.Capacitor) navigator.serviceWorker.register('../sw.js').catch(() => {});
+        await PS.conta.depoisDeEntrar(quem);
     };
     PS.prontos = [];
 
