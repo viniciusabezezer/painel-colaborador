@@ -189,7 +189,7 @@ pronto para subir no Identificador.
   "a) 12  b) 15  c) 18…" numa linha só, frases médias em duas colunas, frases
   longas uma por linha — e mostra no editor o que escolheu.
 - A bolinha ao lado da alternativa marca a **resposta certa**: vai para o
-  **Gabarito do professor**, uma folha à parte, nunca para a prova.
+  **Folha de correção (professor)**, uma folha à parte, nunca para a prova.
 - **Ícone da disciplina**: sai sozinho pelo título da seção (Biologia, Física,
   Química, História, Geografia, Filosofia, Sociologia, Língua Portuguesa,
   Língua estrangeira, Arte, Educação Física, Matemática, Redação); dá para
@@ -229,7 +229,7 @@ enunciado, alternativas vazias e respostas não marcadas.
   certa acompanha, e o gabarito do professor da versão B sai certo), para
   turmas grandes. Questões com "todas as anteriores", "nenhuma das
   alternativas", "a e b" ficam na ordem original — o app avisa quais.
-- **Gabarito do professor**: uma folha com a resposta de cada questão.
+- **Folha de correção (professor)**: uma folha com a resposta de cada questão.
 - **Exportar / Importar** (`.json`): leva a prova a outro computador ou à
   coordenação.
 - **Busca** na lista de provas, quando ela cresce.

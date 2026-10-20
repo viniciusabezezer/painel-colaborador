@@ -467,3 +467,103 @@ fieldset.passo[disabled] { opacity: .75; }
     body.imprimindo-gabaritos #tela-editor { display: none !important; }
     body.imprimindo-gabaritos #gabaritos-impressao { display: block !important; }
 }
+
+/* ===== Editor mais claro: letras e botões maiores, cor por função =====
+   Só a interface muda; a folha impressa (folha.css) fica como está.
+   Verde = imprimir/concluir · azul = acrescentar conteúdo ·
+   laranja = gabarito e correção · vermelho = apagar. */
+
+:root {
+    --azul: hsl(212, 72%, 40%);
+    --azul-fundo: #e8f1fb;
+    --laranja: hsl(26, 90%, 38%);
+    --laranja-fundo: #fff1e2;
+    --perigo-fundo: #fdeceb;
+}
+
+.btn { min-height: 40px; padding: 9px 18px; font-size: 15px; }
+.btn--pequeno { min-height: 36px; padding: 6px 14px; font-size: 14px; }
+.btn--grande { min-height: 46px; padding: 10px 24px; font-size: 16.5px; font-weight: 700; }
+.btn--azul { background: var(--azul-fundo); border-color: var(--azul); color: var(--azul); }
+.btn--azul:hover { background: var(--azul); color: #fff; }
+.btn--laranja { background: var(--laranja-fundo); border-color: var(--laranja); color: var(--laranja); }
+.btn--laranja:hover { background: var(--laranja); color: #fff; }
+.btn--verde { font-size: 14px; min-height: 36px; }
+.btn--perigo { background: var(--perigo-fundo); border-color: #e0a9a3; color: var(--danger); }
+.btn--perigo:hover { background: var(--danger); border-color: var(--danger); color: #fff; }
+
+/* barra de cima, em grupos */
+.barra { height: 66px; }
+.barra-acoes { flex-wrap: nowrap; align-items: center; gap: 14px; }
+.grupo-barra { display: flex; gap: 8px; padding-right: 14px; border-right: 2px solid var(--line); }
+.grupo-barra:empty, .grupo-barra:not(:has(button:not([hidden]))) { display: none; }
+.grade-editor { grid-template-columns: minmax(420px, 600px) 1fr; height: calc(100vh - 66px); }
+
+/* texto do editor */
+.editor label { font-size: 14.5px; color: var(--ink); }
+.editor input[type="text"], .editor input[type="number"], .editor input[type="date"], .editor select, .editor textarea { font-size: 15.5px; padding: 10px 12px; }
+.editor textarea { font-size: 15px; }
+.editor .dica { font-size: 14.5px; }
+.editor .dica--pequena { font-size: 13.5px; }
+.editor label small { font-size: 13px; }
+.opcao { font-size: 15px; }
+.opcao input[type="checkbox"], .opcao input[type="radio"] { width: 18px; height: 18px; }
+
+/* índice dos passos */
+.indice-passos {
+    position: sticky; top: -18px; z-index: 3; display: flex; gap: 6px; flex-wrap: wrap;
+    margin: -18px -16px 14px; padding: 10px 16px; background: var(--bg); border-bottom: 1px solid var(--line);
+}
+.indice-passos a {
+    display: inline-flex; align-items: center; gap: 6px; padding: 6px 12px; border-radius: 999px;
+    background: var(--panel); border: 1px solid var(--line); color: var(--ink);
+    font-size: 14px; font-weight: 600; text-decoration: none;
+}
+.indice-passos a b { display: inline-grid; place-items: center; width: 22px; height: 22px; border-radius: 50%; color: #fff; font-size: 13px; background: var(--cor-passo, var(--green)); }
+.indice-passos a:hover { box-shadow: var(--shadow-sm); }
+.indice-passos [data-passo="1"] { --cor-passo: hsl(130, 50%, 32%); }
+.indice-passos [data-passo="2"] { --cor-passo: hsl(212, 72%, 40%); }
+.indice-passos [data-passo="3"] { --cor-passo: hsl(262, 45%, 46%); }
+.indice-passos [data-passo="4"] { --cor-passo: hsl(26, 90%, 38%); }
+.indice-passos [data-passo="5"] { --cor-passo: hsl(180, 60%, 28%); }
+
+/* cada passo com sua cor e um título maior */
+.editor .passo { border-left: 7px solid var(--cor-passo, var(--green)); scroll-margin-top: 70px; }
+.editor .linha-campos > label { min-width: 130px; flex: 1 1 130px; }
+.passo--1 { --cor-passo: hsl(130, 50%, 32%); }
+.passo--2 { --cor-passo: hsl(212, 72%, 40%); }
+.passo--3 { --cor-passo: hsl(262, 45%, 46%); }
+.passo--4 { --cor-passo: hsl(26, 90%, 38%); }
+.passo--5 { --cor-passo: hsl(180, 60%, 28%); }
+.editor .passo legend { font-size: 22px; font-weight: 800; color: var(--cor-passo, var(--ink)); }
+.editor .passo legend .num { width: 34px; height: 34px; font-size: 18px; background: var(--cor-passo, var(--green)); }
+
+/* seções e questões */
+.secao { border-width: 2px; padding: 12px; }
+.secao-cab input { font-size: 15.5px; }
+.icone { width: auto; min-width: 40px; height: 40px; padding: 0 12px; font-size: 14.5px; font-weight: 600; white-space: nowrap; }
+.icone--perigo { background: var(--perigo-fundo); border-color: #e0a9a3; color: var(--danger); }
+.icone--perigo:hover { background: var(--danger); color: #fff; }
+.icone[disabled] { opacity: .4; cursor: not-allowed; }
+.secao-cab { flex-wrap: wrap; }
+.secao-cab input { flex: 1 1 200px; }
+.questao > summary { padding: 11px 12px; font-size: 15px; }
+.q-numero { font-size: 16px; }
+.q-tag { font-size: 12.5px; padding: 2px 10px; }
+.alt-letra { font-size: 15px; }
+.alt textarea { font-size: 15px; }
+.secao-acoes { margin-top: 8px; }
+.mais-ajuda { margin: 0 0 12px; }
+.mais-ajuda summary { cursor: pointer; font-size: 14.5px; font-weight: 600; color: var(--azul); }
+.gabarito-opcoes { border-top: 2px solid var(--laranja); }
+
+/* prévia */
+.previa-ferramentas { font-size: 14.5px; }
+.copias, .copias input { font-size: 14.5px; }
+
+@media (max-width: 900px) {
+    .barra-acoes { flex-wrap: wrap; }
+    .grupo-barra { border-right: 0; padding-right: 0; flex-wrap: wrap; }
+    .grade-editor { grid-template-columns: 1fr; height: auto; }
+    .indice-passos { position: static; }
+}

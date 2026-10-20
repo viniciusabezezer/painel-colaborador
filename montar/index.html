@@ -176,7 +176,7 @@
 <!-- ===================== EDITOR DA PROVA ===================== -->
 <div id="tela-editor" hidden>
     <header class="barra">
-        <a class="btn btn--pequeno" href="#/">&larr; Início</a>
+        <a class="btn" href="#/">&larr; Início</a>
         <div class="barra-titulo">
             <strong id="ed-titulo">Prova</strong>
             <span id="ed-modelo" class="selo"></span>
@@ -184,18 +184,29 @@
             <span id="ed-nuvem" class="selo selo--nuvem" hidden></span>
         </div>
         <div class="barra-acoes">
-            <button type="button" class="btn btn--pequeno" id="ed-travar" hidden></button>
-            <button type="button" class="btn btn--pequeno" id="ed-desfazer" title="Desfazer (Ctrl+Z fora das caixas de texto)" disabled>↶ Desfazer</button>
-            <button type="button" class="btn btn--pequeno" id="ed-versaob" title="Cópia da prova com as alternativas em outra ordem, para turmas grandes">Versão B</button>
-            <button type="button" class="btn btn--pequeno" id="ed-chave">Gabarito do professor</button>
-            <button type="button" class="btn btn--pequeno" id="ed-exportar">Exportar</button>
-            <button type="button" class="btn btn--primary" id="ed-imprimir">Imprimir / salvar PDF</button>
+            <div class="grupo-barra">
+                <button type="button" class="btn" id="ed-travar" hidden></button>
+                <button type="button" class="btn" id="ed-desfazer" title="Desfazer (Ctrl+Z fora das caixas de texto)" disabled>↶ Desfazer</button>
+            </div>
+            <div class="grupo-barra">
+                <button type="button" class="btn" id="ed-versaob" title="Cópia da prova com as alternativas em outra ordem, para turmas grandes">Versão B</button>
+                <button type="button" class="btn btn--laranja" id="ed-chave" title="Folha só para o professor, com a resposta de cada questão">Folha de correção (professor)</button>
+                <button type="button" class="btn" id="ed-exportar">Exportar</button>
+            </div>
+            <button type="button" class="btn btn--primary btn--grande" id="ed-imprimir">🖨 Imprimir / salvar PDF</button>
         </div>
     </header>
 
     <div class="grade-editor">
         <aside class="editor" id="editor">
-            <fieldset class="passo">
+            <nav class="indice-passos" aria-label="Ir para o passo">
+                <a href="#/" data-passo="1"><b>1</b> Avaliação</a>
+                <a href="#/" data-passo="2"><b>2</b> Aparência</a>
+                <a href="#/" data-passo="3"><b>3</b> Instruções</a>
+                <a href="#/" data-passo="4"><b>4</b> Formato</a>
+                <a href="#/" data-passo="5"><b>5</b> Questões</a>
+            </nav>
+            <fieldset class="passo passo--1" id="passo-1">
                 <legend><span class="num">1</span> A avaliação</legend>
                 <div class="linha-campos">
                     <label class="campo-largo">Nome da avaliação
@@ -255,7 +266,7 @@
                 <p class="dica" data-so-faixa>A primeira página sai com um <strong>espaço em branco de 2,5 cm</strong> no alto, para a gestão acrescentar a identificação. O brasão da escola, o nome do aluno, a turma, a data e o QR entram depois, pelo <a href="../provas/" data-so-no-painel>Identificador de Provas</a> — a prévia mostra uma simulação.</p>
             </fieldset>
 
-            <fieldset class="passo">
+            <fieldset class="passo passo--2" id="passo-2">
                 <legend><span class="num">2</span> Aparência</legend>
                 <div class="linha-campos">
                     <label class="campo-largo">Fonte
@@ -283,7 +294,7 @@
                 <p class="dica dica--pequena">Padrão da escola: Times New Roman 10, espaçamento normal, margens de 0,5 cm, linha entre as colunas. Se a impressora cortar a borda, use 0,8 cm. A fonte precisa estar instalada no computador que imprime (o Windows tem todas).</p>
 
                 <div class="gabarito-opcoes">
-                    <label class="opcao"><input type="checkbox" data-a="gabarito"> <strong>Gabarito</strong> (folha de respostas do aluno)</label>
+                    <label class="opcao"><input type="checkbox" data-a="gabarito"> <strong>Folha de respostas do aluno</strong> (o gabarito que o aluno preenche)</label>
                     <div data-se-gabarito>
                         <div class="linha-campos">
                             <label class="campo-largo">Como
@@ -307,14 +318,14 @@
                         </div>
                         <p class="dica dica--pequena" data-se-gabarito-imagem>Foto, print ou digitalização da folha de respostas que você já usa. Para a leitura óptica, prefira o arquivo digital ao celular.</p>
                         <div class="acoes-lista" data-se-gabarito-separado>
-                            <button type="button" class="btn btn--pequeno btn--verde" id="gab-imprimir4">Imprimir gabaritos (4 por folha)</button>
-                            <button type="button" class="btn btn--pequeno" id="gab-imprimir1" title="Uma folha de respostas por página de 10,5 × 14,85 cm: o formato que a aba Gabaritos do Identificador recebe">Salvar 1 por página (para o Identificador)</button>
+                            <button type="button" class="btn btn--laranja" id="gab-imprimir4">Imprimir gabaritos (4 por folha)</button>
+                            <button type="button" class="btn btn--laranja" id="gab-imprimir1" title="Uma folha de respostas por página de 10,5 × 14,85 cm: o formato que a aba Gabaritos do Identificador recebe">Salvar 1 por página (para o Identificador)</button>
                         </div>
                     </div>
                 </div>
             </fieldset>
 
-            <fieldset class="passo">
+            <fieldset class="passo passo--3" id="passo-3">
                 <legend><span class="num">3</span> Instruções</legend>
                 <label class="opcao"><input type="checkbox" id="ins-ligado"> Quadro de instruções na 1ª página</label>
                 <div id="ins-corpo">
@@ -335,24 +346,25 @@
                 </div>
             </fieldset>
 
-            <fieldset class="passo">
+            <fieldset class="passo passo--4" id="passo-4">
                 <legend><span class="num">4</span> O formato</legend>
                 <div id="formato"></div>
             </fieldset>
 
-            <fieldset class="passo">
+            <fieldset class="passo passo--5" id="passo-5">
                 <legend><span class="num">5</span> As questões</legend>
-                <p class="dica">Escreva aqui ou <strong>cole</strong> do Word, de um PDF ou de um site — negrito, itálico, índices e expoentes vêm junto. Imagens: cole (Ctrl+V), arraste para a questão ou use o botão. Cada linha do enunciado é um parágrafo.</p>
+                <p class="dica">Escreva aqui ou <strong>cole</strong> do Word, de um PDF ou de um site.</p>
+                <details class="mais-ajuda"><summary>Como colar texto e imagens?</summary><p class="dica">Negrito, itálico, índices e expoentes vêm junto. Imagens: cole (Ctrl+V), arraste para a questão ou use o botão. Cada linha do enunciado é um parágrafo.</p></details>
                 <div id="area-painel" class="area-painel" hidden></div>
                 <div id="secoes"></div>
                 <div class="acoes-lista">
-                    <button type="button" class="btn" id="add-secao">+ Nova seção</button>
-                    <button type="button" class="btn" id="add-colar">Colar várias questões</button>
-                    <button type="button" class="btn" id="add-banco">Trazer de outra prova</button>
+                    <button type="button" class="btn btn--azul" id="add-secao">+ Nova seção</button>
+                    <button type="button" class="btn btn--azul" id="add-colar">Colar várias questões</button>
+                    <button type="button" class="btn btn--azul" id="add-banco">Trazer de outra prova</button>
                 </div>
                 <div class="acoes-lista">
-                    <button type="button" class="btn btn--pequeno" id="abrir-todas">Abrir todas</button>
-                    <button type="button" class="btn btn--pequeno" id="fechar-todas">Fechar todas</button>
+                    <button type="button" class="btn" id="abrir-todas">Abrir todas</button>
+                    <button type="button" class="btn" id="fechar-todas">Fechar todas</button>
                 </div>
             </fieldset>
 
@@ -364,7 +376,7 @@
                 <div class="economia">
                     <span id="previa-info">—</span>
                     <label class="copias">× <input type="number" id="copias" min="1" max="2000" value="35"> alunos = <strong id="folhas-total">—</strong></label>
-                    <button type="button" class="btn btn--pequeno btn--verde" id="economizar">Economizar papel</button>
+                    <button type="button" class="btn btn--verde" id="economizar">Economizar papel</button>
                 </div>
                 <span class="zoom">
                     <button type="button" class="btn btn--pequeno" data-zoom="-" title="Diminuir">−</button>

@@ -181,7 +181,7 @@
         destino.innerHTML = '';
         if (!arquivos.length) destino.appendChild(el('p', 'vazio', 'Nada impresso ainda. As provas impressas ou salvas em PDF aparecem aqui.'));
         arquivos.forEach(function (a) {
-            const tipo = a.tipo === 'gabarito' ? 'Gabarito do professor' : a.tipo === 'gabaritos' ? 'Folhas de respostas' : (a.paginas + (a.paginas === 1 ? ' página' : ' páginas'));
+            const tipo = a.tipo === 'gabarito' ? 'Folha de correção (professor)' : a.tipo === 'gabaritos' ? 'Folhas de respostas' : (a.paginas + (a.paginas === 1 ? ' página' : ' páginas'));
             destino.appendChild(el('div', 'prova-linha',
                 '<div class="info"><strong>' + esc(a.nome) + '</strong><span class="meta">' + esc(a.titulo + ' · ' + tipo + ' · gerado em ' + dataHora(a.criadoEm)) + '</span></div>' +
                 '<div class="acoes">' +
@@ -326,7 +326,7 @@
             '<label>Numeração<select data-l="numeracao">' + opcoesHtml([['01.', '01. 02.'], ['1.', '1. 2.'], ['QUESTÃO 01', 'QUESTÃO 01']], layout.numeracao) + '</select></label>' +
             '</div>' +
             (comAparencia ?
-                '<label class="opcao"><input type="checkbox" data-l="gabarito"' + (layout.gabarito ? ' checked' : '') + '> Gabarito (folha de respostas com bolhas e marcas de alinhamento)</label>' +
+                '<label class="opcao"><input type="checkbox" data-l="gabarito"' + (layout.gabarito ? ' checked' : '') + '> Folha de respostas do aluno (com bolhas e marcas de alinhamento)</label>' +
                 '<div class="linha-campos"><label class="campo-largo">Onde fica o gabarito<select data-l="gabaritoLocal">' +
                 opcoesHtml([['prova', 'Na 1ª página da prova'], ['separado', 'Em folha à parte, 4 por folha A4']], layout.gabaritoLocal) + '</select></label></div>' +
                 '<label class="opcao"><input type="checkbox" data-l="linhaColunas"' + (layout.linhaColunas ? ' checked' : '') + '> Linha entre as colunas</label>' +
@@ -774,10 +774,10 @@
         }
 
         corpo += '<div class="q-acoes">' +
-            '<button type="button" class="icone" data-acao="q-subir" title="Subir">↑</button>' +
-            '<button type="button" class="icone" data-acao="q-descer" title="Descer">↓</button>' +
-            '<button type="button" class="btn btn--pequeno" data-acao="q-duplicar">Duplicar</button>' +
-            '<button type="button" class="btn btn--pequeno" data-acao="q-apagar">Apagar</button></div>';
+            '<button type="button" class="icone" data-acao="q-subir" title="Subir">↑ Subir</button>' +
+            '<button type="button" class="icone" data-acao="q-descer" title="Descer">↓ Descer</button>' +
+            '<button type="button" class="btn btn--pequeno icone-txt" data-acao="q-duplicar">Duplicar</button>' +
+            '<button type="button" class="btn btn--pequeno btn--perigo" data-acao="q-apagar">✕ Apagar</button></div>';
 
         if (leitura) {
             /* seção de outro professor: dá para ler tudo, não dá para mexer */
@@ -812,9 +812,9 @@
                 '<div class="secao-cab"><span class="secao-icone">' + (icone ? Icones.svg(icone, 'icone-ui') : '') + '</span>' +
                 '<input type="text" data-campo="secao-titulo" value="' + esc(s.titulo || '') + '" placeholder="Título da seção (ex.: BIOLOGIA) — opcional"' + travaSecao + '>' +
                 (formata ?
-                    '<button type="button" class="icone" data-acao="secao-subir" title="Subir a seção"' + (i === 0 ? ' disabled' : '') + '>↑</button>' +
-                    '<button type="button" class="icone" data-acao="secao-descer" title="Descer a seção"' + (i === prova.secoes.length - 1 ? ' disabled' : '') + '>↓</button>' +
-                    '<button type="button" class="icone icone--perigo" data-acao="secao-apagar" title="Apagar a seção">✕</button>' : '') + '</div>' +
+                    '<button type="button" class="icone" data-acao="secao-subir" title="Subir a seção"' + (i === 0 ? ' disabled' : '') + '>↑ Subir</button>' +
+                    '<button type="button" class="icone" data-acao="secao-descer" title="Descer a seção"' + (i === prova.secoes.length - 1 ? ' disabled' : '') + '>↓ Descer</button>' +
+                    '<button type="button" class="icone icone--perigo" data-acao="secao-apagar" title="Apagar a seção">✕ Apagar</button>' : '') + '</div>' +
                 '<div class="secao-icone-escolha"><select data-campo="secao-icone" aria-label="Ícone da seção"' + travaSecao + '>' + opcoesIcone(s) + '</select></div>' +
                 (prova.nuvem ? donoDaSecao(s, escreve) : '') +
                 s.questoes.map(function (q) {
@@ -822,9 +822,9 @@
                     return questaoHtml(q, n, layout, !escreve);
                 }).join('') +
                 (escreve ?
-                    '<div class="secao-acoes"><button type="button" class="btn btn--pequeno" data-acao="add-objetiva">+ Objetiva</button>' +
-                    '<button type="button" class="btn btn--pequeno" data-acao="add-discursiva">+ Discursiva</button>' +
-                    '<button type="button" class="btn btn--pequeno" data-acao="add-texto">+ Texto de apoio</button></div>' : '') +
+                    '<div class="secao-acoes"><button type="button" class="btn btn--azul" data-acao="add-objetiva">+ Objetiva</button>' +
+                    '<button type="button" class="btn btn--azul" data-acao="add-discursiva">+ Discursiva</button>' +
+                    '<button type="button" class="btn btn--azul" data-acao="add-texto">+ Texto de apoio</button></div>' : '') +
                 (prova.nuvem ? comentariosDaSecao(s) : '') +
                 '</div>';
         }).join('');
@@ -1216,6 +1216,15 @@
         desenharSecoes();
     };
     $('fechar-todas').onclick = function () { abertas.clear(); desenharSecoes(); };
+
+    /* índice dos passos: rola até o passo sem mexer no endereço (a rota vive no #) */
+    document.querySelectorAll('.indice-passos a').forEach(function (link) {
+        link.addEventListener('click', function (e) {
+            e.preventDefault();
+            const alvo = document.getElementById('passo-' + link.dataset.passo);
+            if (alvo) alvo.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        });
+    });
 
     /* ----- prévia e economia ----- */
 
