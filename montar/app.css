@@ -562,8 +562,13 @@ fieldset.passo[disabled] { opacity: .75; }
 .copias, .copias input { font-size: 14.5px; }
 
 @media (max-width: 900px) {
-    .barra-acoes { flex-wrap: wrap; }
+    .barra { height: auto; flex-wrap: wrap; padding: 10px 12px; row-gap: 8px; }
+    .barra-titulo { flex: 1 1 200px; }
+    .barra-acoes { flex-wrap: wrap; width: 100%; justify-content: flex-start; }
+    .barra-acoes .btn--grande { flex: 1 1 100%; justify-content: center; }
+    .editor .linha-campos > label { flex: 1 1 45%; }
     .grupo-barra { border-right: 0; padding-right: 0; flex-wrap: wrap; }
-    .grade-editor { grid-template-columns: 1fr; height: auto; }
+    .grade-editor { grid-template-columns: minmax(0, 1fr); height: auto; }
+    .editor, .previa { min-width: 0; }
     .indice-passos { position: static; }
 }
