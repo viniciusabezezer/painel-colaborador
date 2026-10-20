@@ -82,6 +82,6 @@
     }
 
     const api = { HABILIDADES, EXEMPLOS, LETRAS, lerColadas };
-    global.JangadaQuestoes = api;
+    global.SagaQuestoes = api;
     if (typeof module !== 'undefined' && module.exports) module.exports = api;
 })(typeof globalThis !== 'undefined' ? globalThis : this);

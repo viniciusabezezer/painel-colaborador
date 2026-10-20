@@ -3,37 +3,38 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Jangada — gamificação da sala de aula</title>
-    <meta name="description" content="Jangada: a sala de aula como jogo cooperativo, feita para o Ensino Médio cearense. Funciona sem internet.">
-    <meta name="theme-color" content="#0f5c6e">
+    <title>Saga — o RPG da sala de aula</title>
+    <meta name="description" content="Saga: o RPG da sala de aula, feito para o Ensino Médio cearense. Funciona sem internet.">
+    <meta name="theme-color" content="#2a1650">
     <link rel="manifest" href="manifest.webmanifest">
     <link rel="icon" href="logo.png">
-    <link rel="stylesheet" href="app.css?v=1">
+    <link rel="stylesheet" href="app.css?v=2">
 </head>
 <body>
 <div class="wrap">
     <a class="back-link" href="https://malulinks.vercel.app">&larr; Voltar ao MaluLinks</a>
 
     <header class="masthead">
-        <div class="marca" aria-hidden="true">⛵</div>
+        <div class="marca" aria-hidden="true">⚔️</div>
         <div class="masthead-texto">
-            <h1>Jangada</h1>
-            <p id="escola-rotulo">A sala de aula como jogo cooperativo</p>
+            <h1>SAGA</h1>
+            <p id="escola-rotulo">O RPG da sala de aula</p>
         </div>
         <div class="masthead-controles">
             <label class="campo-turma">Turma
                 <select id="turma-atual" aria-label="Turma"></select>
             </label>
-            <button type="button" class="btn btn--pequeno" data-acao="trocar-professor" id="professor-atual" title="Quem está usando este aparelho"></button>
+            <button type="button" class="btn btn--pequeno" data-acao="trocar-professor" id="professor-atual" title="Mestre do jogo neste aparelho"></button>
         </div>
     </header>
 
     <nav class="abas" role="tablist" aria-label="Seções">
-        <button class="aba" role="tab" data-aba="turma">🧑‍🤝‍🧑 Turma</button>
+        <button class="aba" role="tab" data-aba="turma">⚔️ Turma</button>
         <button class="aba" role="tab" data-aba="telao">📺 Telão</button>
-        <button class="aba" role="tab" data-aba="missoes">🧭 Missões</button>
-        <button class="aba" role="tab" data-aba="batalha">⚔️ Batalha</button>
-        <button class="aba" role="tab" data-aba="conselheiro">💡 Conselheiro</button>
+        <button class="aba" role="tab" data-aba="missoes">📜 Quests</button>
+        <button class="aba" role="tab" data-aba="batalha">🐉 Boss</button>
+        <button class="aba" role="tab" data-aba="loja">🛒 Loja</button>
+        <button class="aba" role="tab" data-aba="conselheiro">🦉 Oráculo</button>
         <button class="aba" role="tab" data-aba="cadastro">📋 Cadastro</button>
         <button class="aba" role="tab" data-aba="escola">🏫 Escola</button>
     </nav>
@@ -43,8 +44,8 @@
 
 <div id="barra-selecao" class="barra-selecao" hidden>
     <span id="selecao-contagem"></span>
-    <button type="button" class="btn btn--positivo" data-acao="reconhecer">＋ Reconhecer</button>
-    <button type="button" class="btn btn--negativo" data-acao="descontar">− Descontar</button>
+    <button type="button" class="btn btn--positivo" data-acao="reconhecer">＋ XP</button>
+    <button type="button" class="btn btn--negativo" data-acao="descontar">− HP</button>
     <button type="button" class="btn btn--pequeno" data-acao="limpar-selecao">Limpar</button>
 </div>
 

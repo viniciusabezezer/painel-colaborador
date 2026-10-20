@@ -1,4 +1,4 @@
-/* O perfil da escola. É o que torna a Jangada adaptável: qualquer escola
+/* O perfil da escola. É o que torna a Saga adaptável: qualquer escola
    estadual do Ceará troca nome, CREDE, tipo, turmas, PDTs e moeda na aba
    Escola, sem mexer em código. A EEMTI MALU vem como modelo de partida. */
 (function (global) {
@@ -36,7 +36,7 @@
             { nome: 'Ciências Humanas', pca: 'Nadja' },
             { nome: 'Linguagens e Códigos', pca: 'Juliana' }
         ],
-        moeda: { nome: 'MaluPix', simbolo: '₥' },
+        moeda: { nome: 'Ouro', simbolo: '🪙' },
         ocorrenciasUrl: 'https://forms.gle/2Rbqkx6xHxqc1zy37'
     };
 
@@ -54,7 +54,7 @@
             { nome: 'Ciências Humanas', pca: '' },
             { nome: 'Linguagens e Códigos', pca: '' }
         ],
-        moeda: { nome: 'Moedas', simbolo: '¢' },
+        moeda: { nome: 'Ouro', simbolo: '🪙' },
         ocorrenciasUrl: ''
     };
 
@@ -101,6 +101,6 @@
 
     const api = { CREDES, TIPOS, perfilPadrao, normalizarTurma, lerTurmas, validar, rotulo };
 
-    global.JangadaEscola = api;
+    global.SagaEscola = api;
     if (typeof module !== 'undefined' && module.exports) module.exports = api;
 })(typeof globalThis !== 'undefined' ? globalThis : this);

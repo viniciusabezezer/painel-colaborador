@@ -1,18 +1,21 @@
-/* Jangada — mesma família visual dos apps da Malu (Outfit, cantos
-   redondos, papel claro), com o azul do mar do litoral cearense no lugar
-   do verde e as cores do jogo: Vida, Energia, XP e moeda. O Telão usa
-   fundo escuro para ler bem no projetor. */
+/* Saga — mesma família visual dos apps da Malu (Outfit, cantos
+   redondos), com cara de RPG: roxo de fantasia, dourado de loot, letra
+   pixelada no título e nos selos de nível, e as cores de sempre dos jogos
+   para HP (vermelho), Mana (azul) e XP (amarelo). O Telão usa fundo escuro
+   para ler bem no projetor. */
 
-@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Press+Start+2P&display=swap');
 
 :root {
-    --mar: #0f5c6e;
-    --mar-escuro: #0a3d4a;
-    --areia: #f4f1ea;
+    --mar: #5b2bb5;
+    --mar-escuro: #2a1650;
+    --areia: #f3f0f8;
+    --ouro: #f5b301;
+    --pixel: 'Press Start 2P', ui-monospace, monospace;
     --panel: #ffffff;
     --ink: #16261d;
     --ink-soft: #56655c;
-    --line: #e2ded3;
+    --line: #e1dcea;
 
     --vida: #e5484d;
     --energia: #2f80ed;
@@ -49,9 +52,9 @@ h3 { font-size: 16px; font-weight: 700; margin: 18px 0 8px; }
 /* ===== topo ===== */
 
 .masthead { display: flex; align-items: center; gap: 14px; margin-bottom: 16px; flex-wrap: wrap; }
-.marca { width: 54px; height: 54px; border-radius: 16px; background: var(--mar); display: grid; place-items: center; font-size: 30px; box-shadow: var(--shadow-sm); }
+.marca { width: 54px; height: 54px; border-radius: 14px; background: linear-gradient(135deg, var(--mar), var(--mar-escuro)); border: 3px solid var(--ouro); display: grid; place-items: center; font-size: 30px; box-shadow: var(--shadow-sm); }
 .masthead-texto { flex: 1 1 240px; min-width: 0; }
-.masthead h1 { font-size: clamp(26px, 4vw, 34px); font-weight: 800; letter-spacing: -.5px; line-height: 1.05; color: var(--mar-escuro); }
+.masthead h1 { font-family: var(--pixel); font-size: clamp(22px, 3.4vw, 30px); font-weight: 400; letter-spacing: 2px; line-height: 1.3; color: var(--mar-escuro); text-shadow: 3px 3px 0 var(--ouro); }
 .masthead p { color: var(--ink-soft); font-size: 14px; }
 .masthead-controles { display: flex; align-items: flex-end; gap: 10px; flex-wrap: wrap; }
 .campo-turma { display: flex; flex-direction: column; gap: 3px; }
@@ -75,7 +78,7 @@ input[type="text"], input[type="number"], input[type="date"], select, textarea {
     background: #fcfbf7; border: 1px solid var(--line); border-radius: var(--radius-sm);
     padding: 7px 10px; width: 100%;
 }
-input:focus, select:focus, textarea:focus, button:focus-visible { outline: 2px solid #7cc4d4; outline-offset: 1px; }
+input:focus, select:focus, textarea:focus, button:focus-visible { outline: 2px solid #b79cf0; outline-offset: 1px; }
 textarea { resize: vertical; font-size: 14px; line-height: 1.45; }
 fieldset { border: 0; }
 legend { font-size: 13px; font-weight: 600; color: var(--ink-soft); margin-bottom: 4px; }
@@ -115,7 +118,7 @@ legend { font-size: 13px; font-weight: 600; color: var(--ink-soft); margin-botto
 .contagem { font-size: 13px; color: var(--ink-soft); }
 .dica { color: var(--ink-soft); font-size: 14px; margin: 4px 0 10px; }
 .dica-inline { color: var(--ink-soft); font-size: 13px; }
-.selo { display: inline-block; font-size: 12px; font-weight: 700; padding: 3px 9px; border-radius: 999px; background: #e3f1f4; color: var(--mar-escuro); white-space: nowrap; }
+.selo { display: inline-block; font-size: 12px; font-weight: 700; padding: 3px 9px; border-radius: 999px; background: #ece4fb; color: var(--mar-escuro); white-space: nowrap; }
 .selo--cinza { background: #efede6; color: var(--ink-soft); font-weight: 600; white-space: normal; }
 .texto-alerta { color: var(--negativo); }
 
@@ -155,12 +158,14 @@ legend { font-size: 13px; font-weight: 600; color: var(--ink-soft); margin-botto
 .grade-alunos { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px; }
 
 .cartao-aluno {
+    position: relative;
     background: var(--panel); border: 2px solid var(--line); border-radius: var(--radius);
     padding: 8px 10px 6px; display: flex; flex-direction: column; gap: 4px;
     transition: border-color .12s, transform .12s;
 }
-.cartao-aluno.selecionado { border-color: var(--mar); box-shadow: 0 0 0 3px #bfe3eb; }
-.cartao-aluno.caido { background: #f6f2f2; }
+.cartao-aluno.selecionado { border-color: var(--mar); box-shadow: 0 0 0 3px #d6c6f5; }
+.nivel-selo { position: absolute; top: 6px; left: 6px; font-family: var(--pixel); font-size: 10px; background: var(--mar-escuro); color: var(--ouro); padding: 4px 5px 3px; border-radius: 6px; }
+.cartao-aluno.caido { background: #f3eeee; filter: grayscale(.6); }
 .cartao-aluno.ausente { opacity: .55; }
 .cartao-toque { background: none; border: 0; font: inherit; text-align: center; cursor: pointer; padding: 2px; display: flex; flex-direction: column; align-items: center; color: inherit; }
 .avatar { font-size: 30px; line-height: 1.1; }
@@ -171,13 +176,15 @@ legend { font-size: 13px; font-weight: 600; color: var(--ink-soft); margin-botto
 
 .barra { position: relative; height: 12px; border-radius: 999px; background: #eceae3; overflow: hidden; }
 .barra span { position: absolute; inset: 0 auto 0 0; border-radius: 999px; transition: width .35s; }
-.barra em { position: absolute; right: 6px; top: -2px; font-size: 10px; font-style: normal; font-weight: 700; color: #333; }
+.barra { height: 13px; }
+.barra b { position: absolute; left: 6px; top: -1px; z-index: 1; font-size: 9px; font-weight: 800; color: #fff; text-shadow: 0 0 2px rgba(0,0,0,.6); }
+.barra em { position: absolute; right: 6px; top: -1px; z-index: 1; font-size: 10px; font-style: normal; font-weight: 700; color: #222; }
 .barra--vida span { background: var(--vida); }
 .barra--energia span { background: var(--energia); }
 .barra--xp span { background: var(--xp); }
 .barra--chefe { height: 20px; }
 .barra--chefe span { background: linear-gradient(90deg, #8e2de2, #e5484d); }
-.barra--chefe em { top: 1px; font-size: 12px; color: #fff; }
+.barra--chefe em, .barra--chefe b { top: 2px; font-size: 12px; color: #fff; }
 
 .barra-selecao {
     position: fixed; left: 50%; bottom: 14px; transform: translateX(-50%);
@@ -220,8 +227,8 @@ legend { font-size: 13px; font-weight: 600; color: var(--ink-soft); margin-botto
 .lista-marcar label { display: flex; align-items: center; gap: 7px; font-weight: 500; color: var(--ink); font-size: 14px; padding: 3px 0; }
 .lista-marcar--linha { max-height: none; grid-template-columns: repeat(auto-fill, minmax(90px, 1fr)); }
 
-.roleta { display: flex; align-items: center; gap: 14px; padding: 14px; margin: 12px 0; border-radius: var(--radius); background: #eef6f8; border: 2px dashed #9fcbd6; }
-.roleta--pronta { border-style: solid; border-color: var(--mar); background: #e3f1f4; }
+.roleta { display: flex; align-items: center; gap: 14px; padding: 14px; margin: 12px 0; border-radius: var(--radius); background: #f3eefc; border: 2px dashed #b79cf0; }
+.roleta--pronta { border-style: solid; border-color: var(--mar); background: #ece4fb; }
 .roleta-icone { font-size: 46px; }
 .roleta-texto strong { display: block; font-size: 18px; }
 .roleta-texto span { color: var(--ink-soft); font-size: 14px; }
@@ -253,7 +260,7 @@ legend { font-size: 13px; font-weight: 600; color: var(--ink-soft); margin-botto
 
 /* ===== Telão ===== */
 
-.telao { background: radial-gradient(circle at 20% 0%, #155f73, #08303b 70%); color: #f2fbfd; border-radius: var(--radius); padding: 22px; min-height: 70vh; }
+.telao { background: radial-gradient(circle at 20% 0%, #4b2696, #150a2e 70%); color: #f2fbfd; border-radius: var(--radius); padding: 22px; min-height: 70vh; }
 .telao:fullscreen { border-radius: 0; padding: 4vh 4vw; overflow-y: auto; }
 .telao-topo { display: flex; justify-content: space-between; align-items: center; gap: 10px; margin-bottom: 16px; }
 .telao-topo h2 { font-size: clamp(26px, 4vw, 44px); font-weight: 800; }
@@ -281,7 +288,7 @@ legend { font-size: 13px; font-weight: 600; color: var(--ink-soft); margin-botto
 
 .grade-chefes { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 10px; margin: 12px 0; }
 .cartao-chefe { display: flex; flex-direction: column; gap: 4px; align-items: flex-start; padding: 12px; border: 2px solid var(--line); border-radius: var(--radius); cursor: pointer; color: var(--ink); }
-.cartao-chefe:has(input:checked) { border-color: var(--mar); background: #eef6f8; }
+.cartao-chefe:has(input:checked) { border-color: var(--mar); background: #f3eefc; }
 .cartao-chefe input { position: absolute; opacity: 0; }
 .cartao-chefe .chefe-icone { font-size: 36px; }
 .chefe { display: flex; gap: 16px; align-items: center; background: #1d1330; color: #fff; padding: 16px 18px; border-radius: var(--radius); margin-bottom: 14px; }
@@ -307,7 +314,7 @@ legend { font-size: 13px; font-weight: 600; color: var(--ink-soft); margin-botto
 .progresso { height: 10px; background: #eceae3; border-radius: 999px; overflow: hidden; margin: 8px 0 4px; }
 .progresso span { display: block; height: 100%; background: var(--positivo); }
 .chips { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 6px; }
-.chip { font: inherit; font-size: 12.5px; padding: 4px 10px; border-radius: 999px; border: 1px dashed #9fcbd6; background: #f3fafb; cursor: pointer; color: var(--mar-escuro); }
+.chip { font: inherit; font-size: 12.5px; padding: 4px 10px; border-radius: 999px; border: 1px dashed #b79cf0; background: #f7f3fe; cursor: pointer; color: var(--mar-escuro); }
 
 /* ===== Conselheiro ===== */
 
@@ -373,3 +380,19 @@ details.avancado textarea { font-family: ui-monospace, Menlo, Consolas, monospac
 @media (prefers-reduced-motion: reduce) {
     *, *::before, *::after { animation: none !important; transition: none !important; }
 }
+
+/* ===== RPG: chefe, avatares, loja ===== */
+
+.chefe-rotulo { font-family: var(--pixel); font-size: 10px; color: #ff6b6b; letter-spacing: 2px; }
+.chefe h2 { font-size: 22px; }
+.avatares { display: flex; flex-wrap: wrap; gap: 8px; }
+.avatar-opcao { font-size: 28px; width: 52px; height: 52px; border-radius: 12px; border: 2px solid var(--line); background: #faf8fe; cursor: pointer; }
+.avatar-opcao.escolhido { border-color: var(--ouro); box-shadow: 0 0 0 3px #fbe7a6; }
+.loja-cliente .saldo { font-size: 16px; }
+.grade-loja { display: grid; grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); gap: 10px; margin-bottom: 12px; }
+.item-loja { display: flex; flex-direction: column; align-items: center; gap: 4px; text-align: center; padding: 14px 10px; background: var(--panel); border: 2px solid var(--line); border-radius: var(--radius); box-shadow: var(--shadow-sm); }
+.item-loja:hover { border-color: var(--ouro); }
+.item-loja--bloqueado { opacity: .55; }
+.item-icone { font-size: 38px; }
+.item-loja .btn { margin-top: auto; background: var(--mar-escuro); border-color: var(--mar-escuro); color: var(--ouro); }
+.hist--compra .hist-delta { color: #8a6200; }

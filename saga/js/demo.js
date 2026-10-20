@@ -5,8 +5,8 @@
     'use strict';
 
     const node = typeof module !== 'undefined' && module.exports;
-    const Motor = node ? require('./motor.js') : global.JangadaMotor;
-    const Conselheiro = node ? require('./conselheiro.js') : global.JangadaConselheiro;
+    const Motor = node ? require('./motor.js') : global.SagaMotor;
+    const Conselheiro = node ? require('./conselheiro.js') : global.SagaConselheiro;
 
     const NOMES = [
         'Ana Clara', 'Bruno', 'Cauã', 'Davi Lucas', 'Emanuelly', 'Francisco', 'Gabriela', 'Heitor',
@@ -42,8 +42,8 @@
         const alunos = NOMES.map((nome, i) => ({ id: `demo-a${i}`, nome, turma, classe: classes[i % classes.length], xp: 0 }));
         const inicio = quando(15, 7, 0);
         for (const a of alunos) ev('aluno.novo', { aluno: { id: a.id, nome: a.nome, turma, classe: a.classe } }, inicio);
-        const sugestao = Conselheiro.formarJangadas(alunos, regras.tamanhoJangada, { prefixoId: 'demo-j' });
-        ev('jangadas.formar', { turma, jangadas: sugestao.jangadas, membros: sugestao.membros }, quando(15, 7, 1));
+        const sugestao = Conselheiro.formarGuildas(alunos, regras.tamanhoGuilda, { prefixoId: 'demo-j' });
+        ev('guildas.formar', { turma, guildas: sugestao.guildas, membros: sugestao.membros }, quando(15, 7, 1));
 
         const positivos = regras.comportamentos.filter((c) => c.tipo === 'positivo');
         const negativos = regras.comportamentos.filter((c) => c.tipo === 'negativo' && !c.ocorrencia);
@@ -85,6 +85,6 @@
     }
 
     const api = { gerar, NOMES };
-    global.JangadaDemo = api;
+    global.SagaDemo = api;
     if (node) module.exports = api;
 })(typeof globalThis !== 'undefined' ? globalThis : this);

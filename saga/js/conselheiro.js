@@ -4,7 +4,7 @@
    - quem ninguém reconhece há dias (os "invisíveis");
    - se a turma recebe mais desconto do que reconhecimento;
    - se o XP está concentrado em poucos;
-   - se as jangadas estão desequilibradas — e propõe jangadas novas.
+   - se as guildas estão desequilibradas — e propõe guildas novas.
    Também sorteia quem responde de forma justa (quem participou menos tem
    mais chance) e escreve o resumo da turma para o PDT.
    Tudo é regra simples e explicável, calculada no próprio aparelho. */
@@ -12,12 +12,14 @@
     'use strict';
 
     const Motor = (typeof module !== 'undefined' && module.exports)
-        ? require('./motor.js') : global.JangadaMotor;
+        ? require('./motor.js') : global.SagaMotor;
 
-    const NOMES_JANGADAS = [
-        'Pedra Rachada', 'Quebra-Mar', 'Boca do Poço', 'Ronco do Mar', 'Lagoinha', 'Taíba',
-        'Flecheiras', 'Mundaú', 'Jericoacoara', 'Canoa Quebrada', 'Mucuripe', 'Iracema',
-        'Cumbuco', 'Icapuí', 'Aracati', 'Jaguaribe'
+    /* Nomes de guilda: RPG com sotaque cearense. */
+    const NOMES_GUILDAS = [
+        'Dragões do Mar', 'Lobos da Caatinga', 'Fênix do Sertão', 'Corsários de Jeri',
+        'Tubarões de Paracuru', 'Falcões do Cariri', 'Guardiões da Ibiapaba', 'Onças do Sertão',
+        'Arraias do Mucuripe', 'Cavaleiros do Aracati', 'Corujas da Serra', 'Serpentes do Jaguaribe',
+        'Carcarás do Pecém', 'Lendas da Taíba', 'Titãs de Quixadá', 'Piratas da Pedra Rachada'
     ];
 
     const RECONHECIMENTOS = new Set(['positivo', 'missao', 'batalha']);
@@ -86,11 +88,11 @@
             const max = Motor.vidaMax(regras, a);
             const descontos = (semana.get(a.id) || []).filter((r) => r.tipo === 'negativo').length;
             if (a.caido) {
-                lista.push({ nivel: 'alta', tipo: 'queda', alunoId: a.id, titulo: `${a.nome} caiu`,
-                    detalhe: 'Combine uma missão de reparação. Ao concluir, volta com metade da Vida.', acao: 'reparar' });
+                lista.push({ nivel: 'alta', tipo: 'queda', alunoId: a.id, titulo: `${a.nome} está K.O.`,
+                    detalhe: 'Combine uma missão de respawn. Ao concluir, volta com metade do HP.', acao: 'reparar' });
             } else if (a.vida / max <= 0.3) {
-                lista.push({ nivel: 'media', tipo: 'vida', alunoId: a.id, titulo: `${a.nome} está com pouca Vida (${a.vida}/${max})`,
-                    detalhe: 'Um(a) Rendeiro(a) da jangada pode curar. Vale uma conversa antes do próximo desconto.' });
+                lista.push({ nivel: 'media', tipo: 'vida', alunoId: a.id, titulo: `${a.nome} está com pouco HP (${a.vida}/${max})`,
+                    detalhe: 'Um(a) Curandeiro(a) da guilda pode curar, ou uma poção da loja resolve. Vale uma conversa antes do próximo desconto.' });
             }
             if (descontos >= 3) {
                 lista.push({ nivel: 'alta', tipo: 'padrao', alunoId: a.id, titulo: `${a.nome}: ${descontos} descontos em 7 dias`,
@@ -112,7 +114,7 @@
         }
         if (energiaParada.length) {
             const nomes = energiaParada.map((a) => a.nome);
-            lista.push({ nivel: 'info', tipo: 'energia', titulo: `${nomes.length} com Energia cheia e poderes parados`,
+            lista.push({ nivel: 'info', tipo: 'energia', titulo: `${nomes.length} com Mana cheia e poderes parados`,
                 detalhe: `${nomes.slice(0, 6).join(', ')}${nomes.length > 6 ? ' e outros' : ''}. Lembre a turma: poder parado é privilégio desperdiçado.` });
         }
 
@@ -127,27 +129,27 @@
         }
         const eq = equilibrio(estado, regras, turma);
         if (eq.desequilibrada) {
-            lista.push({ nivel: 'info', tipo: 'jangadas', titulo: `Jangadas desequilibradas na ${turma}`,
+            lista.push({ nivel: 'info', tipo: 'guildas', titulo: `Guildas desequilibradas na ${turma}`,
                 detalhe: eq.motivo, acao: 'formar' });
         }
         return lista.sort((x, y) => PESO[x.nivel] - PESO[y.nivel]);
     }
 
-    /* ===== jangadas ===== */
+    /* ===== guildas ===== */
 
-    /* Distribui os estudantes em jangadas parecidas entre si: cada uma com
-       as três classes quando possível e com XP total próximo. Classe mais
+    /* Distribui os estudantes em guildas parecidas entre si: cada uma com
+       todas as classes quando possível e com XP total próximo. Classe mais
        rara primeiro; dentro dela, do maior XP para o menor, cada um vai
-       para a jangada que menos tem daquela classe, depois a menor, depois
+       para a guilda que menos tem daquela classe, depois a menor, depois
        a de menor XP. Determinístico: mesma turma, mesma sugestão. */
-    function formarJangadas(alunos, tamanho, opcoes) {
+    function formarGuildas(alunos, tamanho, opcoes) {
         const o = opcoes || {};
         const n = alunos.length;
         const k = Math.max(1, Math.round(n / Math.max(2, tamanho || 5)));
         const usados = new Set(o.nomesEmUso || []);
-        const nomes = NOMES_JANGADAS.filter((x) => !usados.has(x)).concat(NOMES_JANGADAS.filter((x) => usados.has(x)));
+        const nomes = NOMES_GUILDAS.filter((x) => !usados.has(x)).concat(NOMES_GUILDAS.filter((x) => usados.has(x)));
         const prefixo = o.prefixoId || 'j';
-        const jangadas = Array.from({ length: k }, (_, i) => ({
+        const guildas = Array.from({ length: k }, (_, i) => ({
             id: `${prefixo}${i}`, nome: nomes[i % nomes.length] + (i >= nomes.length ? ` ${Math.floor(i / nomes.length) + 1}` : ''),
             xp: 0, total: 0, classes: {}
         }));
@@ -161,7 +163,7 @@
         for (const [classe, lista] of grupos) {
             lista.sort((x, y) => y.xp - x.xp || x.nome.localeCompare(y.nome, 'pt-BR'));
             for (const a of lista) {
-                const alvo = jangadas.slice().sort((x, y) =>
+                const alvo = guildas.slice().sort((x, y) =>
                     (x.classes[classe] || 0) - (y.classes[classe] || 0) || x.total - y.total || x.xp - y.xp || (x.id < y.id ? -1 : 1))[0];
                 alvo.classes[classe] = (alvo.classes[classe] || 0) + 1;
                 alvo.total += 1;
@@ -169,11 +171,11 @@
                 membros[a.id] = alvo.id;
             }
         }
-        return { jangadas: jangadas.map((j) => ({ id: j.id, nome: j.nome })), membros };
+        return { guildas: guildas.map((j) => ({ id: j.id, nome: j.nome })), membros };
     }
 
     function equilibrio(estado, regras, turma) {
-        const jangadas = Motor.jangadasDaTurma(estado, turma).map((j) => {
+        const guildas = Motor.guildasDaTurma(estado, turma).map((j) => {
             const m = Motor.membros(estado, j.id);
             return {
                 id: j.id, nome: j.nome, membros: m.length,
@@ -182,28 +184,28 @@
                 classes: new Set(m.map((a) => a.classe)).size
             };
         });
-        const semJangada = Motor.alunosDaTurma(estado, turma).filter((a) => !a.jangada).length;
-        const r = { jangadas, semJangada, desequilibrada: false, motivo: '' };
-        if (semJangada >= 2) {
+        const semGuilda = Motor.alunosDaTurma(estado, turma).filter((a) => !a.guilda).length;
+        const r = { guildas, semGuilda, desequilibrada: false, motivo: '' };
+        if (semGuilda >= 2) {
             r.desequilibrada = true;
-            r.motivo = `${semJangada} estudantes ainda sem jangada.`;
+            r.motivo = `${semGuilda} estudantes ainda sem guilda.`;
             return r;
         }
-        if (jangadas.length < 2) return r;
-        const medios = jangadas.map((j) => j.xpMedio);
+        if (guildas.length < 2) return r;
+        const medios = guildas.map((j) => j.xpMedio);
         const maior = Math.max(...medios);
         const menor = Math.min(...medios);
-        const tamanhos = jangadas.map((j) => j.membros);
-        const faltaClasse = jangadas.filter((j) => j.membros >= regras.classes.length && j.classes < regras.classes.length);
+        const tamanhos = guildas.map((j) => j.membros);
+        const faltaClasse = guildas.filter((j) => j.membros >= regras.classes.length && j.classes < regras.classes.length);
         if (maior >= 200 && menor < maior * 0.5) {
             r.desequilibrada = true;
-            r.motivo = `A jangada mais forte tem o dobro de XP médio da mais fraca (${Math.round(maior)} × ${Math.round(menor)}).`;
+            r.motivo = `A guilda mais forte tem o dobro de XP médio da mais fraca (${Math.round(maior)} × ${Math.round(menor)}).`;
         } else if (Math.max(...tamanhos) - Math.min(...tamanhos) >= 3) {
             r.desequilibrada = true;
-            r.motivo = `Há jangadas com ${Math.max(...tamanhos)} e com ${Math.min(...tamanhos)} estudantes.`;
+            r.motivo = `Há guildas com ${Math.max(...tamanhos)} e com ${Math.min(...tamanhos)} estudantes.`;
         } else if (faltaClasse.length) {
             r.desequilibrada = true;
-            r.motivo = `${faltaClasse.map((j) => j.nome).join(', ')}: falta alguma classe (sem quem proteja, cure ou anime).`;
+            r.motivo = `${faltaClasse.map((j) => j.nome).join(', ')}: falta alguma classe (sem tanque, suporte, mana ou dano).`;
         }
         return r;
     }
@@ -251,12 +253,12 @@
         const al = alertas(estado, regras, turma, hoje, perfil).filter((a) => a.nivel !== 'info');
         const pdt = perfil.pdts && perfil.pdts[turma];
         const linhas = [];
-        linhas.push(`Jangada — resumo da ${turma} (${perfil.sigla || perfil.nome}) em ${hoje.split('-').reverse().join('/')}`);
+        linhas.push(`Saga — resumo da ${turma} (${perfil.sigla || perfil.nome}) em ${hoje.split('-').reverse().join('/')}`);
         if (pdt) linhas.push(`Para: PDT ${pdt}`);
         linhas.push('');
         linhas.push(`Últimas duas semanas: ${s.positivos} reconhecimentos e ${s.negativos} descontos.`);
         linhas.push(`Estudantes reconhecidos ao menos uma vez: ${Math.round(s.alcance * 100)}% da turma.`);
-        if (s.caidos) linhas.push(`Caídos aguardando reparação: ${s.caidos}.`);
+        if (s.caidos) linhas.push(`Nocauteados aguardando respawn: ${s.caidos}.`);
         if (d.semana.length) {
             linhas.push('');
             linhas.push('Destaques da semana:');
@@ -275,8 +277,8 @@
         return linhas.join('\n');
     }
 
-    const api = { NOMES_JANGADAS, diasEntre, saude, alertas, formarJangadas, equilibrio, sortear, destaques, resumoPDT };
+    const api = { NOMES_GUILDAS, diasEntre, saude, alertas, formarGuildas, equilibrio, sortear, destaques, resumoPDT };
 
-    global.JangadaConselheiro = api;
+    global.SagaConselheiro = api;
     if (typeof module !== 'undefined' && module.exports) module.exports = api;
 })(typeof globalThis !== 'undefined' ? globalThis : this);

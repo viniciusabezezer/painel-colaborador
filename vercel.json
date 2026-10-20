@@ -120,7 +120,7 @@
       ]
     },
     {
-      "source": "/jangada",
+      "source": "/saga",
       "headers": [
         {
           "key": "Cache-Control",
@@ -129,7 +129,7 @@
       ]
     },
     {
-      "source": "/jangada/",
+      "source": "/saga/",
       "headers": [
         {
           "key": "Cache-Control",

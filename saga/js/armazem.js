@@ -5,8 +5,8 @@
 (function (global) {
     'use strict';
 
-    const CHAVE = 'jangada:dados:v1';
-    const FORMATO = 'jangada-backup';
+    const CHAVE = 'saga:dados:v1';
+    const FORMATO = 'saga-backup';
 
     function vazio() {
         return { perfil: null, regras: null, eventos: [], professor: '', turma: '', semeado: false };
@@ -46,29 +46,13 @@
     /* Lê um backup. Devolve { backup } ou { erro }. */
     function lerBackup(texto) {
         let b;
-        try { b = JSON.parse(texto); } catch (erro) { return { erro: 'O arquivo não é um backup da Jangada (JSON inválido).' }; }
-        if (!b || b.formato !== FORMATO || !Array.isArray(b.eventos)) return { erro: 'O arquivo não é um backup da Jangada.' };
+        try { b = JSON.parse(texto); } catch (erro) { return { erro: 'O arquivo não é um backup da Saga (JSON inválido).' }; }
+        if (!b || b.formato !== FORMATO || !Array.isArray(b.eventos)) return { erro: 'O arquivo não é um backup da Saga.' };
         return { backup: b };
     }
 
-    function csvCampo(v) {
-        const s = String(v === undefined || v === null ? '' : v);
-        return /[";\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
-    }
+    const api = { CHAVE, vazio, carregar, salvar, paraBackup, lerBackup };
 
-    /* Planilha da moeda pendente, para lançar no MaluPix (ou na moeda da
-       escola). Separador ";" porque o Excel em português espera assim. */
-    function csvMoeda(registros, alunos) {
-        const linhas = [['codigo', 'estudante', 'turma', 'valor', 'motivo', 'data'].join(';')];
-        for (const r of registros) {
-            const a = alunos[r.alunoId] || {};
-            linhas.push([a.codigo || '', a.nome || '', r.turma, r.moeda, r.texto, r.data.split('-').reverse().join('/')].map(csvCampo).join(';'));
-        }
-        return '﻿' + linhas.join('\n') + '\n';
-    }
-
-    const api = { CHAVE, vazio, carregar, salvar, paraBackup, lerBackup, csvMoeda };
-
-    global.JangadaArmazem = api;
+    global.SagaArmazem = api;
     if (typeof module !== 'undefined' && module.exports) module.exports = api;
 })(typeof globalThis !== 'undefined' ? globalThis : this);

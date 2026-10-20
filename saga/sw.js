@@ -2,11 +2,11 @@
    visita com internet o app inteiro fica guardado no aparelho; daí em
    diante abre sem conexão. Os dados do jogo moram no localStorage, que não
    depende de rede. Mudou um arquivo do app? Suba VERSAO. */
-const VERSAO = 'jangada-v1';
+const VERSAO = 'saga-v1';
 const ARQUIVOS = [
     './',
     './index.html',
-    './app.css?v=1',
+    './app.css?v=2',
     './logo.png',
     './manifest.webmanifest',
     './js/regras.js',

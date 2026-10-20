@@ -1,5 +1,5 @@
 /* Testes do motor, do Conselheiro e do backup (tudo que não depende de
-   navegador). Rode com:  node --test jangada/test/            */
+   navegador). Rode com:  node --test saga/test/            */
 const { test } = require('node:test');
 const assert = require('node:assert/strict');
 const path = require('node:path');
@@ -32,10 +32,10 @@ function roteiro(inicio) {
 }
 
 function turmaBasica(r) {
-    r.add('aluno.novo', { aluno: { id: 'jg', nome: 'Jangadeira', turma: '1ª A', classe: 'jangadeiro', jangada: 'J1' } });
-    r.add('aluno.novo', { aluno: { id: 'rd', nome: 'Rendeiro', turma: '1ª A', classe: 'rendeiro', jangada: 'J1' } });
-    r.add('aluno.novo', { aluno: { id: 'cd', nome: 'Cordelista', turma: '1ª A', classe: 'cordelista', jangada: 'J1' } });
-    r.add('jangada.nova', { jangada: { id: 'J1', nome: 'Pedra Rachada', turma: '1ª A' } });
+    r.add('aluno.novo', { aluno: { id: 'jg', nome: 'Guerreira', turma: '1ª A', classe: 'guerreiro', guilda: 'J1' } });
+    r.add('aluno.novo', { aluno: { id: 'rd', nome: 'Curandeiro', turma: '1ª A', classe: 'curandeiro', guilda: 'J1' } });
+    r.add('aluno.novo', { aluno: { id: 'cd', nome: 'Maga', turma: '1ª A', classe: 'mago', guilda: 'J1' } });
+    r.add('guilda.nova', { guilda: { id: 'J1', nome: 'Dragões do Mar', turma: '1ª A' } });
 }
 
 /* ===== regras ===== */
@@ -57,10 +57,10 @@ test('regras padrão são válidas e mudam com o tipo de escola', () => {
 
 test('validar aponta regras quebradas', () => {
     const r = Regras.regrasPadrao('EEM');
-    r.poderes[0].classe = 'mago';
+    r.poderes[0].classe = 'paladino';
     r.comportamentos[0].xp = 0;
     const erros = Regras.validar(r);
-    assert.ok(erros.some((e) => e.includes('mago')));
+    assert.ok(erros.some((e) => e.includes('paladino')));
     assert.ok(erros.some((e) => e.includes('XP maior que zero')));
 });
 
@@ -84,7 +84,7 @@ test('perfil da MALU é válido e traz os PDTs', () => {
 
 /* ===== motor ===== */
 
-test('reconhecimento dá XP, sobe de nível, rende moeda e Energia', () => {
+test('reconhecimento dá XP, sobe de nível, rende ouro e Mana', () => {
     const r = roteiro();
     turmaBasica(r);
     for (let i = 0; i < 4; i++) r.add('comportamento', { alunoIds: ['cd'], comportamento: comp('ajudou') });
@@ -97,7 +97,7 @@ test('reconhecimento dá XP, sobe de nível, rende moeda e Energia', () => {
     assert.ok(e.registros.some((x) => x.tipo === 'nivel' && x.alunoId === 'cd'));
 });
 
-test('desconto tira Vida, nunca XP; em zero o estudante cai', () => {
+test('dano tira HP, nunca XP; em zero o estudante fica K.O.', () => {
     const r = roteiro();
     turmaBasica(r);
     r.add('comportamento', { alunoIds: ['cd'], comportamento: comp('participacao') });
@@ -107,15 +107,15 @@ test('desconto tira Vida, nunca XP; em zero o estudante cai', () => {
     assert.equal(e.alunos.cd.vida, 0);
     assert.equal(e.alunos.cd.caido, true);
     // caído não usa poder
-    assert.match(Motor.motivoPoder(e, regras, 'cd', 'verso', 'rd'), /reparação/);
-    // reparação devolve metade da Vida
+    assert.match(Motor.motivoPoder(e, regras, 'cd', 'transferir', 'rd'), /respawn/);
+    // respawn devolve metade do HP
     r.add('reparacao', { alunoId: 'cd', reparacao: regras.reparacoes[0] });
     e = r.estado();
     assert.equal(e.alunos.cd.caido, false);
     assert.equal(e.alunos.cd.vida, 25);
 });
 
-test('Jangadeiro(a) protege colega: leva o golpe com 30% a menos e gasta Energia', () => {
+test('Guerreiro(a) tanka pelo colega: leva o dano com 30% a menos e gasta Mana', () => {
     const r = roteiro();
     turmaBasica(r);
     r.add('comportamento', { alunoIds: ['rd'], comportamento: comp('celular'), protecoes: { rd: 'jg' } });
@@ -127,7 +127,7 @@ test('Jangadeiro(a) protege colega: leva o golpe com 30% a menos e gasta Energia
     assert.ok(e.registros.some((x) => x.alunoId === 'rd' && x.tipo === 'negativo'));
 });
 
-test('proteção inválida (sem Energia) cai em quem errou', () => {
+test('proteção inválida (sem Mana) cai em quem errou', () => {
     const r = roteiro();
     turmaBasica(r);
     r.add('comportamento', { alunoIds: ['rd'], comportamento: comp('celular'), protecoes: { rd: 'jg' } });
@@ -137,21 +137,21 @@ test('proteção inválida (sem Energia) cai em quem errou', () => {
     assert.equal(e.alunos.rd.vida, 50);
 });
 
-test('poderes: cura de colega, Energia para a jangada e validações', () => {
+test('poderes: cura de colega e validações', () => {
     const r = roteiro();
     turmaBasica(r);
     r.add('comportamento', { alunoIds: ['jg'], comportamento: comp('desrespeito') });
-    r.add('poder', { alunoId: 'rd', poderId: 'ponto', alvoId: 'jg' });
+    r.add('poder', { alunoId: 'rd', poderId: 'cura', alvoId: 'jg' });
     let e = r.estado();
     assert.equal(e.alunos.jg.vida, 80 - 25 + 15);
     assert.equal(e.alunos.rd.energia, 0);
-    // sem Energia o segundo uso é ignorado com motivo
-    r.add('poder', { alunoId: 'rd', poderId: 'ponto', alvoId: 'jg' });
+    // sem Mana o segundo uso é ignorado com motivo
+    r.add('poder', { alunoId: 'rd', poderId: 'cura', alvoId: 'jg' });
     e = r.estado();
     assert.equal(e.ignorados.length, 1);
-    assert.match(e.ignorados[0].motivo, /Energia/);
-    assert.match(Motor.motivoPoder(e, regras, 'cd', 'peleja'), /nível 3/);
-    assert.match(Motor.motivoPoder(e, regras, 'cd', 'ponto', 'jg'), /não é um poder/);
+    assert.match(e.ignorados[0].motivo, /Mana/);
+    assert.match(Motor.motivoPoder(e, regras, 'cd', 'aura'), /nível 3/);
+    assert.match(Motor.motivoPoder(e, regras, 'cd', 'cura', 'jg'), /não é um poder/);
 });
 
 test('começar o dia: Energia volta, evento vale e não repete no mesmo dia', () => {
@@ -166,14 +166,14 @@ test('começar o dia: Energia volta, evento vale e não repete no mesmo dia', ()
     assert.equal(e.ignorados.length, 1);
 });
 
-test('mar de calmaria: ninguém perde Vida no dia, mas o registro fica', () => {
+test('zona segura: ninguém perde HP no dia, mas o registro fica', () => {
     const r = roteiro();
     turmaBasica(r);
-    r.add('novoDia', { turma: '1ª A', evento: evento('calmaria') });
+    r.add('novoDia', { turma: '1ª A', evento: evento('zona') });
     r.add('comportamento', { alunoIds: ['cd'], comportamento: comp('atraso') });
     const e = r.estado();
     assert.equal(e.alunos.cd.vida, 50);
-    assert.ok(e.registros.some((x) => x.tipo === 'negativo' && /calmaria/.test(x.texto)));
+    assert.ok(e.registros.some((x) => x.tipo === 'negativo' && /zona segura/.test(x.texto)));
 });
 
 test('chamada: sequência de presença dá bônus e faltas seguidas são contadas', () => {
@@ -213,20 +213,57 @@ test('juntar dois aparelhos: une por id, sem duplicar, em ordem de horário', ()
     assert.equal(e.ignorados.length, 1);
 });
 
-test('missão: XP e moeda uma vez por estudante, e moeda fica pendente para exportar', () => {
+test('missão: XP e ouro uma vez por estudante', () => {
     const r = roteiro();
     turmaBasica(r);
     r.add('missao.nova', { missao: { id: 'm1', titulo: 'Fato ou opinião', xp: 50, moeda: 5, turmas: ['1ª A'] } });
     r.add('missao.concluir', { missaoId: 'm1', alunoIds: ['jg', 'rd'] });
     r.add('missao.concluir', { missaoId: 'm1', alunoIds: ['jg'] });
-    let e = r.estado();
+    const e = r.estado();
     assert.equal(e.alunos.jg.xp, 50);
     assert.equal(e.alunos.jg.moeda, 5);
-    const pendente = Motor.moedaPendente(e);
-    assert.equal(pendente.length, 2);
-    r.add('moeda.exportar', { ids: pendente.map((p) => p.id) });
+});
+
+test('loja: compra gasta ouro, poção cura, sem ouro ou K.O. não compra', () => {
+    const r = roteiro();
+    turmaBasica(r);
+    const item = (id) => regras.loja.find((i) => i.id === id);
+    r.add('missao.nova', { missao: { id: 'm1', titulo: 'Ouro', xp: 0, moeda: 20, turmas: ['1ª A'] } });
+    r.add('missao.concluir', { missaoId: 'm1', alunoIds: ['jg'] });
+    r.add('comportamento', { alunoIds: ['jg'], comportamento: comp('desrespeito') });
+    r.add('compra', { alunoId: 'jg', item: item('pocao') });
+    let e = r.estado();
+    assert.equal(e.alunos.jg.moeda, 5);
+    assert.equal(e.alunos.jg.vida, 80 - 25 + 20);
+    r.add('compra', { alunoId: 'jg', item: item('pocao') });
     e = r.estado();
-    assert.equal(Motor.moedaPendente(e).length, 0);
+    assert.match(e.ignorados[0].motivo, /custa 15/);
+    for (let i = 0; i < 2; i++) r.add('comportamento', { alunoIds: ['cd'], comportamento: comp('desrespeito') });
+    r.add('missao.concluir', { missaoId: 'm1', alunoIds: ['cd'] });
+    r.add('compra', { alunoId: 'cd', item: item('pocao') });
+    e = r.estado();
+    assert.equal(e.alunos.cd.caido, true);
+    assert.match(e.ignorados[1].motivo, /respawn/);
+});
+
+test('arqueiro(a) de pé na guilda dá golpe crítico no boss', () => {
+    const r = roteiro();
+    turmaBasica(r);
+    assert.equal(Motor.golpesDaGuilda(r.estado(), regras, 'J1'), 1);
+    r.add('aluno.novo', { aluno: { id: 'aq', nome: 'Arqueira', turma: '1ª A', classe: 'arqueiro', guilda: 'J1' } });
+    assert.equal(Motor.golpesDaGuilda(r.estado(), regras, 'J1'), 2);
+});
+
+test('avatar: começa com o da classe, pode trocar e volta ao padrão ao mudar de classe', () => {
+    const r = roteiro();
+    turmaBasica(r);
+    assert.equal(r.estado().alunos.cd.avatar, '🔮');
+    r.add('aluno.editar', { alunoId: 'cd', campos: { avatar: '🧙' } });
+    assert.equal(r.estado().alunos.cd.avatar, '🧙');
+    r.add('aluno.editar', { alunoId: 'cd', campos: { classe: 'arqueiro' } });
+    assert.equal(r.estado().alunos.cd.avatar, '🏹');
+    assert.equal(Regras.titulo(1), 'Aprendiz');
+    assert.equal(Regras.titulo(10), 'Lenda');
 });
 
 test('batalha vencida dá o XP do chefe aos participantes', () => {
@@ -236,23 +273,24 @@ test('batalha vencida dá o XP do chefe aos participantes', () => {
     r.add('batalha', { turma: '1ª A', chefe, vitoria: true, participantes: ['jg', 'cd'] });
     const e = r.estado();
     assert.equal(e.alunos.jg.xp, chefe.xp);
+    assert.equal(e.alunos.jg.moeda, chefe.ouro);
     assert.equal(e.alunos.rd.xp, 0);
 });
 
 /* ===== conselheiro ===== */
 
-test('formar jangadas: tamanhos parecidos e as três classes em cada uma', () => {
-    const classes = ['jangadeiro', 'rendeiro', 'cordelista'];
-    const alunos = Array.from({ length: 30 }, (_, i) => ({ id: `a${i}`, nome: `A${i}`, classe: classes[i % 3], xp: i * 37 % 500 }));
-    const s = Conselheiro.formarJangadas(alunos, 5);
-    assert.equal(s.jangadas.length, 6);
-    for (const j of s.jangadas) {
+test('formar guildas: tamanhos parecidos e as quatro classes em cada uma', () => {
+    const classes = ['guerreiro', 'curandeiro', 'mago', 'arqueiro'];
+    const alunos = Array.from({ length: 32 }, (_, i) => ({ id: `a${i}`, nome: `A${i}`, classe: classes[i % 4], xp: i * 37 % 500 }));
+    const s = Conselheiro.formarGuildas(alunos, 5);
+    assert.equal(s.guildas.length, 6);
+    for (const j of s.guildas) {
         const m = alunos.filter((a) => s.membros[a.id] === j.id);
-        assert.equal(m.length, 5);
-        assert.equal(new Set(m.map((a) => a.classe)).size, 3);
+        assert.ok(m.length >= 5 && m.length <= 6);
+        assert.equal(new Set(m.map((a) => a.classe)).size, 4);
     }
     // determinístico
-    assert.deepEqual(Conselheiro.formarJangadas(alunos, 5), s);
+    assert.deepEqual(Conselheiro.formarGuildas(alunos, 5), s);
 });
 
 test('sorteio justo: quem participou menos tem mais chance e ausente não sai', () => {
@@ -283,14 +321,14 @@ test('demonstração: o Conselheiro acha o invisível, o padrão de descontos e 
     assert.match(resumo, /Pedem atenção/);
 });
 
-test('jangadas desequilibradas são apontadas', () => {
+test('guildas desequilibradas são apontadas', () => {
     const r = roteiro();
     turmaBasica(r);
-    r.add('aluno.novo', { aluno: { id: 'x1', nome: 'Sem barco 1', turma: '1ª A', classe: 'rendeiro' } });
-    r.add('aluno.novo', { aluno: { id: 'x2', nome: 'Sem barco 2', turma: '1ª A', classe: 'cordelista' } });
+    r.add('aluno.novo', { aluno: { id: 'x1', nome: 'Sem guilda 1', turma: '1ª A', classe: 'curandeiro' } });
+    r.add('aluno.novo', { aluno: { id: 'x2', nome: 'Sem guilda 2', turma: '1ª A', classe: 'mago' } });
     const eq = Conselheiro.equilibrio(r.estado(), regras, '1ª A');
     assert.equal(eq.desequilibrada, true);
-    assert.match(eq.motivo, /sem jangada/);
+    assert.match(eq.motivo, /sem guilda/);
 });
 
 /* ===== backup e questões ===== */
@@ -310,12 +348,6 @@ test('salvar e carregar num armazenamento falso', () => {
     assert.equal(Armazem.carregar(ls).professor, 'Ana');
     const cheio = { getItem: () => null, setItem: () => { throw new Error('QuotaExceeded'); } };
     assert.match(Armazem.salvar({}, cheio), /espaço/);
-});
-
-test('CSV da moeda sai com ; e aspas onde precisa', () => {
-    const csv = Armazem.csvMoeda([{ alunoId: 'a', turma: '1ª A', moeda: 10, texto: 'Missão: "ler"; resumir', data: '2026-10-20' }], { a: { nome: 'Ana', codigo: 'MALU-123' } });
-    assert.match(csv, /^﻿codigo;estudante;turma;valor;motivo;data\n/);
-    assert.match(csv, /MALU-123;Ana;1ª A;10;"Missão: ""ler""; resumir";20\/10\/2026/);
 });
 
 test('questões coladas: várias de uma vez, com erros apontados', () => {

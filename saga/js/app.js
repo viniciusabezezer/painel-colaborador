@@ -1,16 +1,20 @@
-/* A interface da Jangada. Toda ação vira um EVENTO (ver motor.js); a tela
-   é sempre desenhada a partir do estado refeito dos eventos. Os cliques
-   são tratados num só lugar, pelo atributo data-acao. */
+/* A interface da Saga. Toda ação vira um EVENTO (ver motor.js); a tela é
+   sempre desenhada a partir do estado refeito dos eventos. Os cliques são
+   tratados num só lugar, pelo atributo data-acao.
+
+   Vocabulário de jogo, para o estudante reconhecer na hora: HP (a Vida do
+   motor), Mana (a Energia do motor), XP, ouro, guilda, quest, boss, K.O. e
+   respawn. */
 (function () {
     'use strict';
 
-    const Regras = window.JangadaRegras;
-    const Escola = window.JangadaEscola;
-    const Motor = window.JangadaMotor;
-    const Conselheiro = window.JangadaConselheiro;
-    const Questoes = window.JangadaQuestoes;
-    const Armazem = window.JangadaArmazem;
-    const Demo = window.JangadaDemo;
+    const Regras = window.SagaRegras;
+    const Escola = window.SagaEscola;
+    const Motor = window.SagaMotor;
+    const Conselheiro = window.SagaConselheiro;
+    const Questoes = window.SagaQuestoes;
+    const Armazem = window.SagaArmazem;
+    const Demo = window.SagaDemo;
 
     const TURMA_DEMO = 'Demonstração';
 
@@ -19,7 +23,7 @@
     if (!D.regras) D.regras = Regras.regrasPadrao(D.perfil.tipo);
     let E = Motor.reproduzir(D.eventos, D.regras);
 
-    const tela = { aba: 'turma', selecao: new Set(), sorteado: null, batalha: null, filtroMissoes: 'ativas' };
+    const tela = { aba: 'turma', selecao: new Set(), sorteado: null, batalha: null, filtroMissoes: 'ativas', comprador: null };
 
     /* ===== utilidades ===== */
 
@@ -34,8 +38,9 @@
     const hoje = () => Motor.dataLocal();
     const dataBR = (d) => (d ? d.split('-').reverse().join('/') : '');
     const turma = () => D.turma;
-    const moeda = () => D.perfil.moeda || { nome: 'Moedas', simbolo: '¢' };
+    const moeda = () => D.perfil.moeda || { nome: 'Ouro', simbolo: '🪙' };
     const classe = (id) => Motor.classeDe(D.regras, id);
+    const avatar = (a) => (a.caido ? '😵' : a.avatar || classe(a.classe).icone);
 
     function salvarDados() {
         const erro = Armazem.salvar(D);
@@ -113,7 +118,7 @@
     function barra(valor, max, tipo, rotulo) {
         const pct = max > 0 ? Math.max(0, Math.min(100, Math.round(valor / max * 100))) : 0;
         return `<div class="barra barra--${tipo}" title="${h(rotulo)}: ${valor}/${max}" aria-label="${h(rotulo)} ${valor} de ${max}">
-            <span style="width:${pct}%"></span><em>${valor}</em></div>`;
+            <b>${h(rotulo)}</b><span style="width:${pct}%"></span><em>${valor}</em></div>`;
     }
 
     function progressoXp(a) {
@@ -133,7 +138,7 @@
         const lista = turmas();
         if (!lista.includes(D.turma)) D.turma = lista[0] || '';
         sel.innerHTML = lista.map((t) => `<option ${t === D.turma ? 'selected' : ''}>${h(t)}</option>`).join('');
-        $('#professor-atual').textContent = D.professor ? `👤 ${D.professor}` : '👤 Quem é você?';
+        $('#professor-atual').textContent = D.professor ? `🎲 ${D.professor}` : '🎲 Mestre do jogo?';
         for (const b of $$('.aba')) {
             b.classList.toggle('ativa', b.dataset.aba === tela.aba);
             b.setAttribute('aria-selected', b.dataset.aba === tela.aba ? 'true' : 'false');
@@ -158,14 +163,15 @@
         if (a.caido) cls.push('caido');
         if (ausentes.has(a.id)) cls.push('ausente');
         return `<div class="${cls.join(' ')}">
+            <span class="nivel-selo" title="Nível ${a.nivel}">${a.nivel}</span>
             <button type="button" class="cartao-toque" data-acao="selecionar" data-id="${a.id}" aria-pressed="${tela.selecao.has(a.id)}">
-                <span class="avatar" aria-hidden="true">${a.caido ? '💤' : c.icone}</span>
+                <span class="avatar" aria-hidden="true">${avatar(a)}</span>
                 <span class="cartao-nome">${h(a.nome)}</span>
-                <span class="cartao-sub">Nv ${a.nivel} · ${h(c.nome)}${ausentes.has(a.id) ? ' · faltou' : ''}</span>
+                <span class="cartao-sub">${a.caido ? 'K.O.' : `${h(c.nome)} · ${h(Regras.titulo(a.nivel))}`}${ausentes.has(a.id) ? ' · faltou' : ''}</span>
             </button>
-            ${barra(a.vida, c.vidaMax, 'vida', 'Vida')}
-            ${barra(a.energia, c.energiaMax, 'energia', 'Energia')}
-            ${barra(p.atual, p.total, 'xp', 'XP do nível')}
+            ${barra(a.vida, c.vidaMax, 'vida', 'HP')}
+            ${barra(a.energia, c.energiaMax, 'energia', 'MP')}
+            ${barra(p.atual, p.total, 'xp', 'XP')}
             <div class="cartao-rodape">
                 <span title="${h(moeda().nome)}">${h(moeda().simbolo)} ${a.moeda}</span>
                 <button type="button" class="link-ficha" data-acao="ficha" data-id="${a.id}">ficha ›</button>
@@ -178,9 +184,9 @@
         if (!turma()) return '<div class="vazio"><p>Cadastre as turmas na aba <strong>Escola</strong>.</p></div>';
         if (!alunos.length) {
             return `<div class="vazio">
-                <p class="vazio-icone">⛵</p>
-                <h2>A ${h(turma())} ainda não tem tripulação</h2>
-                <p>Cole a lista de estudantes na aba Cadastro. A Jangada distribui as classes e forma as jangadas sozinha.</p>
+                <p class="vazio-icone">⚔️</p>
+                <h2>A ${h(turma())} ainda não tem heróis</h2>
+                <p>Cole a lista de estudantes na aba Cadastro. A Saga distribui as classes e forma as guildas sozinha.</p>
                 <div class="acoes-lista acoes-centro">
                     <button type="button" class="btn btn--primary" data-acao="ir" data-aba="cadastro">📋 Cadastrar estudantes</button>
                     <button type="button" class="btn" data-acao="demo">Ver uma turma de demonstração</button>
@@ -193,14 +199,14 @@
         if (!dia) {
             topo = `<div class="faixa-dia">
                 <div><strong>O dia ainda não começou na ${h(turma())}.</strong>
-                <span>Sorteie o evento do dia, faça a chamada e a Energia da turma recarrega.</span></div>
-                <button type="button" class="btn btn--primary" data-acao="comecar-dia">🌅 Começar o dia</button>
+                <span>Sorteie o evento do dia, faça a chamada e a Mana da turma recarrega.</span></div>
+                <button type="button" class="btn btn--primary" data-acao="comecar-dia">🎲 Começar o dia</button>
             </div>`;
         } else {
             const ev = dia.evento || {};
             const desafio = ev.efeito && ev.efeito.tipo === 'desafio';
             topo = `<div class="faixa-dia faixa-dia--evento">
-                <div class="evento-icone" aria-hidden="true">${h(ev.icone || '🌅')}</div>
+                <div class="evento-icone" aria-hidden="true">${h(ev.icone || '🎲')}</div>
                 <div><strong>Evento do dia: ${h(ev.nome || '')}</strong><span>${h(ev.texto || '')}</span></div>
                 <div class="acoes-lista">
                     ${desafio ? `<button type="button" class="btn btn--positivo" data-acao="desafio-cumprido">🎉 Desafio cumprido</button>` : ''}
@@ -209,12 +215,12 @@
                 </div>
             </div>`;
         }
-        const grupos = Motor.jangadasDaTurma(E, turma()).map((j) => ({ j, m: Motor.membros(E, j.id).sort((x, y) => x.nome.localeCompare(y.nome, 'pt-BR')) }));
-        const soltos = alunos.filter((a) => !a.jangada || !E.jangadas[a.jangada]);
-        const secao = (titulo, sub, lista, jangadaId) => `<section class="grupo">
+        const grupos = Motor.guildasDaTurma(E, turma()).map((j) => ({ j, m: Motor.membros(E, j.id).sort((x, y) => x.nome.localeCompare(y.nome, 'pt-BR')) }));
+        const soltos = alunos.filter((a) => !a.guilda || !E.guildas[a.guilda]);
+        const secao = (titulo, sub, lista, guildaId) => `<section class="grupo">
             <header class="grupo-topo">
                 <h3>${titulo}</h3><span class="contagem">${sub}</span>
-                <button type="button" class="btn btn--pequeno" data-acao="selecionar-grupo" data-jangada="${jangadaId || ''}">Selecionar</button>
+                <button type="button" class="btn btn--pequeno" data-acao="selecionar-grupo" data-guilda="${guildaId || ''}">Selecionar</button>
             </header>
             <div class="grade-alunos">${lista.map((a) => cartaoAluno(a, ausentes)).join('')}</div>
         </section>`;
@@ -223,21 +229,21 @@
                 <button type="button" class="btn btn--pequeno" data-acao="selecionar-todos">Selecionar a turma toda</button>
                 <span class="contagem">Toque nos estudantes para selecionar e use a barra que aparece embaixo.</span>
             </div>
-            ${grupos.map(({ j, m }) => secao(`⛵ ${h(j.nome)}`, `${m.length} na jangada · ${m.reduce((s, a) => s + a.xp, 0)} XP`, m, j.id)).join('')}
-            ${soltos.length ? secao(grupos.length ? 'Sem jangada' : 'Estudantes', `${soltos.length}`, soltos, '') : ''}`;
+            ${grupos.map(({ j, m }) => secao(`🏰 ${h(j.nome)}`, `${m.length} na guilda · ${m.reduce((s, a) => s + a.xp, 0)} XP`, m, j.id)).join('')}
+            ${soltos.length ? secao(grupos.length ? 'Sem guilda' : 'Estudantes', `${soltos.length}`, soltos, '') : ''}`;
     }
 
     function modalComecarDia() {
         const eventos = D.regras.eventos;
         const sorteado = eventos[Math.floor(Math.random() * eventos.length)];
         const alunos = alunosTurma();
-        abrirModal(`<h2 id="modal-titulo">🌅 Começar o dia na ${h(turma())}</h2>
+        abrirModal(`<h2 id="modal-titulo">🎲 Começar o dia na ${h(turma())}</h2>
             <div class="roleta" id="roleta" data-evento="${h(sorteado.id)}">
                 <div class="roleta-icone" id="roleta-icone">🎲</div>
-                <div class="roleta-texto" id="roleta-texto"><strong>Sorteando o evento do dia…</strong></div>
+                <div class="roleta-texto" id="roleta-texto"><strong>Rolando o dado do evento…</strong></div>
             </div>
             <h3>Quem faltou?</h3>
-            <p class="dica">Marque só quem não veio. Presença seguida rende bônus (a cada ${D.regras.presenca.bonusACada} dias, +${D.regras.presenca.xp} XP), e três faltas seguidas acendem o alerta de Busca Ativa no Conselheiro.</p>
+            <p class="dica">Marque só quem não veio. Presença seguida rende bônus (a cada ${D.regras.presenca.bonusACada} dias, +${D.regras.presenca.xp} XP${D.regras.presenca.ouro ? ` e ${D.regras.presenca.ouro} ${h(moeda().simbolo)}` : ''}), e três faltas seguidas acendem o alerta de Busca Ativa no Oráculo.</p>
             <div class="lista-marcar">${alunos.map((a) => `<label><input type="checkbox" name="ausente" value="${a.id}"> ${h(a.nome)}</label>`).join('')}</div>
             <div class="acoes-lista">
                 <button type="button" class="btn btn--primary" data-acao="confirmar-dia" disabled id="btn-confirmar-dia">Começar o dia</button>
@@ -271,10 +277,10 @@
         const ids = Array.from(tela.selecao);
         const dia = diaDeHoje();
         const lista = D.regras.comportamentos.filter((c) => c.tipo === 'positivo');
-        abrirModal(`<h2 id="modal-titulo">＋ Reconhecer ${ids.length} estudante${ids.length > 1 ? 's' : ''}</h2>
+        abrirModal(`<h2 id="modal-titulo">＋ XP para ${ids.length} estudante${ids.length > 1 ? 's' : ''}</h2>
             <p class="dica">${h(nomesCurtos(ids))}</p>
             ${dia && dia.multiplicador > 1 ? `<p class="aviso aviso--ok">${h(dia.evento.icone)} ${h(dia.evento.nome)}: ${dia.so ? `“${h((lista.find((c) => c.id === dia.so) || {}).nome || '')}”` : 'todo reconhecimento'} vale ×${dia.multiplicador} hoje.</p>` : ''}
-            <label class="campo-bloco">Observação (opcional)<input type="text" id="nota-comportamento" maxlength="120" placeholder="ex.: explicou a questão 3 para a jangada"></label>
+            <label class="campo-bloco">Observação (opcional)<input type="text" id="nota-comportamento" maxlength="120" placeholder="ex.: explicou a questão 3 para a guilda"></label>
             <div class="grade-comportamentos">${lista.map((c) => `<button type="button" class="botao-comportamento botao-comportamento--positivo" data-acao="aplicar-comportamento" data-comp="${h(c.id)}">
                 <span class="bc-icone">${h(c.icone || '⭐')}</span><span class="bc-nome">${h(c.nome)}</span><span class="bc-valor">+${c.xp} XP</span></button>`).join('')}</div>`);
     }
@@ -292,21 +298,21 @@
                 if (!ps.length || a.caido) return '';
                 return `<label class="linha-protecao">${h(a.nome)}: <select data-protegido="${id}">
                     <option value="">ninguém protege</option>
-                    ${ps.map((p) => `<option value="${p.aluno.id}">${h(classe(p.aluno.classe).icone)} ${h(p.aluno.nome)} protege (−${p.poder.custo} Energia, leva ${Math.round(escolhido.vida * (1 - p.poder.efeito.reducao))} de dano)</option>`).join('')}
+                    ${ps.map((p) => `<option value="${p.aluno.id}">${h(avatar(p.aluno))} ${h(p.aluno.nome)} usa ${h(p.poder.nome)} (−${p.poder.custo} MP, leva ${Math.round(escolhido.vida * (1 - p.poder.efeito.reducao))} de dano)</option>`).join('')}
                 </select></label>`;
             }).join('');
             protecao = `<div class="painel-escolha">
-                <p><strong>${h(escolhido.icone)} ${h(escolhido.nome)}</strong> — ${escolhido.vida} de Vida${dia && dia.semDano ? ' <em>(mar de calmaria: hoje não tira Vida)</em>' : ''}.</p>
-                ${linhas ? `<p class="dica">Um(a) Jangadeiro(a) da mesma jangada pode receber o golpe no lugar do colega:</p>${linhas}` : ''}
+                <p><strong>${h(escolhido.icone)} ${h(escolhido.nome)}</strong> — ${escolhido.vida} de dano no HP${dia && dia.semDano ? ' <em>(zona segura: hoje não tira HP)</em>' : ''}.</p>
+                ${linhas ? `<p class="dica">Um(a) Guerreiro(a) da mesma guilda pode tankar o dano no lugar do colega:</p>${linhas}` : ''}
                 ${escolhido.ocorrencia ? avisoOcorrencia() : ''}
                 <label class="campo-bloco">Observação (opcional)<input type="text" id="nota-comportamento" maxlength="120"></label>
-                <div class="acoes-lista"><button type="button" class="btn btn--negativo" data-acao="aplicar-comportamento" data-comp="${h(escolhido.id)}">Aplicar desconto</button></div>
+                <div class="acoes-lista"><button type="button" class="btn btn--negativo" data-acao="aplicar-comportamento" data-comp="${h(escolhido.id)}">Aplicar dano</button></div>
             </div>`;
         }
-        abrirModal(`<h2 id="modal-titulo">− Descontar de ${ids.length} estudante${ids.length > 1 ? 's' : ''}</h2>
-            <p class="dica">${h(nomesCurtos(ids))}. O desconto tira Vida, nunca XP. Quem chega a zero cai e volta por uma missão de reparação.</p>
+        abrirModal(`<h2 id="modal-titulo">− HP de ${ids.length} estudante${ids.length > 1 ? 's' : ''}</h2>
+            <p class="dica">${h(nomesCurtos(ids))}. O dano tira HP, nunca XP. Quem chega a zero fica K.O. e volta por uma missão de respawn.</p>
             <div class="grade-comportamentos">${lista.map((c) => `<button type="button" class="botao-comportamento botao-comportamento--negativo${c.id === compId ? ' escolhido' : ''}" data-acao="escolher-desconto" data-comp="${h(c.id)}">
-                <span class="bc-icone">${h(c.icone || '⚠️')}</span><span class="bc-nome">${h(c.nome)}</span><span class="bc-valor">−${c.vida} Vida</span></button>`).join('')}</div>
+                <span class="bc-icone">${h(c.icone || '⚠️')}</span><span class="bc-nome">${h(c.nome)}</span><span class="bc-valor">−${c.vida} HP</span></button>`).join('')}</div>
             ${protecao}`);
     }
 
@@ -337,9 +343,9 @@
         desenhar();
         const quedas = E.registros.filter((r) => r.ev === ev.id && r.tipo === 'queda').map((r) => E.alunos[r.alunoId].nome);
         const niveis = E.registros.filter((r) => r.ev === ev.id && r.tipo === 'nivel').map((r) => E.alunos[r.alunoId].nome);
-        let texto = c.tipo === 'positivo' ? `${c.icone || ''} ${c.nome}: +XP para ${ids.length}` : `${c.nome} registrado para ${ids.length}`;
-        if (niveis.length) texto += ` · ${niveis.join(', ')} subiu de nível!`;
-        if (quedas.length) texto += ` · ${quedas.join(', ')} caiu`;
+        let texto = c.tipo === 'positivo' ? `${c.icone || ''} ${c.nome}: +XP para ${ids.length}` : `${c.nome}: dano em ${ids.length}`;
+        if (niveis.length) texto += ` · LEVEL UP: ${niveis.join(', ')}!`;
+        if (quedas.length) texto += ` · K.O.: ${quedas.join(', ')}`;
         avisar(texto, null, ev.id);
     }
 
@@ -350,54 +356,56 @@
         if (!a) return;
         const c = classe(a.classe);
         const p = progressoXp(a);
-        const jangada = a.jangada && E.jangadas[a.jangada];
-        const colegas = Motor.membros(E, a.jangada).filter((x) => x.id !== a.id);
+        const guilda = a.guilda && E.guildas[a.guilda];
+        const colegas = Motor.membros(E, a.guilda).filter((x) => x.id !== a.id);
         const poderes = Motor.poderesDe(D.regras, a).sort((x, y) => x.nivel - y.nivel);
         const registros = E.registros.filter((r) => r.alunoId === id).slice(-25).reverse();
         const desfazivel = (r) => {
             const ev = D.eventos.find((e) => e.id === r.ev);
             return ev && Motor.DESFAZIVEIS.has(ev.tipo);
         };
-        const delta = (r) => [r.xp ? `${r.xp > 0 ? '+' : ''}${r.xp} XP` : '', r.vida ? `${r.vida > 0 ? '+' : ''}${r.vida} Vida` : '',
-            r.energia ? `${r.energia > 0 ? '+' : ''}${r.energia} Energia` : '', r.moeda ? `+${r.moeda} ${moeda().simbolo}` : ''].filter(Boolean).join(' · ');
+        const delta = (r) => [r.xp ? `${r.xp > 0 ? '+' : ''}${r.xp} XP` : '', r.vida ? `${r.vida > 0 ? '+' : ''}${r.vida} HP` : '',
+            r.energia ? `${r.energia > 0 ? '+' : ''}${r.energia} MP` : '', r.moeda ? `${r.moeda > 0 ? '+' : ''}${r.moeda} ${moeda().simbolo}` : ''].filter(Boolean).join(' · ');
 
         const blocoPoderes = poderes.map((pd) => {
             const motivo = Motor.motivoPoder(E, D.regras, a.id, pd.id, colegas[0] && colegas[0].id);
             const passivo = pd.efeito.tipo === 'proteger';
             const precisaColega = pd.efeito.alvo === 'colega';
             const liberado = a.nivel >= pd.nivel;
-            const usavel = !passivo && (!motivo || (precisaColega && !/nível|Energia|reparação/.test(motivo)));
+            const usavel = !passivo && (!motivo || (precisaColega && !/nível|Mana|respawn/.test(motivo)));
             return `<li class="poder${liberado ? '' : ' poder--bloqueado'}">
-                <div><strong>${h(pd.nome)}</strong> <span class="contagem">nível ${pd.nivel} · ${pd.custo} Energia</span><br><span class="dica-inline">${h(pd.descricao)}</span></div>
-                ${passivo ? '<span class="selo">usado no desconto</span>'
+                <div><strong>${liberado ? '' : '🔒 '}${h(pd.nome)}</strong> <span class="contagem">nível ${pd.nivel} · ${pd.custo} MP</span><br><span class="dica-inline">${h(pd.descricao)}</span></div>
+                ${passivo ? '<span class="selo">usado na hora do dano</span>'
                     : usavel ? `<div class="poder-acao">${precisaColega ? `<select id="alvo-${pd.id}">${colegas.filter((x) => !x.caido).map((x) => `<option value="${x.id}">${h(x.nome)}</option>`).join('')}</select>` : ''}
                         <button type="button" class="btn btn--pequeno btn--primary" data-acao="usar-poder" data-id="${a.id}" data-poder="${pd.id}">Usar</button></div>`
                         : `<span class="selo selo--cinza">${h(motivo || '')}</span>`}
             </li>`;
         }).join('');
 
-        const reparacao = a.caido ? `<div class="painel-escolha painel-escolha--queda">
-            <h3>💤 Caiu — missão de reparação</h3>
-            <p class="dica">Combine com o(a) estudante (e o PDT) uma forma de reparar. Concluída, volta à jangada com ${Math.round((D.regras.voltaDaQueda || 0.5) * 100)}% da Vida.</p>
+        const respawn = a.caido ? `<div class="painel-escolha painel-escolha--queda">
+            <h3>😵 K.O. — missão de respawn</h3>
+            <p class="dica">Combine com o(a) estudante (e o PDT) uma forma de reparar o que aconteceu. Concluída, volta para a guilda com ${Math.round((D.regras.voltaDaQueda || 0.5) * 100)}% do HP.</p>
             <select id="reparacao-escolha">${D.regras.reparacoes.map((r) => `<option value="${h(r.id)}">${h(r.nome)}</option>`).join('')}</select>
             <label class="campo-bloco">Como foi (opcional)<input type="text" id="reparacao-nota" maxlength="160"></label>
-            <button type="button" class="btn btn--primary" data-acao="concluir-reparacao" data-id="${a.id}">Reparação concluída</button>
+            <button type="button" class="btn btn--primary" data-acao="concluir-reparacao" data-id="${a.id}">Respawn: missão concluída</button>
         </div>` : '';
 
         abrirModal(`<div class="ficha-topo">
-                <div class="avatar avatar--grande" aria-hidden="true">${a.caido ? '💤' : c.icone}</div>
+                <div class="avatar avatar--grande" aria-hidden="true">${avatar(a)}</div>
                 <div><h2 id="modal-titulo">${h(a.nome)}</h2>
-                <p class="dica">${h(c.nome)} · Nível ${a.nivel} · ${h(a.turma)}${jangada ? ` · jangada ${h(jangada.nome)}` : ''}${a.codigo ? ` · código ${h(a.codigo)}` : ''}</p>
+                <p class="dica"><strong>Nível ${a.nivel} · ${h(Regras.titulo(a.nivel))}</strong> · ${h(c.nome)} (${h(c.funcao)}) · ${h(a.turma)}${guilda ? ` · guilda ${h(guilda.nome)}` : ''}</p>
                 <p class="dica-inline">${h(c.papel)}</p></div>
             </div>
             <div class="ficha-barras">
-                <div><span>Vida</span>${barra(a.vida, c.vidaMax, 'vida', 'Vida')}</div>
-                <div><span>Energia</span>${barra(a.energia, c.energiaMax, 'energia', 'Energia')}</div>
-                <div><span>XP</span>${barra(p.atual, p.total, 'xp', 'XP do nível')}<small>${a.xp} XP no total · faltam ${p.falta} para o nível ${a.nivel + 1}</small></div>
-                <div><span>${h(moeda().nome)}</span><strong>${h(moeda().simbolo)} ${a.moeda}</strong></div>
+                <div><span>❤️ HP</span>${barra(a.vida, c.vidaMax, 'vida', 'HP')}</div>
+                <div><span>💧 Mana</span>${barra(a.energia, c.energiaMax, 'energia', 'MP')}</div>
+                <div><span>⭐ XP</span>${barra(p.atual, p.total, 'xp', 'XP')}<small>${a.xp} XP no total · faltam ${p.falta} para o nível ${a.nivel + 1}</small></div>
+                <div><span>${h(moeda().simbolo)} ${h(moeda().nome)}</span><strong>${a.moeda}</strong></div>
             </div>
-            ${reparacao}
-            <h3>Poderes de ${h(c.nome)}</h3>
+            ${respawn}
+            <h3>Visual</h3>
+            <div class="avatares">${(c.avatares || [c.icone]).map((v) => `<button type="button" class="avatar-opcao${v === (a.avatar || c.icone) ? ' escolhido' : ''}" data-acao="trocar-avatar" data-id="${a.id}" data-avatar="${h(v)}" aria-label="Visual ${h(v)}">${h(v)}</button>`).join('')}</div>
+            <h3>Árvore de poderes — ${h(c.nome)}</h3>
             <ul class="lista-poderes">${blocoPoderes}</ul>
             <h3>Histórico</h3>
             ${registros.length ? `<ul class="historico">${registros.map((r) => `<li class="hist hist--${r.tipo}">
@@ -414,13 +422,14 @@
         const dia = diaDeHoje();
         const semana = E.registros.filter((r) => r.turma === turma() && Conselheiro.diasEntre(r.data, hoje()) < 7 && r.xp > 0);
         const xpDe = (ids) => semana.filter((r) => ids.has(r.alunoId)).reduce((s, r) => s + r.xp, 0);
-        const ranking = Motor.jangadasDaTurma(E, turma()).map((j) => {
+        const ranking = Motor.guildasDaTurma(E, turma()).map((j) => {
             const m = Motor.membros(E, j.id);
             return { j, xp: xpDe(new Set(m.map((a) => a.id))), n: m.length };
         }).sort((x, y) => y.xp - x.xp);
         const maior = Math.max(1, ...ranking.map((r) => r.xp));
         const d = Conselheiro.destaques(E, turma(), hoje());
         const s = tela.sorteado && E.alunos[tela.sorteado];
+        const medalha = ['🥇', '🥈', '🥉'];
         return `<div class="telao" id="telao">
             <div class="telao-topo">
                 <h2>${h(turma())} <span>· ${h(D.perfil.sigla || D.perfil.nome)}</span></h2>
@@ -428,32 +437,32 @@
             </div>
             <div class="telao-grade">
                 <section class="telao-cartao telao-evento">
-                    <div class="telao-icone">${h(dia ? dia.evento.icone : '🌅')}</div>
+                    <div class="telao-icone">${h(dia ? dia.evento.icone : '🎲')}</div>
                     <h3>${h(dia ? dia.evento.nome : 'O dia ainda não começou')}</h3>
-                    <p>${h(dia ? dia.evento.texto : 'Comece o dia na aba Turma para sortear o evento.')}</p>
+                    <p>${h(dia ? dia.evento.texto : 'Comece o dia na aba Turma para rolar o evento.')}</p>
                 </section>
                 <section class="telao-cartao telao-sorteio">
                     <h3>Quem responde?</h3>
-                    <div class="sorteado${s ? ' sorteado--pronto' : ''}" id="sorteado">${s ? `${h(classe(s.classe).icone)} ${h(s.nome)}` : '🎲'}</div>
+                    <div class="sorteado${s ? ' sorteado--pronto' : ''}" id="sorteado">${s ? `${h(avatar(s))} ${h(s.nome)}` : '🎲'}</div>
                     <div class="acoes-lista acoes-centro">
-                        <button type="button" class="btn btn--primary" data-acao="sortear" ${alunos.length ? '' : 'disabled'}>Sortear</button>
-                        ${s ? `<button type="button" class="btn btn--positivo" data-acao="reconhecer-sorteado">＋ Participou</button>` : ''}
+                        <button type="button" class="btn btn--primary" data-acao="sortear" ${alunos.length ? '' : 'disabled'}>Rolar o dado</button>
+                        ${s ? `<button type="button" class="btn btn--positivo" data-acao="reconhecer-sorteado">＋ XP</button>` : ''}
                     </div>
                     <p class="telao-nota">Sorteio justo: quem participou menos na semana tem mais chance, e quem faltou hoje não entra.</p>
                 </section>
                 <section class="telao-cartao telao-ranking">
-                    <h3>Travessia da semana</h3>
+                    <h3>🏆 Ranking das guildas (semana)</h3>
                     ${ranking.length ? ranking.map((r, i) => `<div class="rank-linha">
-                        <span class="rank-pos">${i + 1}º</span><span class="rank-nome">⛵ ${h(r.j.nome)}</span>
+                        <span class="rank-pos">${medalha[i] || `${i + 1}º`}</span><span class="rank-nome">${h(r.j.nome)}</span>
                         <span class="rank-barra"><span style="width:${Math.round(r.xp / maior * 100)}%"></span></span><span class="rank-xp">${r.xp} XP</span>
-                    </div>`).join('') : '<p>Forme as jangadas para ver a travessia.</p>'}
+                    </div>`).join('') : '<p>Forme as guildas para ver o ranking.</p>'}
                 </section>
                 <section class="telao-cartao telao-destaques">
-                    <h3>Destaques da semana</h3>
-                    ${d.semana.length ? d.semana.map((x) => `<div class="destaque">${h(classe(x.aluno.classe).icone)} <strong>${h(x.aluno.nome)}</strong> <span>+${x.xp} XP</span></div>`).join('') : '<p>Ainda sem destaques nesta semana.</p>'}
+                    <h3>⭐ MVPs da semana</h3>
+                    ${d.semana.length ? d.semana.map((x) => `<div class="destaque">${h(avatar(x.aluno))} <strong>${h(x.aluno.nome)}</strong> <span>+${x.xp} XP</span></div>`).join('') : '<p>Ainda sem MVPs nesta semana.</p>'}
                 </section>
             </div>
-            <p class="telao-nota">O Telão mostra só conquistas: Vida e descontos ficam na tela do professor.</p>
+            <p class="telao-nota">O Telão mostra só conquistas: HP e danos ficam na tela do professor.</p>
         </div>`;
     }
 
@@ -473,14 +482,14 @@
         }, 80);
     }
 
-    /* ===== aba Missões ===== */
+    /* ===== aba Quests ===== */
 
     const MODELOS_MISSAO = [
-        { titulo: 'Simulado SPAECE — Língua Portuguesa', area: 'Linguagens e Códigos', habilidade: 'LP D4 — Inferir uma informação implícita em um texto', xp: 60, moeda: 5 },
-        { titulo: 'Lista de Matemática — tabelas e gráficos', area: 'Matemática', habilidade: 'MT D34 — Resolver problema com informações apresentadas em tabelas e/ou gráficos', xp: 50, moeda: 5 },
-        { titulo: 'Leitura do mês', area: 'Linguagens e Códigos', habilidade: 'LP D6 — Identificar o tema de um texto', xp: 40, moeda: 3 },
-        { titulo: 'Etapa do projeto do NTPPS', area: '', habilidade: 'Pesquisa e projeto de vida', xp: 50, moeda: 5 },
-        { titulo: 'Revisão para o ENEM — Ciências da Natureza', area: 'Ciências da Natureza', habilidade: 'ENEM — Ciências da Natureza', xp: 50, moeda: 5 }
+        { titulo: 'Simulado SPAECE — Língua Portuguesa', area: 'Linguagens e Códigos', habilidade: 'LP D4 — Inferir uma informação implícita em um texto', xp: 60, moeda: 10 },
+        { titulo: 'Lista de Matemática — tabelas e gráficos', area: 'Matemática', habilidade: 'MT D34 — Resolver problema com informações apresentadas em tabelas e/ou gráficos', xp: 50, moeda: 10 },
+        { titulo: 'Leitura do mês', area: 'Linguagens e Códigos', habilidade: 'LP D6 — Identificar o tema de um texto', xp: 40, moeda: 5 },
+        { titulo: 'Etapa do projeto do NTPPS', area: '', habilidade: 'Pesquisa e projeto de vida', xp: 50, moeda: 10 },
+        { titulo: 'Revisão para o ENEM — Ciências da Natureza', area: 'Ciências da Natureza', habilidade: 'ENEM — Ciências da Natureza', xp: 50, moeda: 10 }
     ];
 
     function missoesDaTurma(ativas) {
@@ -499,13 +508,13 @@
             const pct = alunos.length ? Math.round(feitos / alunos.length * 100) : 0;
             const atrasada = m.prazo && m.prazo < hoje() && m.ativa;
             return `<article class="missao">
-                <div class="missao-topo"><h3>🧭 ${h(m.titulo)}</h3><span class="selo">+${m.xp || 0} XP${m.moeda ? ` · +${m.moeda} ${h(moeda().simbolo)}` : ''}</span></div>
+                <div class="missao-topo"><h3>📜 ${h(m.titulo)}</h3><span class="selo">+${m.xp || 0} XP${m.moeda ? ` · +${m.moeda} ${h(moeda().simbolo)}` : ''}</span></div>
                 <p class="dica-inline">${[m.area, m.habilidade].filter(Boolean).map(h).join(' · ')}${m.prazo ? ` · prazo ${dataBR(m.prazo)}${atrasada ? ' (vencido)' : ''}` : ''}</p>
                 ${m.descricao ? `<p>${h(m.descricao)}</p>` : ''}
                 <div class="progresso"><span style="width:${pct}%"></span></div>
-                <p class="contagem">${feitos} de ${alunos.length} da ${h(turma())} concluíram (${pct}%)${pct < 40 && m.ativa && alunos.length ? ' — vale retomar a habilidade em sala' : ''}</p>
+                <p class="contagem">${feitos} de ${alunos.length} da ${h(turma())} completaram (${pct}%)${pct < 40 && m.ativa && alunos.length ? ' — vale retomar a habilidade em sala' : ''}</p>
                 ${m.ativa ? `<div class="acoes-lista">
-                    <button type="button" class="btn btn--primary btn--pequeno" data-acao="concluir-missao" data-id="${m.id}">Marcar quem concluiu</button>
+                    <button type="button" class="btn btn--primary btn--pequeno" data-acao="concluir-missao" data-id="${m.id}">Marcar quem completou</button>
                     <button type="button" class="btn btn--pequeno" data-acao="arquivar-missao" data-id="${m.id}">Arquivar</button>
                 </div>` : ''}
             </article>`;
@@ -516,11 +525,11 @@
                     <button class="aba${tela.filtroMissoes === 'ativas' ? ' ativa' : ''}" data-acao="filtro-missoes" data-filtro="ativas">Ativas (${ativas.length})</button>
                     <button class="aba${tela.filtroMissoes === 'arquivadas' ? ' ativa' : ''}" data-acao="filtro-missoes" data-filtro="arquivadas">Arquivadas (${arquivadas.length})</button>
                 </div>
-                ${lista.length ? lista.map(cartao).join('') : `<div class="vazio vazio--pequeno"><p>${tela.filtroMissoes === 'ativas' ? 'Nenhuma missão ativa para esta turma. Crie a primeira ao lado.' : 'Nada arquivado.'}</p></div>`}
+                ${lista.length ? lista.map(cartao).join('') : `<div class="vazio vazio--pequeno"><p>${tela.filtroMissoes === 'ativas' ? 'Nenhuma quest ativa para esta turma. Crie a primeira ao lado.' : 'Nada arquivado.'}</p></div>`}
             </section>
             <section class="passo">
-                <h3>Nova missão</h3>
-                <p class="dica">Missão é tarefa com recompensa: lista, leitura, simulado, etapa de projeto. Ligue a uma habilidade (descritor) para o PCA acompanhar.</p>
+                <h3>Nova quest</h3>
+                <p class="dica">Quest é tarefa com recompensa em XP e ouro: lista, leitura, simulado, etapa de projeto. Ligue a uma habilidade (descritor) para o PCA acompanhar.</p>
                 <div class="chips">${MODELOS_MISSAO.map((m, i) => `<button type="button" class="chip" data-acao="modelo-missao" data-i="${i}">${h(m.titulo)}</button>`).join('')}</div>
                 <label class="campo-bloco">Título<input type="text" id="m-titulo" maxlength="80"></label>
                 <label class="campo-bloco">O que fazer<textarea id="m-descricao" rows="2" maxlength="300"></textarea></label>
@@ -531,22 +540,22 @@
                 <datalist id="habilidades">${Questoes.HABILIDADES.map((x) => `<option value="${h(x)}">`).join('')}</datalist>
                 <div class="linha-campos">
                     <label>XP<input type="number" id="m-xp" value="50" min="0" max="500"></label>
-                    <label>${h(moeda().nome)}<input type="number" id="m-moeda" value="0" min="0" max="100"></label>
+                    <label>${h(moeda().nome)}<input type="number" id="m-moeda" value="5" min="0" max="100"></label>
                     <label>Prazo<input type="date" id="m-prazo"></label>
                 </div>
                 <fieldset class="campo-bloco"><legend>Turmas</legend>
                     <div class="lista-marcar lista-marcar--linha">${turmas().map((t) => `<label><input type="checkbox" name="m-turma" value="${h(t)}" ${t === turma() ? 'checked' : ''}> ${h(t)}</label>`).join('')}</div>
                 </fieldset>
-                <button type="button" class="btn btn--primary" data-acao="criar-missao">Criar missão</button>
+                <button type="button" class="btn btn--primary" data-acao="criar-missao">Criar quest</button>
             </section>
         </div>`;
     }
 
-    /* ===== aba Batalha ===== */
+    /* ===== aba Boss ===== */
 
     function bancoQuestoes(area) {
         const daEscola = Object.values(E.questoes);
-        const todas = daEscola.concat(Questoes.EXEMPLOS.filter((q) => !D.semExemplos));
+        const todas = daEscola.concat(Questoes.EXEMPLOS.filter(() => !D.semExemplos));
         return area ? todas.filter((q) => q.area === area) : todas;
     }
 
@@ -567,23 +576,22 @@
         const fim = b.vida <= 0 || b.indice >= b.questoes.length;
         const topo = `<div class="chefe${b.vida <= 0 ? ' chefe--derrotado' : ''}">
             <div class="chefe-icone">${h(chefe.icone)}</div>
-            <div class="chefe-info"><h2>${h(chefe.nome)}</h2>
-                <div class="barra barra--chefe"><span style="width:${pctVida}%"></span><em>${b.vida}/${b.vidaMax}</em></div>
-                <p class="contagem">Questão ${Math.min(b.indice + 1, b.questoes.length)} de ${b.questoes.length} · vitória vale +${chefe.xp} XP para cada participante</p></div>
+            <div class="chefe-info"><p class="chefe-rotulo">BOSS</p><h2>${h(chefe.nome)}</h2>
+                <div class="barra barra--chefe"><b>HP</b><span style="width:${pctVida}%"></span><em>${b.vida}/${b.vidaMax}</em></div>
+                <p class="contagem">Questão ${Math.min(b.indice + 1, b.questoes.length)} de ${b.questoes.length} · loot: +${chefe.xp} XP${chefe.ouro ? ` e ${chefe.ouro} ${h(moeda().simbolo)}` : ''} para cada participante</p></div>
         </div>`;
         if (fim) {
             const vitoria = b.vida <= 0;
             return `${topo}<div class="vazio">
                 <p class="vazio-icone">${vitoria ? '🏆' : '🌫️'}</p>
-                <h2>${vitoria ? `A ${h(turma())} venceu ${h(chefe.nome)}!` : `${h(chefe.nome)} escapou desta vez`}</h2>
-                <p>${vitoria ? `Cada um dos ${b.participantes.length} participantes ganha ${chefe.xp} XP.` : 'Ninguém perde nada: revanche em outro dia, com a matéria revisada.'}</p>
+                <h2>${vitoria ? `VITÓRIA! A ${h(turma())} derrotou ${h(chefe.nome)}` : `${h(chefe.nome)} escapou desta vez`}</h2>
+                <p>${vitoria ? `Cada um dos ${b.participantes.length} participantes ganha ${chefe.xp} XP${chefe.ouro ? ` e ${chefe.ouro} de ouro` : ''}.` : 'Ninguém perde nada: revanche em outro dia, com a matéria revisada.'}</p>
                 <div class="acoes-lista acoes-centro">
                     ${b.registrada ? '<span class="selo">Resultado registrado</span>' : `<button type="button" class="btn btn--primary" data-acao="registrar-batalha">Registrar resultado</button>`}
                     <button type="button" class="btn" data-acao="nova-batalha">Nova batalha</button>
                 </div></div>`;
         }
         const q = b.questoes[b.indice];
-        const grupos = b.grupos;
         return `${topo}
             <article class="questao-telao">
                 <p class="contagem">${h([q.area, q.habilidade].filter(Boolean).join(' · '))}</p>
@@ -594,10 +602,10 @@
                 ${b.mostrar ? '' : '<button type="button" class="btn" data-acao="mostrar-resposta">👁️ Mostrar resposta</button>'}
             </div>
             <h3>Quem acertou?</h3>
-            <div class="grupos-acerto">${grupos.map((g) => `<button type="button" class="botao-acerto${b.acertos[g.id] ? ' acertou' : ''}" data-acao="marcar-acerto" data-grupo="${h(g.id)}">
-                ${b.acertos[g.id] ? '✅' : '⬜'} ${h(g.nome)}</button>`).join('')}</div>
+            <div class="grupos-acerto">${b.grupos.map((g) => `<button type="button" class="botao-acerto${b.acertos[g.id] ? ' acertou' : ''}" data-acao="marcar-acerto" data-grupo="${h(g.id)}">
+                ${b.acertos[g.id] ? '✅' : '⬜'} ${h(g.nome)}${g.golpes > 1 ? ' <span class="selo">🏹 crítico ×2</span>' : ''}</button>`).join('')}</div>
             <div class="acoes-lista">
-                <button type="button" class="btn btn--primary" data-acao="golpear">⚔️ Golpear e ir para a próxima</button>
+                <button type="button" class="btn btn--primary" data-acao="golpear">⚔️ Atacar e ir para a próxima</button>
                 <button type="button" class="btn btn--pequeno" data-acao="encerrar-batalha">Encerrar</button>
             </div>`;
     }
@@ -605,12 +613,12 @@
     function desenharPreparoBatalha() {
         const banco = bancoQuestoes('');
         return `<div class="passo">
-            <h3>⚔️ Batalha contra um chefe</h3>
-            <p class="dica">Revisão em forma de desafio coletivo. Cada jangada que acerta dá um golpe (a Vida do chefe cresce com o número de jangadas); derrotado o chefe, todos os participantes ganham XP. Errar não tira nada.</p>
+            <h3>🐉 Batalha contra o boss</h3>
+            <p class="dica">Revisão em forma de raid. Cada guilda que acerta ataca o boss; guilda com Arqueiro(a) de pé dá golpe crítico (dano dobrado). O HP do boss cresce com o número de guildas. Vencendo, todos os participantes levam o loot. Errar não tira nada.</p>
             <div class="grade-chefes">${D.regras.chefes.map((c, i) => `<label class="cartao-chefe">
                 <input type="radio" name="chefe" value="${h(c.id)}" ${i === 0 ? 'checked' : ''}>
                 <span class="chefe-icone">${h(c.icone)}</span><strong>${h(c.nome)}</strong>
-                <span class="dica-inline">${h(c.texto)}</span><span class="selo">${c.vida + 4} questões · +${c.xp} XP</span>
+                <span class="dica-inline">${h(c.texto)}</span><span class="selo">${c.vida + 4} questões · +${c.xp} XP${c.ouro ? ` · +${c.ouro} ${h(moeda().simbolo)}` : ''}</span>
             </label>`).join('')}</div>
             <div class="linha-campos">
                 <label>Área das questões<select id="b-area"><option value="">Todas (${banco.length})</option>
@@ -629,35 +637,72 @@
         if (!banco.length) { avisar('Não há questões nessa área. Cadastre na aba Cadastro.', 'erro'); return; }
         const ausentes = new Set(chamadaDeHoje() || []);
         const participantes = alunosTurma().filter((a) => !ausentes.has(a.id)).map((a) => a.id);
-        let grupos = Motor.jangadasDaTurma(E, turma()).map((j) => ({ id: j.id, nome: `⛵ ${j.nome}` }));
-        if (!grupos.length) grupos = [{ id: 'turma-1', nome: 'Lado esquerdo' }, { id: 'turma-2', nome: 'Lado direito' }];
+        let grupos = Motor.guildasDaTurma(E, turma()).map((j) => ({ id: j.id, nome: j.nome, golpes: Motor.golpesDaGuilda(E, D.regras, j.id) }));
+        if (!grupos.length) grupos = [{ id: 'turma-1', nome: 'Lado esquerdo', golpes: 1 }, { id: 'turma-2', nome: 'Lado direito', golpes: 1 }];
         let questoes = embaralhar(banco);
         while (questoes.length < chefe.vida + 3 && questoes.length < 40) questoes = questoes.concat(embaralhar(banco));
-        const vidaMax = Math.max(chefe.vida, Math.round(chefe.vida * grupos.length * 0.6));
+        const golpesPorRodada = grupos.reduce((s, g) => s + g.golpes, 0);
+        const vidaMax = Math.max(chefe.vida, Math.round(chefe.vida * golpesPorRodada * 0.5));
         tela.batalha = { turma: turma(), chefe: Regras.copiar(chefe), vida: vidaMax, vidaMax, questoes: questoes.slice(0, chefe.vida + 4), indice: 0, mostrar: false, acertos: {}, grupos, participantes, registrada: false };
         desenhar();
     }
 
-    /* ===== aba Conselheiro ===== */
+    /* ===== aba Loja ===== */
+
+    function desenharLoja() {
+        const alunos = alunosTurma();
+        if (!alunos.length) return '<div class="vazio"><p>Cadastre a turma para abrir a loja.</p></div>';
+        if (!tela.comprador || !alunos.some((a) => a.id === tela.comprador)) tela.comprador = alunos[0].id;
+        const a = E.alunos[tela.comprador];
+        const compras = E.registros.filter((r) => r.turma === turma() && r.tipo === 'compra').slice(-10).reverse();
+        return `<div class="duas-colunas">
+            <section>
+                <div class="passo loja-cliente">
+                    <label class="campo-bloco">Quem está comprando?
+                        <select id="comprador">${alunos.map((x) => `<option value="${x.id}" ${x.id === a.id ? 'selected' : ''}>${h(x.nome)} — ${x.moeda} ${h(moeda().simbolo)}</option>`).join('')}</select>
+                    </label>
+                    <p class="saldo">${h(avatar(a))} <strong>${h(a.nome)}</strong> tem <strong>${a.moeda} ${h(moeda().simbolo)}</strong> ${h(moeda().nome.toLowerCase())}</p>
+                </div>
+                <div class="grade-loja">${D.regras.loja.map((i) => {
+                    const falta = a.moeda < i.preco;
+                    const bloqueado = falta || (a.caido && i.efeito.tipo !== 'privilegio');
+                    return `<div class="item-loja${bloqueado ? ' item-loja--bloqueado' : ''}">
+                        <span class="item-icone">${h(i.icone)}</span><strong>${h(i.nome)}</strong>
+                        <span class="dica-inline">${h(i.descricao)}</span>
+                        <button type="button" class="btn btn--primary btn--pequeno" data-acao="comprar" data-item="${h(i.id)}" ${bloqueado ? 'disabled' : ''}>${i.preco} ${h(moeda().simbolo)}</button>
+                    </div>`;
+                }).join('')}</div>
+                <p class="dica">Ouro vem dos níveis, das quests, do loot dos bosses e da sequência de presença. Os itens e preços se mudam na aba Escola (regras em JSON).</p>
+            </section>
+            <section class="passo">
+                <h3>Últimas compras na ${h(turma())}</h3>
+                ${compras.length ? `<ul class="lista-simples">${compras.map((r) => `<li>${dataBR(r.data)} · <strong>${h((E.alunos[r.alunoId] || {}).nome)}</strong> — ${h(r.texto.replace(/^Comprou /, '').split(':')[0])} (${r.moeda} ${h(moeda().simbolo)})
+                    <button type="button" class="link-ficha" data-acao="desfazer" data-ev="${h(r.ev)}">desfazer</button></li>`).join('')}</ul>` : '<p class="dica">Nenhuma compra ainda.</p>'}
+            </section>
+        </div>`;
+    }
+
+    /* ===== aba Oráculo ===== */
 
     function desenharConselheiro() {
         const s = Conselheiro.saude(E, D.regras, turma(), hoje());
         const al = Conselheiro.alertas(E, D.regras, turma(), hoje(), D.perfil);
         const eq = Conselheiro.equilibrio(E, D.regras, turma());
         const d = Conselheiro.destaques(E, turma(), hoje());
-        const prop = s.proporcao === null ? '—' : s.proporcao === Infinity ? 'só reconhecimentos' : `${s.proporcao.toFixed(1).replace('.', ',')} : 1`;
+        const prop = s.proporcao === null ? '—' : s.proporcao === Infinity ? 'só XP' : `${s.proporcao.toFixed(1).replace('.', ',')} : 1`;
         const pdt = D.perfil.pdts && D.perfil.pdts[turma()];
         const visaoEscola = turmas().map((t) => {
             const st = Conselheiro.saude(E, D.regras, t, hoje());
             const altas = Conselheiro.alertas(E, D.regras, t, hoje(), D.perfil).filter((x) => x.nivel === 'alta').length;
             return { t, st, altas };
         }).filter((x) => x.st.alunos);
-        return `<div class="indicadores">
-                <div class="indicador"><strong>${prop}</strong><span>reconhecimentos por desconto (14 dias)</span></div>
-                <div class="indicador"><strong>${Math.round(s.alcance * 100)}%</strong><span>da turma reconhecida ao menos uma vez</span></div>
-                <div class="indicador"><strong>${Math.round(s.vidaMedia * 100)}%</strong><span>Vida média</span></div>
+        return `<p class="dica">O Oráculo é a visão do mestre do jogo: lê o histórico e aponta o que pede atenção. Os estudantes não veem esta tela.</p>
+            <div class="indicadores">
+                <div class="indicador"><strong>${prop}</strong><span>reconhecimentos (+XP) por dano (14 dias)</span></div>
+                <div class="indicador"><strong>${Math.round(s.alcance * 100)}%</strong><span>da turma ganhou XP ao menos uma vez</span></div>
+                <div class="indicador"><strong>${Math.round(s.vidaMedia * 100)}%</strong><span>HP médio</span></div>
                 <div class="indicador"><strong>${s.xpSemana}</strong><span>XP na semana</span></div>
-                <div class="indicador${s.caidos ? ' indicador--alerta' : ''}"><strong>${s.caidos}</strong><span>caídos aguardando reparação</span></div>
+                <div class="indicador${s.caidos ? ' indicador--alerta' : ''}"><strong>${s.caidos}</strong><span>K.O. aguardando respawn</span></div>
             </div>
             <div class="duas-colunas">
                 <section>
@@ -665,21 +710,21 @@
                     ${al.length ? `<ul class="alertas">${al.map((a) => `<li class="alerta alerta--${a.nivel}">
                         <div><strong>${h(a.titulo)}</strong><span>${h(a.detalhe)}</span></div>
                         ${a.alunoId ? `<button type="button" class="btn btn--pequeno" data-acao="ficha" data-id="${a.alunoId}">Abrir ficha</button>` : ''}
-                        ${a.acao === 'formar' ? '<button type="button" class="btn btn--pequeno" data-acao="sugerir-jangadas">Ver sugestão</button>' : ''}
-                    </li>`).join('')}</ul>` : '<p class="aviso aviso--ok">Nada fora do lugar nesta turma. Bons ventos!</p>'}
-                    <h3>Destaques da semana</h3>
-                    ${d.semana.length ? `<ul class="lista-simples">${d.semana.map((x) => `<li>${h(classe(x.aluno.classe).icone)} <strong>${h(x.aluno.nome)}</strong> · +${x.xp} XP
-                        <button type="button" class="link-ficha" data-acao="certificado" data-id="${x.aluno.id}">certificado</button></li>`).join('')}</ul>` : '<p class="dica">Sem destaques ainda.</p>'}
-                    ${d.viradas.length ? `<h3>Viraram o jogo</h3><p class="dica">Tinham descontos na semana passada e nesta só reconhecimentos. Vale dizer isso a eles.</p>
+                        ${a.acao === 'formar' ? '<button type="button" class="btn btn--pequeno" data-acao="sugerir-guildas">Ver sugestão</button>' : ''}
+                    </li>`).join('')}</ul>` : '<p class="aviso aviso--ok">Nada fora do lugar nesta turma. GG!</p>'}
+                    <h3>MVPs da semana</h3>
+                    ${d.semana.length ? `<ul class="lista-simples">${d.semana.map((x) => `<li>${h(avatar(x.aluno))} <strong>${h(x.aluno.nome)}</strong> · +${x.xp} XP
+                        <button type="button" class="link-ficha" data-acao="certificado" data-id="${x.aluno.id}">certificado</button></li>`).join('')}</ul>` : '<p class="dica">Sem MVPs ainda.</p>'}
+                    ${d.viradas.length ? `<h3>Viraram o jogo</h3><p class="dica">Tomavam dano na semana passada e nesta só ganharam XP. Vale dizer isso a eles.</p>
                         <ul class="lista-simples">${d.viradas.map((x) => `<li>🔄 <strong>${h(x.aluno.nome)}</strong> <button type="button" class="link-ficha" data-acao="certificado" data-id="${x.aluno.id}">certificado</button></li>`).join('')}</ul>` : ''}
                 </section>
                 <section>
-                    <h3>Jangadas</h3>
-                    ${eq.jangadas.length ? `<table class="tabela"><thead><tr><th>Jangada</th><th>Tripulação</th><th>Classes</th><th>XP médio</th></tr></thead><tbody>
-                        ${eq.jangadas.map((j) => `<tr><td>⛵ ${h(j.nome)}</td><td>${j.membros}</td><td>${j.classes}/${D.regras.classes.length}</td><td>${Math.round(j.xpMedio)}</td></tr>`).join('')}
-                    </tbody></table>` : '<p class="dica">Esta turma ainda não tem jangadas.</p>'}
+                    <h3>Guildas</h3>
+                    ${eq.guildas.length ? `<table class="tabela"><thead><tr><th>Guilda</th><th>Membros</th><th>Classes</th><th>XP médio</th></tr></thead><tbody>
+                        ${eq.guildas.map((j) => `<tr><td>🏰 ${h(j.nome)}</td><td>${j.membros}</td><td>${j.classes}/${D.regras.classes.length}</td><td>${Math.round(j.xpMedio)}</td></tr>`).join('')}
+                    </tbody></table>` : '<p class="dica">Esta turma ainda não tem guildas.</p>'}
                     ${eq.desequilibrada ? `<p class="aviso">${h(eq.motivo)}</p>` : ''}
-                    <button type="button" class="btn" data-acao="sugerir-jangadas">🧮 Sugerir jangadas equilibradas</button>
+                    <button type="button" class="btn" data-acao="sugerir-guildas">🧮 Sugerir guildas equilibradas</button>
                     <h3>Resumo para o PDT${pdt ? ` (${h(pdt)})` : ''}</h3>
                     <p class="dica">Pronto para colar no WhatsApp ou levar ao Conselho de Classe.</p>
                     <textarea id="resumo-pdt" rows="10" readonly>${h(Conselheiro.resumoPDT(E, D.regras, D.perfil, turma(), hoje()))}</textarea>
@@ -687,25 +732,25 @@
                 </section>
             </div>
             ${visaoEscola.length > 1 ? `<h3>Visão da escola</h3>
-            <table class="tabela"><thead><tr><th>Turma</th><th>Estudantes</th><th>XP na semana</th><th>Reconh. : desc.</th><th>Alcance</th><th>Alertas graves</th></tr></thead><tbody>
+            <div class="tabela-rolagem"><table class="tabela"><thead><tr><th>Turma</th><th>Estudantes</th><th>XP na semana</th><th>+XP : dano</th><th>Alcance</th><th>Alertas graves</th></tr></thead><tbody>
                 ${visaoEscola.map(({ t, st, altas }) => `<tr><td><button type="button" class="link-ficha" data-acao="ir-turma" data-turma="${h(t)}">${h(t)}</button></td><td>${st.alunos}</td><td>${st.xpSemana}</td>
                     <td>${st.positivos} : ${st.negativos}</td><td>${Math.round(st.alcance * 100)}%</td><td>${altas ? `<strong class="texto-alerta">${altas}</strong>` : '0'}</td></tr>`).join('')}
-            </tbody></table>` : ''}`;
+            </tbody></table></div>` : ''}`;
     }
 
-    function modalSugerirJangadas() {
+    function modalSugerirGuildas() {
         const alunos = alunosTurma();
         if (alunos.length < 2) { avisar('Cadastre a turma primeiro.', 'erro'); return; }
-        const sugestao = Conselheiro.formarJangadas(alunos, D.regras.tamanhoJangada, { prefixoId: Motor.novoId('j') + '-' });
+        const sugestao = Conselheiro.formarGuildas(alunos, D.regras.tamanhoGuilda, { prefixoId: Motor.novoId('j') + '-' });
         tela.sugestao = sugestao;
-        abrirModal(`<h2 id="modal-titulo">🧮 Jangadas equilibradas para a ${h(turma())}</h2>
-            <p class="dica">Cada jangada com as três classes sempre que possível e XP total parecido. Aplicar desfaz as jangadas atuais da turma (o XP de cada estudante continua o mesmo).</p>
-            <div class="grade-sugestao">${sugestao.jangadas.map((j) => {
+        abrirModal(`<h2 id="modal-titulo">🧮 Guildas equilibradas para a ${h(turma())}</h2>
+            <p class="dica">Cada guilda com tanque, suporte, mana e dano sempre que possível, e XP total parecido. Aplicar desfaz as guildas atuais da turma (o XP de cada estudante continua o mesmo).</p>
+            <div class="grade-sugestao">${sugestao.guildas.map((j) => {
                 const m = alunos.filter((a) => sugestao.membros[a.id] === j.id);
-                return `<div class="sugestao"><strong>⛵ ${h(j.nome)}</strong><span class="contagem">${m.reduce((s, a) => s + a.xp, 0)} XP</span>
+                return `<div class="sugestao"><strong>🏰 ${h(j.nome)}</strong><span class="contagem">${m.reduce((s, a) => s + a.xp, 0)} XP</span>
                     <ul>${m.map((a) => `<li>${h(classe(a.classe).icone)} ${h(a.nome)}</li>`).join('')}</ul></div>`;
             }).join('')}</div>
-            <div class="acoes-lista"><button type="button" class="btn btn--primary" data-acao="aplicar-jangadas">Aplicar estas jangadas</button></div>`, 'modal-caixa--larga');
+            <div class="acoes-lista"><button type="button" class="btn btn--primary" data-acao="aplicar-guildas">Aplicar estas guildas</button></div>`, 'modal-caixa--larga');
     }
 
     function certificado(id) {
@@ -714,15 +759,15 @@
         if (!janela) { avisar('Libere as janelas pop-up para imprimir o certificado.', 'erro'); return; }
         janela.document.write(`<!DOCTYPE html><html lang="pt-BR"><head><meta charset="UTF-8"><title>Certificado — ${h(a.nome)}</title>
             <style>body{font-family:Georgia,serif;margin:0;display:grid;place-items:center;min-height:100vh;background:#fff}
-            .c{border:10px double #0f5c6e;padding:48px 64px;max-width:820px;text-align:center}
-            h1{font-size:40px;margin:0 0 8px;color:#0f5c6e}h2{font-size:30px;margin:24px 0}p{font-size:18px;line-height:1.6}
+            .c{border:10px double #3b1f6b;padding:48px 64px;max-width:820px;text-align:center}
+            h1{font-size:40px;margin:0 0 8px;color:#3b1f6b}h2{font-size:30px;margin:24px 0}p{font-size:18px;line-height:1.6}
             .assin{margin-top:56px;display:flex;justify-content:space-around;gap:40px}.assin span{border-top:1px solid #333;padding-top:6px;min-width:220px}
             @media print{@page{size:landscape;margin:12mm}}</style></head><body><div class="c">
-            <div style="font-size:48px">⛵</div><h1>Certificado de Destaque</h1>
+            <div style="font-size:48px">${h(avatar(a))}</div><h1>Certificado de Conquista</h1>
             <p>${h(D.perfil.nome)} — ${h(D.perfil.municipio)}</p>
             <p>Certificamos que</p><h2>${h(a.nome)}</h2>
-            <p>da turma ${h(a.turma)} se destacou na Jangada, chegando ao <strong>nível ${a.nivel}</strong> como <strong>${h(classe(a.classe).nome)}</strong>,
-            com dedicação, cooperação e respeito à sua tripulação.</p>
+            <p>da turma ${h(a.turma)} alcançou o <strong>nível ${a.nivel} — ${h(Regras.titulo(a.nivel))}</strong> na Saga, como <strong>${h(classe(a.classe).nome)}</strong>,
+            com dedicação, cooperação e respeito à sua guilda.</p>
             <p>${dataBR(hoje())}</p>
             <div class="assin"><span>${h(D.professor || 'Professor(a)')}</span><span>Coordenação Pedagógica</span></div>
             </div><script>setTimeout(function(){window.print()},300)<\/script></body></html>`);
@@ -733,40 +778,39 @@
 
     function desenharCadastro() {
         const alunos = alunosTurma();
-        const jangadas = Motor.jangadasDaTurma(E, turma());
+        const guildas = Motor.guildasDaTurma(E, turma());
         const questoesEscola = Object.values(E.questoes);
         return `<div class="duas-colunas">
             <section class="passo">
                 <h3>Estudantes da ${h(turma())} (${alunos.length})</h3>
-                ${alunos.length ? `<div class="tabela-rolagem"><table class="tabela tabela--edicao"><thead><tr><th>Nome ou apelido</th><th>Classe</th><th>Jangada</th><th>Código ${h(moeda().nome)}</th><th></th></tr></thead><tbody>
+                ${alunos.length ? `<div class="tabela-rolagem"><table class="tabela tabela--edicao"><thead><tr><th>Nome ou apelido</th><th>Classe</th><th>Guilda</th><th></th></tr></thead><tbody>
                     ${alunos.map((a) => `<tr>
                         <td><input type="text" value="${h(a.nome)}" data-mudar="aluno" data-campo="nome" data-id="${a.id}" aria-label="Nome"></td>
                         <td><select data-mudar="aluno" data-campo="classe" data-id="${a.id}" aria-label="Classe">${D.regras.classes.map((c) => `<option value="${c.id}" ${c.id === a.classe ? 'selected' : ''}>${h(c.icone)} ${h(c.nome)}</option>`).join('')}</select></td>
-                        <td><select data-mudar="aluno" data-campo="jangada" data-id="${a.id}" aria-label="Jangada"><option value="">—</option>${jangadas.map((j) => `<option value="${j.id}" ${j.id === a.jangada ? 'selected' : ''}>${h(j.nome)}</option>`).join('')}</select></td>
-                        <td><input type="text" value="${h(a.codigo)}" data-mudar="aluno" data-campo="codigo" data-id="${a.id}" placeholder="opcional" aria-label="Código"></td>
+                        <td><select data-mudar="aluno" data-campo="guilda" data-id="${a.id}" aria-label="Guilda"><option value="">—</option>${guildas.map((j) => `<option value="${j.id}" ${j.id === a.guilda ? 'selected' : ''}>${h(j.nome)}</option>`).join('')}</select></td>
                         <td><button type="button" class="link-ficha" data-acao="remover-aluno" data-id="${a.id}">remover</button></td>
                     </tr>`).join('')}
                 </tbody></table></div>` : '<p class="dica">Nenhum estudante ainda.</p>'}
                 <h3>Adicionar estudantes</h3>
-                <p class="dica">Um por linha. Para guardar o código do ${h(moeda().nome)}, use <code>Nome ; código</code>. Prefira o apelido ou o primeiro nome: os dados ficam neste aparelho, mas quanto menos dado pessoal, melhor (LGPD). As classes são distribuídas em rodízio para a turma ter as três; dá para trocar depois.</p>
-                <textarea id="novos-alunos" rows="6" placeholder="Ana Clara&#10;Bruno ; MALU-0042&#10;Cauã"></textarea>
+                <p class="dica">Um por linha. Prefira o apelido ou o primeiro nome: os dados ficam neste aparelho, mas quanto menos dado pessoal, melhor (LGPD). As classes são distribuídas em rodízio para a turma ter todas; o ideal é cada estudante escolher a sua no começo — dá para trocar aqui.</p>
+                <textarea id="novos-alunos" rows="6" placeholder="Ana Clara&#10;Bruno&#10;Cauã"></textarea>
                 <div class="acoes-lista"><button type="button" class="btn btn--primary" data-acao="adicionar-alunos">Adicionar à ${h(turma())}</button></div>
             </section>
             <section>
                 <div class="passo">
-                    <h3>Jangadas da ${h(turma())}</h3>
-                    ${jangadas.length ? `<ul class="lista-simples">${jangadas.map((j) => `<li>⛵ <input type="text" value="${h(j.nome)}" data-mudar="jangada" data-id="${j.id}" aria-label="Nome da jangada" class="input-curto">
-                        <span class="contagem">${Motor.membros(E, j.id).length} tripulantes</span>
-                        <button type="button" class="link-ficha" data-acao="remover-jangada" data-id="${j.id}">remover</button></li>`).join('')}</ul>` : '<p class="dica">Sem jangadas.</p>'}
-                    <div class="linha-campos"><label class="campo-largo">Nova jangada<input type="text" id="nova-jangada" placeholder="ex.: Pedra Rachada" maxlength="40"></label></div>
+                    <h3>Guildas da ${h(turma())}</h3>
+                    ${guildas.length ? `<ul class="lista-simples">${guildas.map((j) => `<li>🏰 <input type="text" value="${h(j.nome)}" data-mudar="guilda" data-id="${j.id}" aria-label="Nome da guilda" class="input-curto">
+                        <span class="contagem">${Motor.membros(E, j.id).length} membros</span>
+                        <button type="button" class="link-ficha" data-acao="remover-guilda" data-id="${j.id}">remover</button></li>`).join('')}</ul>` : '<p class="dica">Sem guildas.</p>'}
+                    <div class="linha-campos"><label class="campo-largo">Nova guilda<input type="text" id="nova-guilda" placeholder="ex.: Dragões do Mar" maxlength="40"></label></div>
                     <div class="acoes-lista">
-                        <button type="button" class="btn" data-acao="criar-jangada">Criar</button>
-                        <button type="button" class="btn btn--primary" data-acao="sugerir-jangadas">🧮 Formar automaticamente</button>
+                        <button type="button" class="btn" data-acao="criar-guilda">Criar</button>
+                        <button type="button" class="btn btn--primary" data-acao="sugerir-guildas">🧮 Formar automaticamente</button>
                     </div>
                 </div>
                 <div class="passo">
                     <h3>Banco de questões da escola (${questoesEscola.length})</h3>
-                    <p class="dica">Usadas nas batalhas. Cole uma ou várias, separadas por linha em branco, neste formato:</p>
+                    <p class="dica">Usadas nas batalhas contra o boss. Cole uma ou várias, separadas por linha em branco, neste formato:</p>
                     <pre class="exemplo">Quanto é 25% de 80?\nA) 15\nB) 20\nC) 25\nResposta: B</pre>
                     <div class="linha-campos">
                         <label>Área<select id="q-area"><option value="">—</option>${D.perfil.areas.map((a) => `<option>${h(a.nome)}</option>`).join('')}</select></label>
@@ -784,21 +828,19 @@
     }
 
     function adicionarAlunos() {
-        const linhas = $('#novos-alunos').value.split('\n').map((l) => l.trim()).filter(Boolean);
-        if (!linhas.length) { avisar('Cole ao menos um nome.', 'erro'); return; }
+        const nomes = $('#novos-alunos').value.split('\n').map((l) => l.split(';')[0].trim()).filter(Boolean);
+        if (!nomes.length) { avisar('Cole ao menos um nome.', 'erro'); return; }
         const existentes = alunosTurma();
         const contagem = {};
         for (const c of D.regras.classes) contagem[c.id] = existentes.filter((a) => a.classe === c.id).length;
         const t0 = Date.now();
-        linhas.forEach((linha, i) => {
-            const [nome, codigo] = linha.split(';').map((x) => x.trim());
-            if (!nome) return;
+        nomes.forEach((nome, i) => {
             const classeId = Object.keys(contagem).sort((x, y) => contagem[x] - contagem[y])[0];
             contagem[classeId]++;
-            D.eventos.push(Motor.criarEvento('aluno.novo', { aluno: { id: Motor.novoId('a'), nome, turma: turma(), classe: classeId, codigo: codigo || '' } }, { autor: D.professor, agora: t0 + i }));
+            D.eventos.push(Motor.criarEvento('aluno.novo', { aluno: { id: Motor.novoId('a'), nome, turma: turma(), classe: classeId } }, { autor: D.professor, agora: t0 + i }));
         });
         recalcular();
-        avisar(`${linhas.length} estudante${linhas.length > 1 ? 's' : ''} na ${turma()}. Agora forme as jangadas.`);
+        avisar(`${nomes.length} estudante${nomes.length > 1 ? 's' : ''} na ${turma()}. Agora forme as guildas.`);
     }
 
     /* ===== aba Escola ===== */
@@ -806,12 +848,10 @@
     function desenharEscola() {
         const p = D.perfil;
         const r = D.regras;
-        const pendente = Motor.moedaPendente(E);
-        const totalPendente = pendente.reduce((s, x) => s + x.moeda, 0);
         return `<div class="duas-colunas">
             <section class="passo">
                 <h3>🏫 Perfil da escola</h3>
-                <p class="dica">É o que adapta a Jangada a qualquer escola estadual do Ceará. Os comportamentos sugeridos mudam com o tipo (EEMTI tem NTPPS e Eletivas; EEEP, estágio e laboratório).</p>
+                <p class="dica">É o que adapta a Saga a qualquer escola estadual do Ceará. Os comportamentos sugeridos mudam com o tipo (EEMTI tem NTPPS e Eletivas; EEEP, estágio e laboratório).</p>
                 <label class="campo-bloco">Nome<input type="text" id="p-nome" value="${h(p.nome)}"></label>
                 <div class="linha-campos">
                     <label>Sigla<input type="text" id="p-sigla" value="${h(p.sigla)}" maxlength="12"></label>
@@ -826,13 +866,13 @@
                 <div class="grade-pdt">${p.turmas.map((t) => `<label>${h(t)}<input type="text" data-pdt="${h(t)}" value="${h((p.pdts || {})[t] || '')}"></label>`).join('')}</div>
                 <h3>Áreas e PCAs</h3>
                 <div class="grade-pdt">${p.areas.map((a, i) => `<label><input type="text" data-area-nome="${i}" value="${h(a.nome)}" aria-label="Área"><input type="text" data-area-pca="${i}" value="${h(a.pca)}" placeholder="PCA" aria-label="PCA"></label>`).join('')}</div>
-                <h3>Moeda</h3>
+                <h3>Moeda do jogo</h3>
                 <div class="linha-campos">
                     <label class="campo-largo">Nome<input type="text" id="p-moeda" value="${h(p.moeda.nome)}"></label>
                     <label>Símbolo<input type="text" id="p-simbolo" value="${h(p.moeda.simbolo)}" maxlength="3"></label>
                     <label>Por nível<input type="number" id="r-moeda-nivel" value="${r.moeda.porNivel}" min="0" max="100"></label>
                 </div>
-                <label class="campo-bloco">Link do formulário de ocorrências <small>aparece quando um desconto pede registro oficial</small><input type="text" id="p-ocorrencias" value="${h(p.ocorrenciasUrl)}"></label>
+                <label class="campo-bloco">Link do formulário de ocorrências <small>aparece quando um dano pede registro oficial</small><input type="text" id="p-ocorrencias" value="${h(p.ocorrenciasUrl)}"></label>
                 <div class="acoes-lista">
                     <button type="button" class="btn btn--primary" data-acao="salvar-perfil">Salvar perfil</button>
                     <button type="button" class="btn btn--pequeno" data-acao="perfil-modelo" data-modelo="malu">Modelo EEMTI MALU</button>
@@ -842,7 +882,7 @@
             <section>
                 <div class="passo">
                     <h3>⚖️ Comportamentos</h3>
-                    <p class="dica">Combine com a turma no começo do ano. Valor é XP para os positivos e Vida para os negativos.</p>
+                    <p class="dica">Combine com a turma no começo do ano. Valor é XP para os positivos e dano no HP para os negativos.</p>
                     <div class="tabela-rolagem"><table class="tabela tabela--edicao"><thead><tr><th></th><th>Nome</th><th>Tipo</th><th>Valor</th><th title="Lembra de registrar ocorrência oficial">Ocorr.</th><th></th></tr></thead><tbody id="tabela-comportamentos">
                         ${r.comportamentos.map((c, i) => linhaComportamento(c, i)).join('')}
                     </tbody></table></div>
@@ -854,18 +894,19 @@
                 <div class="passo">
                     <h3>⚙️ Ritmo do jogo</h3>
                     <div class="linha-campos">
-                        <label>Energia por dia<input type="number" id="r-energia-dia" value="${r.energiaPorDia}" min="0" max="50"></label>
-                        <label>Vida por dia<input type="number" id="r-vida-dia" value="${r.vidaPorDia}" min="0" max="50"></label>
-                        <label>Tamanho da jangada<input type="number" id="r-tamanho" value="${r.tamanhoJangada}" min="2" max="10"></label>
+                        <label>Mana por dia<input type="number" id="r-energia-dia" value="${r.energiaPorDia}" min="0" max="50"></label>
+                        <label>HP por dia<input type="number" id="r-vida-dia" value="${r.vidaPorDia}" min="0" max="50"></label>
+                        <label>Tamanho da guilda<input type="number" id="r-tamanho" value="${r.tamanhoGuilda}" min="2" max="10"></label>
                     </div>
                     <div class="linha-campos">
                         <label>Bônus de presença a cada<span class="com-unidade"><input type="number" id="r-pres-cada" value="${r.presenca.bonusACada}" min="0" max="30"><span>dias</span></span></label>
                         <label>XP do bônus<input type="number" id="r-pres-xp" value="${r.presenca.xp}" min="0" max="200"></label>
-                        <label>Volta da queda<span class="com-unidade"><input type="number" id="r-volta" value="${Math.round(r.voltaDaQueda * 100)}" min="10" max="100"><span>% da Vida</span></span></label>
+                        <label>Ouro do bônus<input type="number" id="r-pres-ouro" value="${r.presenca.ouro || 0}" min="0" max="100"></label>
+                        <label>Respawn com<span class="com-unidade"><input type="number" id="r-volta" value="${Math.round(r.voltaDaQueda * 100)}" min="10" max="100"><span>% do HP</span></span></label>
                     </div>
-                    <label class="campo-bloco">Solidariedade <small>Vida que os colegas perdem quando alguém da jangada cai (0 = desligado; o Classcraft liga, a Jangada não, por padrão)</small><input type="number" id="r-solidariedade" value="${r.solidariedade}" min="0" max="30"></label>
+                    <label class="campo-bloco">Dano em grupo <small>HP que os colegas da guilda perdem quando alguém fica K.O. (0 = desligado; o Classcraft liga, a Saga não, por padrão)</small><input type="number" id="r-solidariedade" value="${r.solidariedade}" min="0" max="30"></label>
                     <button type="button" class="btn btn--primary" data-acao="salvar-ritmo">Salvar ritmo</button>
-                    <details class="avancado"><summary>Avançado: todas as regras em JSON (classes, poderes, eventos, chefes, reparações)</summary>
+                    <details class="avancado"><summary>Avançado: todas as regras em JSON (classes, poderes, loja, eventos, bosses, respawn)</summary>
                         <textarea id="regras-json" rows="14" spellcheck="false">${h(JSON.stringify(r, null, 2))}</textarea>
                         <div class="acoes-lista">
                             <button type="button" class="btn btn--pequeno btn--primary" data-acao="salvar-json">Salvar regras</button>
@@ -875,15 +916,12 @@
                 </div>
                 <div class="passo">
                     <h3>💾 Dados deste aparelho</h3>
-                    <p class="dica">Tudo fica neste navegador e funciona sem internet. Faça backup com frequência. Para juntar o trabalho de colegas que usam a Jangada em outro aparelho, importe o backup deles com <strong>Juntar</strong>: nada se perde nem duplica.</p>
+                    <p class="dica">Tudo fica neste navegador e funciona sem internet. Faça backup com frequência. Para juntar o trabalho de colegas que usam a Saga em outro aparelho, importe o backup deles com <strong>Juntar</strong>: nada se perde nem duplica.</p>
                     <div class="acoes-lista">
                         <button type="button" class="btn btn--primary" data-acao="exportar">⬇️ Baixar backup</button>
                         <label class="btn">⬆️ Juntar backup<input type="file" accept=".json,application/json" data-mudar="importar" data-modo="juntar" hidden></label>
                         <label class="btn">♻️ Substituir por backup<input type="file" accept=".json,application/json" data-mudar="importar" data-modo="substituir" hidden></label>
                     </div>
-                    <h3>${h(p.moeda.nome)} a lançar</h3>
-                    <p class="dica">Moeda ganha na Jangada (níveis e missões) e ainda não lançada no sistema da moeda: <strong>${totalPendente} ${h(p.moeda.simbolo)}</strong> em ${pendente.length} registro${pendente.length === 1 ? '' : 's'}. A planilha sai com o código de cada estudante para o caixa lançar.</p>
-                    <button type="button" class="btn" data-acao="exportar-moeda" ${pendente.length ? '' : 'disabled'}>📄 Baixar planilha e marcar como lançada</button>
                     <h3>Demonstração</h3>
                     <div class="acoes-lista">
                         <button type="button" class="btn" data-acao="demo">Carregar turma de demonstração</button>
@@ -901,7 +939,7 @@
         return `<tr data-linha="${i}">
             <td><input type="text" class="input-icone" data-c="icone" value="${h(c.icone || '')}" maxlength="4" aria-label="Ícone"></td>
             <td><input type="text" data-c="nome" value="${h(c.nome)}" aria-label="Nome"><input type="hidden" data-c="id" value="${h(c.id)}"></td>
-            <td><select data-c="tipo" aria-label="Tipo"><option value="positivo" ${c.tipo === 'positivo' ? 'selected' : ''}>＋ XP</option><option value="negativo" ${c.tipo === 'negativo' ? 'selected' : ''}>− Vida</option></select></td>
+            <td><select data-c="tipo" aria-label="Tipo"><option value="positivo" ${c.tipo === 'positivo' ? 'selected' : ''}>＋ XP</option><option value="negativo" ${c.tipo === 'negativo' ? 'selected' : ''}>− HP</option></select></td>
             <td><input type="number" data-c="valor" value="${c.tipo === 'positivo' ? c.xp : c.vida}" min="1" max="200" class="input-num" aria-label="Valor"></td>
             <td><input type="checkbox" data-c="ocorrencia" ${c.ocorrencia ? 'checked' : ''} aria-label="Pede ocorrência"></td>
             <td><button type="button" class="link-ficha" data-acao="remover-linha">×</button></td>
@@ -941,7 +979,7 @@
         p.pdts = {};
         for (const el of $$('[data-pdt]')) if (el.value.trim()) p.pdts[el.dataset.pdt] = el.value.trim();
         p.areas = $$('[data-area-nome]').map((el) => ({ nome: el.value.trim(), pca: $(`[data-area-pca="${el.dataset.areaNome}"]`).value.trim() })).filter((a) => a.nome);
-        p.moeda = { nome: $('#p-moeda').value.trim(), simbolo: $('#p-simbolo').value.trim() || '¢' };
+        p.moeda = { nome: $('#p-moeda').value.trim(), simbolo: $('#p-simbolo').value.trim() || '🪙' };
         p.ocorrenciasUrl = $('#p-ocorrencias').value.trim();
         const erros = Escola.validar(p);
         if (erros.length) { avisar(erros[0], 'erro'); return; }
@@ -952,16 +990,6 @@
         }
         recalcular();
         avisar('Perfil salvo.');
-    }
-
-    function exportarMoeda() {
-        const pendente = Motor.moedaPendente(E);
-        if (!pendente.length) return;
-        const semCodigo = new Set(pendente.filter((r) => !(E.alunos[r.alunoId] || {}).codigo).map((r) => r.alunoId)).size;
-        if (semCodigo && !confirm(`${semCodigo} estudante(s) sem código cadastrado. A planilha sai com o nome, e o código fica em branco. Continuar?`)) return;
-        baixar(`jangada-${D.perfil.moeda.nome.toLowerCase().replace(/\W+/g, '-')}-${hoje()}.csv`, Armazem.csvMoeda(pendente, E.alunos), 'text/csv;charset=utf-8');
-        emitir('moeda.exportar', { ids: pendente.map((r) => r.id) });
-        avisar('Planilha baixada. Esses registros não saem de novo na próxima.');
     }
 
     function importar(input) {
@@ -1000,7 +1028,7 @@
 
     function desenhar() {
         desenharTopo();
-        const vistas = { turma: desenharTurma, telao: desenharTelao, missoes: desenharMissoes, batalha: desenharBatalha, conselheiro: desenharConselheiro, cadastro: desenharCadastro, escola: desenharEscola };
+        const vistas = { turma: desenharTurma, telao: desenharTelao, missoes: desenharMissoes, batalha: desenharBatalha, loja: desenharLoja, conselheiro: desenharConselheiro, cadastro: desenharCadastro, escola: desenharEscola };
         const rolagem = window.scrollY;
         $('#conteudo').innerHTML = (vistas[tela.aba] || desenharTurma)();
         window.scrollTo(0, rolagem);
@@ -1008,15 +1036,16 @@
     }
 
     function boasVindas() {
-        abrirModal(`<h2 id="modal-titulo">⛵ Bem-vindo(a) à Jangada</h2>
-            <p>A sala de aula como jogo cooperativo, inspirada no Classcraft e feita para o Ensino Médio cearense: em português, gratuita e funcionando sem internet.</p>
+        abrirModal(`<h2 id="modal-titulo">⚔️ Bem-vindo(a) à Saga</h2>
+            <p>O RPG da sala de aula. Os estudantes são heróis, você é o <strong>mestre do jogo</strong>. Em português, gratuito e funcionando sem internet.</p>
             <ul class="lista-simples">
-                <li>⛵🧵📜 Cada estudante escolhe uma classe — <strong>Jangadeiro(a)</strong>, <strong>Rendeiro(a)</strong> ou <strong>Cordelista</strong> — e rema numa jangada com os colegas.</li>
-                <li>＋ Reconhecimentos dão XP e níveis; níveis liberam poderes e privilégios reais.</li>
-                <li>− Descontos tiram Vida, nunca XP. Quem cai volta por uma missão de reparação.</li>
-                <li>💡 O Conselheiro avisa quem está sumindo, caindo ou faltando — e escreve o resumo para o PDT.</li>
+                <li>🛡️🌿🔮🏹 Cada estudante escolhe uma classe — <strong>Guerreiro(a)</strong> (tanque), <strong>Curandeiro(a)</strong> (suporte), <strong>Mago(a)</strong> (mana) ou <strong>Arqueiro(a)</strong> (dano) — e entra numa guilda.</li>
+                <li>⭐ Bom comportamento dá XP; XP sobe de nível; nível libera poderes e privilégios reais. 🪙 Ouro compra itens na loja.</li>
+                <li>❤️ Mau comportamento tira HP, nunca XP. Quem zera fica K.O. e volta com uma missão de respawn.</li>
+                <li>🐉 Revisão vira batalha contra o boss; tarefas viram quests.</li>
+                <li>🦉 O Oráculo avisa quem está sumindo, tomando dano ou faltando — e escreve o resumo para o PDT.</li>
             </ul>
-            <label class="campo-bloco">Como você quer aparecer nos registros?<input type="text" id="nome-professor" placeholder="ex.: Prof. Vinícius" maxlength="40" autofocus></label>
+            <label class="campo-bloco">Seu nome de mestre do jogo (aparece nos registros)<input type="text" id="nome-professor" placeholder="ex.: Prof. Vinícius" maxlength="40" autofocus></label>
             <p class="dica">A escola já vem configurada como <strong>${h(D.perfil.nome)}</strong>. Outra escola? Troque na aba Escola.</p>
             <div class="acoes-lista">
                 <button type="button" class="btn btn--primary" data-acao="salvar-professor" data-depois="demo">Entrar e ver a demonstração</button>
@@ -1044,7 +1073,7 @@
             desenhar();
         },
         'selecionar-grupo': (el) => {
-            const lista = el.dataset.jangada ? Motor.membros(E, el.dataset.jangada) : alunosTurma().filter((a) => !a.jangada || !E.jangadas[a.jangada]);
+            const lista = el.dataset.guilda ? Motor.membros(E, el.dataset.guilda) : alunosTurma().filter((a) => !a.guilda || !E.guildas[a.guilda]);
             const todos = lista.every((a) => tela.selecao.has(a.id));
             lista.forEach((a) => (todos ? tela.selecao.delete(a.id) : tela.selecao.add(a.id)));
             desenhar();
@@ -1056,6 +1085,10 @@
         'aplicar-comportamento': (el) => aplicarComportamento(el.dataset.comp),
         desfazer: (el) => { desfazer(el.dataset.ev); if (!$('#modal').hidden) fecharModal(); },
         ficha: (el) => modalFicha(el.dataset.id),
+        'trocar-avatar': (el) => {
+            emitir('aluno.editar', { alunoId: el.dataset.id, campos: { avatar: el.dataset.avatar } });
+            modalFicha(el.dataset.id);
+        },
         'comecar-dia': modalComecarDia,
         'confirmar-dia': () => {
             const evento = D.regras.eventos.find((e) => e.id === $('#roleta').dataset.evento);
@@ -1064,7 +1097,7 @@
             emitir('novoDia', { turma: turma(), evento: Regras.copiar(evento) });
             if (!pular) emitir('presenca', { turma: turma(), ausentes });
             fecharModal();
-            avisar(`${evento.icone} ${evento.nome}! Energia da turma recarregada.`);
+            avisar(`${evento.icone} ${evento.nome}! Mana da turma recarregada.`);
         },
         chamada: modalChamada,
         'confirmar-chamada': () => {
@@ -1092,7 +1125,7 @@
             const r = D.regras.reparacoes.find((x) => x.id === $('#reparacao-escolha').value);
             emitir('reparacao', { alunoId: el.dataset.id, reparacao: Regras.copiar(r), nota: $('#reparacao-nota').value.trim() });
             modalFicha(el.dataset.id);
-            avisar('De volta à jangada!');
+            avisar('Respawn! De volta à guilda.');
         },
         'tela-cheia': () => {
             const el = $('#telao');
@@ -1113,19 +1146,19 @@
         'criar-missao': () => {
             const titulo = $('#m-titulo').value.trim();
             const ts = $$('input[name="m-turma"]:checked').map((i) => i.value);
-            if (!titulo) { avisar('Dê um título à missão.', 'erro'); return; }
+            if (!titulo) { avisar('Dê um título à quest.', 'erro'); return; }
             if (!ts.length) { avisar('Escolha ao menos uma turma.', 'erro'); return; }
             emitir('missao.nova', { missao: {
                 id: Motor.novoId('m'), titulo, descricao: $('#m-descricao').value.trim(), area: $('#m-area').value,
                 habilidade: $('#m-habilidade').value.trim(), xp: Math.max(0, +$('#m-xp').value || 0),
                 moeda: Math.max(0, +$('#m-moeda').value || 0), prazo: $('#m-prazo').value, turmas: ts
             } });
-            avisar('Missão criada.');
+            avisar('Quest criada.');
         },
         'concluir-missao': (el) => {
             const m = E.missoes[el.dataset.id];
-            abrirModal(`<h2 id="modal-titulo">🧭 ${h(m.titulo)}</h2>
-                <p class="dica">Marque quem concluiu na ${h(turma())}. Cada um ganha ${m.xp} XP${m.moeda ? ` e ${m.moeda} ${h(moeda().simbolo)}` : ''}, uma vez só.</p>
+            abrirModal(`<h2 id="modal-titulo">📜 ${h(m.titulo)}</h2>
+                <p class="dica">Marque quem completou na ${h(turma())}. Cada um ganha ${m.xp} XP${m.moeda ? ` e ${m.moeda} ${h(moeda().simbolo)}` : ''}, uma vez só.</p>
                 <button type="button" class="btn btn--pequeno" data-acao="marcar-todos">Marcar todos</button>
                 <div class="lista-marcar">${alunosTurma().map((a) => `<label><input type="checkbox" name="concluiu" value="${a.id}" ${m.concluidas[a.id] ? 'checked disabled' : ''}> ${h(a.nome)}${m.concluidas[a.id] ? ` <em class="contagem">(${dataBR(m.concluidas[a.id])})</em>` : ''}</label>`).join('')}</div>
                 <div class="acoes-lista"><button type="button" class="btn btn--primary" data-acao="confirmar-missao" data-id="${m.id}">Registrar</button></div>`);
@@ -1136,21 +1169,22 @@
             if (!ids.length) { fecharModal(); return; }
             const ev = emitir('missao.concluir', { missaoId: el.dataset.id, alunoIds: ids });
             fecharModal();
-            avisar(`Missão concluída por ${ids.length}.`, null, ev.id);
+            avisar(`Quest completada por ${ids.length}.`, null, ev.id);
         },
-        'arquivar-missao': (el) => { if (confirm('Arquivar a missão? Ela sai da lista de ativas (o XP já dado continua).')) emitir('missao.arquivar', { missaoId: el.dataset.id }); },
+        'arquivar-missao': (el) => { if (confirm('Arquivar a quest? Ela sai da lista de ativas (o XP já dado continua).')) emitir('missao.arquivar', { missaoId: el.dataset.id }); },
         'iniciar-batalha': iniciarBatalha,
         'mostrar-resposta': () => { tela.batalha.mostrar = true; desenhar(); },
         'marcar-acerto': (el) => { const g = el.dataset.grupo; tela.batalha.acertos[g] = !tela.batalha.acertos[g]; desenhar(); },
         golpear: () => {
             const b = tela.batalha;
-            const golpes = Object.values(b.acertos).filter(Boolean).length;
+            const golpes = b.grupos.filter((g) => b.acertos[g.id]).reduce((s, g) => s + g.golpes, 0);
+            const criticos = b.grupos.some((g) => b.acertos[g.id] && g.golpes > 1);
             b.vida = Math.max(0, b.vida - golpes);
             b.indice += 1;
             b.mostrar = false;
             b.acertos = {};
             desenhar();
-            if (golpes) avisar(`⚔️ ${golpes} golpe${golpes > 1 ? 's' : ''} em ${b.chefe.nome}!`);
+            if (golpes) avisar(`⚔️ ${golpes} de dano em ${b.chefe.nome}!${criticos ? ' 🏹 CRÍTICO!' : ''}`);
         },
         'encerrar-batalha': () => { tela.batalha.indice = tela.batalha.questoes.length; desenhar(); },
         'registrar-batalha': () => {
@@ -1161,11 +1195,19 @@
             avisar('Resultado registrado.');
         },
         'nova-batalha': () => { tela.batalha = null; desenhar(); },
-        'sugerir-jangadas': modalSugerirJangadas,
-        'aplicar-jangadas': () => {
-            emitir('jangadas.formar', { turma: turma(), jangadas: tela.sugestao.jangadas, membros: tela.sugestao.membros });
+        comprar: (el) => {
+            const item = D.regras.loja.find((i) => i.id === el.dataset.item);
+            const a = E.alunos[tela.comprador];
+            if (!confirm(`${a.nome} compra ${item.nome} por ${item.preco} ${moeda().simbolo}?`)) return;
+            const ev = emitir('compra', { alunoId: a.id, item: Regras.copiar(item) });
+            const ok = !E.ignorados.some((x) => x.id === ev.id);
+            avisar(ok ? `${item.icone} ${a.nome} comprou ${item.nome}!` : 'Compra não realizada.', ok ? null : 'erro', ok ? ev.id : null);
+        },
+        'sugerir-guildas': modalSugerirGuildas,
+        'aplicar-guildas': () => {
+            emitir('guildas.formar', { turma: turma(), guildas: tela.sugestao.guildas, membros: tela.sugestao.membros });
             fecharModal();
-            avisar('Jangadas formadas. Bons ventos!');
+            avisar('Guildas formadas. Boa jornada!');
         },
         'copiar-resumo': () => copiarTexto($('#resumo-pdt').value),
         certificado: (el) => certificado(el.dataset.id),
@@ -1174,12 +1216,12 @@
             const a = E.alunos[el.dataset.id];
             if (confirm(`Remover ${a.nome} da ${a.turma}? O histórico fica guardado.`)) emitir('aluno.remover', { alunoId: a.id });
         },
-        'criar-jangada': () => {
-            const nome = $('#nova-jangada').value.trim();
-            if (!nome) { avisar('Dê um nome à jangada.', 'erro'); return; }
-            emitir('jangada.nova', { jangada: { id: Motor.novoId('j'), nome, turma: turma() } });
+        'criar-guilda': () => {
+            const nome = $('#nova-guilda').value.trim();
+            if (!nome) { avisar('Dê um nome à guilda.', 'erro'); return; }
+            emitir('guilda.nova', { guilda: { id: Motor.novoId('j'), nome, turma: turma() } });
         },
-        'remover-jangada': (el) => { if (confirm('Remover a jangada? Os tripulantes ficam sem jangada.')) emitir('jangada.remover', { jangadaId: el.dataset.id }); },
+        'remover-guilda': (el) => { if (confirm('Remover a guilda? Os membros ficam sem guilda.')) emitir('guilda.remover', { guildaId: el.dataset.id }); },
         'adicionar-questoes': () => {
             const { questoes, erros } = Questoes.lerColadas($('#q-texto').value);
             if (erros.length) avisar(erros[0], 'erro');
@@ -1213,8 +1255,8 @@
             const n = (id, min) => Math.max(min || 0, parseInt($(id).value, 10) || 0);
             novas.energiaPorDia = n('#r-energia-dia');
             novas.vidaPorDia = n('#r-vida-dia');
-            novas.tamanhoJangada = n('#r-tamanho', 2);
-            novas.presenca = { bonusACada: n('#r-pres-cada'), xp: n('#r-pres-xp') };
+            novas.tamanhoGuilda = n('#r-tamanho', 2);
+            novas.presenca = { bonusACada: n('#r-pres-cada'), xp: n('#r-pres-xp'), ouro: n('#r-pres-ouro') };
             novas.voltaDaQueda = Math.min(1, n('#r-volta', 10) / 100);
             novas.solidariedade = n('#r-solidariedade');
             if (trocarRegras(novas)) avisar('Ritmo salvo. O histórico foi recalculado com as regras novas.');
@@ -1228,9 +1270,8 @@
             if (confirm('Voltar todas as regras ao padrão?') && trocarRegras(Regras.regrasPadrao(D.perfil.tipo))) avisar('Regras restauradas.');
         },
         exportar: () => {
-            baixar(`jangada-backup-${(D.perfil.sigla || 'escola').toLowerCase()}-${hoje()}.json`, JSON.stringify(Armazem.paraBackup(D), null, 1), 'application/json');
+            baixar(`saga-backup-${(D.perfil.sigla || 'escola').toLowerCase()}-${hoje()}.json`, JSON.stringify(Armazem.paraBackup(D), null, 1), 'application/json');
         },
-        'exportar-moeda': exportarMoeda,
         demo: () => { fecharModal(); carregarDemo(); },
         'remover-demo': () => {
             D.eventos = D.eventos.filter((e) => !String(e.id).startsWith('demo-'));
@@ -1239,7 +1280,7 @@
             avisar('Demonstração removida.');
         },
         'apagar-tudo': () => {
-            if (!confirm('Apagar TODOS os dados da Jangada neste aparelho? Baixe um backup antes.')) return;
+            if (!confirm('Apagar TODOS os dados da Saga neste aparelho? Baixe um backup antes.')) return;
             if (!confirm('Tem certeza? Não dá para desfazer.')) return;
             Object.assign(D, Armazem.vazio(), { perfil: Escola.perfilPadrao(), regras: Regras.regrasPadrao('EEMTI'), professor: D.professor });
             tela.batalha = null;
@@ -1283,6 +1324,7 @@
             desenhar();
             return;
         }
+        if (el.id === 'comprador') { tela.comprador = el.value; desenhar(); return; }
         const tipo = el.dataset.mudar;
         if (tipo === 'aluno') {
             const a = E.alunos[el.dataset.id];
@@ -1290,8 +1332,8 @@
             const valor = el.value.trim();
             if (campo === 'nome' && !valor) { el.value = a.nome; return; }
             if ((a[campo] || '') !== valor) emitir('aluno.editar', { alunoId: a.id, campos: { [campo]: valor } });
-        } else if (tipo === 'jangada') {
-            if (el.value.trim()) emitir('jangada.editar', { jangadaId: el.dataset.id, nome: el.value.trim() });
+        } else if (tipo === 'guilda') {
+            if (el.value.trim()) emitir('guilda.editar', { guildaId: el.dataset.id, nome: el.value.trim() });
         } else if (tipo === 'importar') {
             importar(el);
         } else if (tipo === 'sem-exemplos') {
@@ -1307,5 +1349,5 @@
     desenhar();
     if (!D.professor) boasVindas();
 
-    window.JangadaApp = { dados: D, estado: () => E, tela };
+    window.SagaApp = { dados: D, estado: () => E, tela };
 })();

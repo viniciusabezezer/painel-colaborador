@@ -10,20 +10,19 @@
    - Cada evento leva uma cópia do que valia na hora (XP do comportamento,
      dados do chefe), então mudar as regras depois não reescreve o passado.
 
-   Evento que não pode ser aplicado (poder sem Energia, chamada repetida)
+   Evento que não pode ser aplicado (poder sem Mana, chamada repetida)
    não quebra nada: vai para estado.ignorados com o motivo. */
 (function (global) {
     'use strict';
 
     const Regras = (typeof module !== 'undefined' && module.exports)
-        ? require('./regras.js') : global.JangadaRegras;
+        ? require('./regras.js') : global.SagaRegras;
 
     function novoEstado() {
         return {
-            alunos: {}, jangadas: {}, missoes: {}, questoes: {},
+            alunos: {}, guildas: {}, missoes: {}, questoes: {},
             dias: {},        // turma -> { data, evento, multiplicador, so, semDano }
             chamadas: {},    // "turma|data" -> lista de ausentes
-            exportados: {},  // id do registro de moeda -> true
             registros: [],
             ignorados: []
         };
@@ -74,13 +73,13 @@
             .sort((x, y) => x.nome.localeCompare(y.nome, 'pt-BR'));
     }
 
-    function membros(estado, jangadaId) {
-        if (!jangadaId) return [];
-        return Object.values(estado.alunos).filter((a) => a.ativo && a.jangada === jangadaId);
+    function membros(estado, guildaId) {
+        if (!guildaId) return [];
+        return Object.values(estado.alunos).filter((a) => a.ativo && a.guilda === guildaId);
     }
 
-    function jangadasDaTurma(estado, turma) {
-        return Object.values(estado.jangadas)
+    function guildasDaTurma(estado, turma) {
+        return Object.values(estado.guildas)
             .filter((j) => j.turma === turma)
             .sort((x, y) => x.nome.localeCompare(y.nome, 'pt-BR'));
     }
@@ -91,7 +90,7 @@
         return regras.poderes.filter((p) => p.classe === aluno.classe);
     }
 
-    function mesmaJangada(a, b) { return !!(a && b && a.jangada && a.jangada === b.jangada && a.id !== b.id); }
+    function mesmaGuilda(a, b) { return !!(a && b && a.guilda && a.guilda === b.guilda && a.id !== b.id); }
 
     /* Por que este estudante não pode usar este poder agora? null = pode. */
     function motivoPoder(estado, regras, alunoId, poderId, alvoId) {
@@ -100,27 +99,27 @@
         if (!aluno || !aluno.ativo) return 'Estudante não encontrado.';
         if (!poder) return 'Poder não encontrado.';
         if (poder.classe !== aluno.classe) return `${poder.nome} não é um poder de ${classeDe(regras, aluno.classe).nome}.`;
-        if (aluno.caido) return 'Quem caiu precisa concluir a missão de reparação antes de usar poderes.';
+        if (aluno.caido) return 'Nocauteado(a): precisa concluir a missão de respawn antes de usar poderes.';
         if (aluno.nivel < poder.nivel) return `Libera no nível ${poder.nivel}.`;
-        if (aluno.energia < poder.custo) return `Precisa de ${poder.custo} de Energia (tem ${aluno.energia}).`;
+        if (aluno.energia < poder.custo) return `Precisa de ${poder.custo} de Mana (tem ${aluno.energia}).`;
         if (poder.efeito.tipo === 'proteger') return 'Este poder é usado na hora de um desconto, para proteger um colega.';
         if (poder.efeito.alvo === 'colega') {
             const alvo = estado.alunos[alvoId];
             if (!alvo || !alvo.ativo) return 'Escolha o colega.';
-            if (!mesmaJangada(aluno, alvo)) return 'O colega precisa ser da mesma jangada.';
-            if (alvo.caido) return `${alvo.nome} caiu: primeiro a missão de reparação.`;
+            if (!mesmaGuilda(aluno, alvo)) return 'O colega precisa ser da mesma guilda.';
+            if (alvo.caido) return `${alvo.nome} está K.O.: primeiro a missão de respawn.`;
         }
-        if (poder.efeito.alvo === 'jangada' && !aluno.jangada) return 'Precisa estar numa jangada.';
+        if (poder.efeito.alvo === 'guilda' && !aluno.guilda) return 'Precisa estar numa guilda.';
         return null;
     }
 
-    /* Quem da jangada pode receber o desconto no lugar deste estudante. */
+    /* Quem da guilda pode receber o desconto no lugar deste estudante. */
     function protetores(estado, regras, alunoId) {
         const aluno = estado.alunos[alunoId];
         if (!aluno) return [];
         const escudos = regras.poderes.filter((p) => p.efeito.tipo === 'proteger');
         const lista = [];
-        for (const colega of membros(estado, aluno.jangada)) {
+        for (const colega of membros(estado, aluno.guilda)) {
             if (colega.id === aluno.id || colega.caido) continue;
             const poder = escudos.find((p) => p.classe === colega.classe && colega.nivel >= p.nivel && colega.energia >= p.custo);
             if (poder) lista.push({ aluno: colega, poder });
@@ -165,12 +164,12 @@
 
     function cair(estado, regras, ev, aluno, cascata) {
         aluno.caido = true;
-        registrar(estado, ev, aluno, 'queda', {}, 'Caiu: precisa de uma missão de reparação.');
+        registrar(estado, ev, aluno, 'queda', {}, 'K.O.! Precisa de uma missão de respawn.');
         const s = regras.solidariedade || 0;
         if (!cascata || s <= 0) return;
-        for (const colega of membros(estado, aluno.jangada)) {
+        for (const colega of membros(estado, aluno.guilda)) {
             if (colega.id === aluno.id || colega.caido) continue;
-            mudarVida(estado, regras, ev, colega, -s, 'solidariedade', `${aluno.nome} caiu e a jangada sentiu.`, false);
+            mudarVida(estado, regras, ev, colega, -s, 'solidariedade', `${aluno.nome} foi nocauteado(a) e a guilda sentiu.`, false);
         }
     }
 
@@ -205,7 +204,7 @@
             const classe = classeDe(regras, d.classe);
             estado.alunos[d.id] = {
                 id: d.id, nome: String(d.nome).trim(), turma: d.turma, classe: classe.id,
-                jangada: d.jangada || null, codigo: d.codigo || '', ativo: true, criadoEm: ev.data,
+                guilda: d.guilda || null, avatar: d.avatar || classe.icone, ativo: true, criadoEm: ev.data,
                 xp: 0, nivel: 1, vida: classe.vidaMax,
                 energia: Math.min(regras.energiaInicial || 0, classe.energiaMax),
                 moeda: 0, caido: false, seqPresenca: 0, faltasSeq: 0
@@ -216,52 +215,53 @@
             const aluno = estado.alunos[ev.alunoId];
             if (!aluno) return 'Estudante não encontrado.';
             const c = ev.campos || {};
-            for (const campo of ['nome', 'turma', 'codigo']) if (c[campo] !== undefined) aluno[campo] = String(c[campo]).trim();
-            if (c.jangada !== undefined) aluno.jangada = c.jangada || null;
+            for (const campo of ['nome', 'turma', 'avatar']) if (c[campo] !== undefined) aluno[campo] = String(c[campo]).trim();
+            if (c.guilda !== undefined) aluno.guilda = c.guilda || null;
             if (c.classe !== undefined && c.classe !== aluno.classe) {
                 aluno.classe = classeDe(regras, c.classe).id;
+                if (c.avatar === undefined) aluno.avatar = classeDe(regras, aluno.classe).icone;
                 aluno.vida = Math.min(aluno.vida, vidaMax(regras, aluno));
                 aluno.energia = Math.min(aluno.energia, energiaMax(regras, aluno));
             }
-            if (c.turma !== undefined && aluno.jangada && estado.jangadas[aluno.jangada]
-                && estado.jangadas[aluno.jangada].turma !== aluno.turma) aluno.jangada = null;
+            if (c.turma !== undefined && aluno.guilda && estado.guildas[aluno.guilda]
+                && estado.guildas[aluno.guilda].turma !== aluno.turma) aluno.guilda = null;
         },
 
         'aluno.remover'(estado, regras, ev) {
             const aluno = estado.alunos[ev.alunoId];
             if (!aluno) return 'Estudante não encontrado.';
             aluno.ativo = false;
-            aluno.jangada = null;
+            aluno.guilda = null;
         },
 
-        'jangada.nova'(estado, regras, ev) {
-            const j = ev.jangada;
-            if (!j || !j.id || !String(j.nome || '').trim()) return 'Jangada sem nome.';
-            estado.jangadas[j.id] = { id: j.id, nome: String(j.nome).trim(), turma: j.turma };
+        'guilda.nova'(estado, regras, ev) {
+            const j = ev.guilda;
+            if (!j || !j.id || !String(j.nome || '').trim()) return 'Guilda sem nome.';
+            estado.guildas[j.id] = { id: j.id, nome: String(j.nome).trim(), turma: j.turma };
         },
 
-        'jangada.editar'(estado, regras, ev) {
-            const j = estado.jangadas[ev.jangadaId];
-            if (!j) return 'Jangada não encontrada.';
+        'guilda.editar'(estado, regras, ev) {
+            const j = estado.guildas[ev.guildaId];
+            if (!j) return 'Guilda não encontrada.';
             if (ev.nome) j.nome = String(ev.nome).trim();
         },
 
-        'jangada.remover'(estado, regras, ev) {
-            if (!estado.jangadas[ev.jangadaId]) return 'Jangada não encontrada.';
-            for (const a of membros(estado, ev.jangadaId)) a.jangada = null;
-            delete estado.jangadas[ev.jangadaId];
+        'guilda.remover'(estado, regras, ev) {
+            if (!estado.guildas[ev.guildaId]) return 'Guilda não encontrada.';
+            for (const a of membros(estado, ev.guildaId)) a.guilda = null;
+            delete estado.guildas[ev.guildaId];
         },
 
-        /* Refaz as jangadas de uma turma de uma vez (sugestão do Conselheiro). */
-        'jangadas.formar'(estado, regras, ev) {
-            for (const j of jangadasDaTurma(estado, ev.turma)) {
-                for (const a of membros(estado, j.id)) a.jangada = null;
-                delete estado.jangadas[j.id];
+        /* Refaz as guildas de uma turma de uma vez (sugestão do Conselheiro). */
+        'guildas.formar'(estado, regras, ev) {
+            for (const j of guildasDaTurma(estado, ev.turma)) {
+                for (const a of membros(estado, j.id)) a.guilda = null;
+                delete estado.guildas[j.id];
             }
-            for (const j of ev.jangadas || []) estado.jangadas[j.id] = { id: j.id, nome: j.nome, turma: ev.turma };
-            for (const [alunoId, jangadaId] of Object.entries(ev.membros || {})) {
+            for (const j of ev.guildas || []) estado.guildas[j.id] = { id: j.id, nome: j.nome, turma: ev.turma };
+            for (const [alunoId, guildaId] of Object.entries(ev.membros || {})) {
                 const a = estado.alunos[alunoId];
-                if (a && a.ativo && a.turma === ev.turma && estado.jangadas[jangadaId]) a.jangada = jangadaId;
+                if (a && a.ativo && a.turma === ev.turma && estado.guildas[guildaId]) a.guilda = guildaId;
             }
         },
 
@@ -280,7 +280,7 @@
                 }
                 const dia = estado.dias[aluno.turma];
                 if (dia && dia.data === ev.data && dia.semDano) {
-                    registrar(estado, ev, aluno, 'negativo', {}, `${c.nome} (mar de calmaria: sem dano)${nota}`);
+                    registrar(estado, ev, aluno, 'negativo', {}, `${c.nome} (zona segura: sem dano)${nota}`);
                     continue;
                 }
                 if (aluno.caido) {
@@ -312,8 +312,8 @@
             let alvos = [];
             if (ef.alvo === 'si') alvos = [aluno];
             else if (ef.alvo === 'colega') alvos = [estado.alunos[ev.alvoId]];
-            else if (ef.alvo === 'jangada') {
-                alvos = membros(estado, aluno.jangada).filter((a) => !a.caido && (ef.tipo === 'curar' || a.id !== aluno.id));
+            else if (ef.alvo === 'guilda') {
+                alvos = membros(estado, aluno.guilda).filter((a) => !a.caido && (ef.tipo === 'curar' || a.id !== aluno.id));
             }
             for (const alvo of alvos) {
                 if (ef.tipo === 'curar') {
@@ -376,6 +376,10 @@
                 aluno.seqPresenca += 1;
                 if (p.bonusACada > 0 && p.xp > 0 && aluno.seqPresenca % p.bonusACada === 0) {
                     ganharXp(estado, regras, ev, aluno, p.xp, 'presenca', `${aluno.seqPresenca} dias seguidos presente!`);
+                    if (p.ouro > 0) {
+                        aluno.moeda += p.ouro;
+                        registrar(estado, ev, aluno, 'moeda', { moeda: p.ouro }, 'Ouro pela sequência de presença');
+                    }
                 }
             }
         },
@@ -412,7 +416,7 @@
             aluno.caido = false;
             aluno.vida = Math.max(1, Math.round(vidaMax(regras, aluno) * (regras.voltaDaQueda || 0.5)));
             const r = ev.reparacao || {};
-            registrar(estado, ev, aluno, 'reparacao', { vida: aluno.vida }, `Voltou à jangada: ${r.nome || 'missão de reparação'}${ev.nota ? ` — ${ev.nota}` : ''}`);
+            registrar(estado, ev, aluno, 'reparacao', { vida: aluno.vida }, `Respawn! ${r.nome || 'Missão de respawn'}${ev.nota ? ` — ${ev.nota}` : ''}`);
         },
 
         batalha(estado, regras, ev) {
@@ -420,8 +424,14 @@
             const participantes = (ev.participantes || []).map((id) => estado.alunos[id]).filter((a) => a && a.ativo);
             if (!participantes.length) return 'Batalha sem participantes.';
             for (const aluno of participantes) {
-                if (ev.vitoria) ganharXp(estado, regras, ev, aluno, chefe.xp || 0, 'batalha', `Venceu ${chefe.nome}!`);
-                else registrar(estado, ev, aluno, 'batalha', {}, `Enfrentou ${chefe.nome} (fica para a próxima)`);
+                if (ev.vitoria) {
+                    ganharXp(estado, regras, ev, aluno, chefe.xp || 0, 'batalha', `Derrotou o boss ${chefe.nome}!`);
+                    if (chefe.ouro > 0) {
+                        aluno.moeda += chefe.ouro;
+                        registrar(estado, ev, aluno, 'moeda', { moeda: chefe.ouro }, `Loot do boss ${chefe.nome}`);
+                    }
+                }
+                else registrar(estado, ev, aluno, 'batalha', {}, `Enfrentou o boss ${chefe.nome} (revanche na próxima)`);
             }
         },
 
@@ -436,8 +446,20 @@
             delete estado.questoes[ev.questaoId];
         },
 
-        'moeda.exportar'(estado, regras, ev) {
-            for (const id of ev.ids || []) estado.exportados[id] = ev.data;
+        /* Compra na loja: gasta ouro. Poção não levanta quem está K.O. */
+        compra(estado, regras, ev) {
+            const aluno = estado.alunos[ev.alunoId];
+            const item = ev.item;
+            if (!aluno || !aluno.ativo) return 'Estudante não encontrado.';
+            if (!item || !(item.preco > 0)) return 'Item inválido.';
+            if (aluno.moeda < item.preco) return `${aluno.nome} tem ${aluno.moeda} de ouro; o item custa ${item.preco}.`;
+            const ef = item.efeito || {};
+            if (aluno.caido && ef.tipo !== 'privilegio') return `${aluno.nome} está K.O.: poção não faz respawn.`;
+            aluno.moeda -= item.preco;
+            const deltas = { moeda: -item.preco };
+            if (ef.tipo === 'vida') deltas.vida = mudarVida(estado, regras, ev, aluno, ef.valor);
+            if (ef.tipo === 'energia') deltas.energia = mudarEnergia(estado, regras, aluno, ef.valor);
+            registrar(estado, ev, aluno, 'compra', deltas, `Comprou ${item.nome}: ${item.descricao}`);
         }
     };
 
@@ -450,7 +472,7 @@
 
     /* O que pode ser desfeito pelo botão "Desfazer" (cadastro não entra:
        apagar um estudante é "remover", que guarda o histórico). */
-    const DESFAZIVEIS = new Set(['comportamento', 'poder', 'novoDia', 'bonus', 'presenca', 'missao.concluir', 'reparacao', 'batalha']);
+    const DESFAZIVEIS = new Set(['comportamento', 'poder', 'compra', 'novoDia', 'bonus', 'presenca', 'missao.concluir', 'reparacao', 'batalha']);
 
     function reproduzir(eventos, regras) {
         const desfeitos = new Set();
@@ -464,17 +486,19 @@
         return estado;
     }
 
-    /* Moeda ganha e ainda não levada ao MaluPix (ou à moeda da escola). */
-    function moedaPendente(estado) {
-        return estado.registros.filter((r) => r.moeda > 0 && !estado.exportados[r.id]);
+    /* Golpes de uma guilda que acertou a questão do boss: arqueiro(a) de
+       pé na guilda faz o acerto valer crítico (dano dobrado). */
+    function golpesDaGuilda(estado, regras, guildaId) {
+        const critico = membros(estado, guildaId).some((a) => !a.caido && classeDe(regras, a.classe).critico);
+        return critico ? 2 : 1;
     }
 
     const api = {
         novoEstado, dataLocal, novoId, criarEvento, ordenar, juntar, reproduzir, aplicar,
-        classeDe, vidaMax, energiaMax, alunosDaTurma, membros, jangadasDaTurma, poderDe, poderesDe,
-        motivoPoder, protetores, moedaPendente, DESFAZIVEIS
+        classeDe, vidaMax, energiaMax, alunosDaTurma, membros, guildasDaTurma, poderDe, poderesDe,
+        motivoPoder, protetores, golpesDaGuilda, DESFAZIVEIS
     };
 
-    global.JangadaMotor = api;
+    global.SagaMotor = api;
     if (typeof module !== 'undefined' && module.exports) module.exports = api;
 })(typeof globalThis !== 'undefined' ? globalThis : this);
