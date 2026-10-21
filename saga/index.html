@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Saga — o RPG da sala de aula</title>
+    <meta name="description" content="Saga: o RPG da sala de aula, feito para o Ensino Médio cearense. Funciona sem internet.">
+    <meta name="theme-color" content="#2a1650">
+    <link rel="manifest" href="manifest.webmanifest">
+    <link rel="icon" href="logo.png">
+    <link rel="stylesheet" href="app.css?v=2">
+</head>
+<body>
+<div class="wrap">
+    <a class="back-link" href="https://malulinks.vercel.app">&larr; Voltar ao MaluLinks</a>
+
+    <header class="masthead">
+        <div class="marca" aria-hidden="true">⚔️</div>
+        <div class="masthead-texto">
+            <h1>SAGA</h1>
+            <p id="escola-rotulo">O RPG da sala de aula</p>
+        </div>
+        <div class="masthead-controles">
+            <label class="campo-turma">Turma
+                <select id="turma-atual" aria-label="Turma"></select>
+            </label>
+            <button type="button" class="btn btn--pequeno" data-acao="trocar-professor" id="professor-atual" title="Mestre do jogo neste aparelho"></button>
+        </div>
+    </header>
+
+    <nav class="abas" role="tablist" aria-label="Seções">
+        <button class="aba" role="tab" data-aba="turma">⚔️ Turma</button>
+        <button class="aba" role="tab" data-aba="telao">📺 Telão</button>
+        <button class="aba" role="tab" data-aba="missoes">📜 Quests</button>
+        <button class="aba" role="tab" data-aba="batalha">🐉 Boss</button>
+        <button class="aba" role="tab" data-aba="loja">🛒 Loja</button>
+        <button class="aba" role="tab" data-aba="conselheiro">🦉 Oráculo</button>
+        <button class="aba" role="tab" data-aba="cadastro">📋 Cadastro</button>
+        <button class="aba" role="tab" data-aba="escola">🏫 Escola</button>
+    </nav>
+
+    <main id="conteudo" tabindex="-1"></main>
+</div>
+
+<div id="barra-selecao" class="barra-selecao" hidden>
+    <span id="selecao-contagem"></span>
+    <button type="button" class="btn btn--positivo" data-acao="reconhecer">＋ XP</button>
+    <button type="button" class="btn btn--negativo" data-acao="descontar">− HP</button>
+    <button type="button" class="btn btn--pequeno" data-acao="limpar-selecao">Limpar</button>
+</div>
+
+<div id="modal" class="modal" hidden>
+    <div class="modal-caixa" role="dialog" aria-modal="true" aria-labelledby="modal-titulo">
+        <button type="button" class="modal-fechar" data-acao="fechar-modal" aria-label="Fechar">&times;</button>
+        <div id="modal-corpo"></div>
+    </div>
+</div>
+
+<div id="avisos" class="avisos-flutuantes" aria-live="polite"></div>
+
+<script src="js/regras.js"></script>
+<script src="js/escola.js"></script>
+<script src="js/motor.js"></script>
+<script src="js/conselheiro.js"></script>
+<script src="js/questoes.js"></script>
+<script src="js/armazem.js"></script>
+<script src="js/demo.js"></script>
+<script src="js/app.js"></script>
+<script>
+    if ('serviceWorker' in navigator && location.protocol === 'https:') {
+        navigator.serviceWorker.register('sw.js').catch(function () { /* sem modo offline, segue normal */ });
+    }
+</script>
+</body>
+</html>
