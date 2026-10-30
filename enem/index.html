@@ -6,24 +6,26 @@
 <meta name="theme-color" content="#1c2046">
 <title>Partiu ENEM</title>
 <meta name="claude:viewport-fit-sides" content="cover">
-<meta name="description" content="Partiu ENEM: jogo de corrida para treinar, brincando, todas as regras e cuidados dos dois dias do Enem.">
+<meta name="description" content="Partiu ENEM: jogo de tabuleiro e estratégia para treinar todas as regras e cuidados dos dois dias do Enem.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bungee&family=Atkinson+Hyperlegible:ital,wght@0,400;0,700;1,400&display=swap">
 <style>
-/* Layout: uma tela de jogo (canvas 2:1) com cartões no estilo Cartão-Resposta por cima */
+/* Layout: painel de recursos + tabuleiro em SVG; desafios abrem em cartões no estilo Cartão-Resposta */
 :root {
-  --noite: #1c2046;        /* fundo da página */
+  --noite: #1c2046;
   --noite-2: #282d5c;
-  --papel: #fbf6ea;        /* papel do cartão-resposta */
-  --salmao: #e7695d;       /* linhas salmão do cartão */
+  --borda: #3d4384;
+  --papel: #fbf6ea;
+  --salmao: #e7695d;
   --salmao-claro: #f6cdc6;
-  --sol: #ffc83d;          /* destaque */
-  --tinta: #191c2e;        /* tinta preta da caneta */
-  --mato: #2a9d8f;         /* acerto */
+  --sol: #ffc83d;
+  --tinta: #191c2e;
+  --mato: #2a9d8f;
   --erro: #d64545;
   --texto-claro: #eef0ff;
   --texto-suave: #b9bde6;
+  --cinza: #5b5f7a;
   --f-display: "Bungee", "Arial Black", Impact, sans-serif;
   --f-corpo: "Atkinson Hyperlegible", "Segoe UI", Roboto, Arial, sans-serif;
   color-scheme: dark;
@@ -31,174 +33,228 @@
 html, body { height: 100%; }
 [hidden] { display: none !important; }
 body {
-  background: var(--noite);
-  color: var(--texto-claro);
-  font-family: var(--f-corpo);
-  font-size: 16px;
+  background: var(--noite); color: var(--texto-claro);
+  font-family: var(--f-corpo); font-size: 16px;
   -webkit-tap-highlight-color: transparent;
 }
 #app {
-  min-height: 100%;
+  min-height: 100%; box-sizing: border-box;
   display: flex; flex-direction: column; gap: 10px;
   max-width: 1100px; margin: 0 auto;
   padding-left: max(16px, env(safe-area-inset-left, 0px));
   padding-right: max(16px, env(safe-area-inset-right, 0px));
   padding-block: 10px 16px;
-  box-sizing: border-box;
 }
 .topo { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
-.marca { font-family: var(--f-display); font-size: 1.35rem; letter-spacing: .02em; margin: 0; color: var(--sol); line-height: 1; }
+.marca { font-family: var(--f-display); font-weight: 400; font-size: 1.35rem; margin: 0; color: var(--sol); line-height: 1; }
 .marca span { color: var(--texto-claro); }
 .topo .acoes { margin-left: auto; display: flex; gap: 8px; flex-wrap: wrap; }
 .btn-mini {
   font: 700 .85rem var(--f-corpo); color: var(--texto-claro);
-  background: var(--noite-2); border: 1px solid #3d4384; border-radius: 999px;
+  background: var(--noite-2); border: 1px solid var(--borda); border-radius: 999px;
   padding: 7px 13px; cursor: pointer;
 }
 .btn-mini:hover { border-color: var(--sol); }
 button:focus-visible, input:focus-visible { outline: 3px solid var(--sol); outline-offset: 2px; }
 
-#palco {
-  position: relative; width: 100%;
-  aspect-ratio: 2 / 1; max-width: 100%;
-  max-height: calc(100vh - 150px); min-height: 180px;
-  margin: 0 auto;
-  border-radius: 14px; overflow: hidden;
-  background: #7fd3f0;
-  box-shadow: 0 0 0 3px #0f1230, 0 14px 40px rgba(0,0,0,.35);
-  touch-action: manipulation; user-select: none; -webkit-user-select: none;
-  cursor: pointer;
+/* Painel de recursos */
+.hud {
+  display: flex; flex-wrap: wrap; align-items: center; gap: 10px 22px;
+  background: var(--noite-2); border: 1px solid var(--borda); border-radius: 12px; padding: 10px 14px;
 }
-#cv { display: block; width: 100%; height: 100%; }
-#aviso {
-  position: absolute; left: 50%; top: 13%; transform: translateX(-50%);
-  width: min(88%, 560px); box-sizing: border-box;
-  padding: 10px 14px; border-radius: 12px;
-  font: 700 clamp(.78rem, 1.9vw, 1rem)/1.3 var(--f-corpo);
-  background: var(--papel); color: var(--tinta);
-  border-left: 8px solid var(--mato);
-  box-shadow: 0 6px 18px rgba(0,0,0,.25);
-  pointer-events: none; transition: opacity .25s;
-}
-#aviso.ruim { border-left-color: var(--erro); }
-#aviso b { font-family: var(--f-display); font-weight: 400; letter-spacing: .02em; }
-.ajuda { margin: 0; color: var(--texto-suave); font-size: .9rem; text-align: center; }
-.ajuda kbd { font: 700 .8rem var(--f-corpo); background: var(--noite-2); border: 1px solid #3d4384; border-radius: 6px; padding: 1px 6px; color: var(--texto-claro); }
+.hud-fase { flex: 1 1 220px; min-width: 0; }
+.hud-fase small { display: block; font-size: .72rem; letter-spacing: .1em; text-transform: uppercase; color: var(--texto-suave); }
+.hud-fase strong { font-family: var(--f-display); font-weight: 400; font-size: 1rem; line-height: 1.2; }
+.recurso { display: flex; flex-direction: column; gap: 3px; }
+.recurso small { font-size: .7rem; letter-spacing: .1em; text-transform: uppercase; color: var(--texto-suave); }
+.coracoes { font-size: 1.15rem; letter-spacing: 3px; color: var(--salmao); line-height: 1; }
+.coracoes .vazio { color: #4a4f86; }
+.relogio { font: 400 1.25rem var(--f-display); color: var(--sol); font-variant-numeric: tabular-nums; line-height: 1; }
+.relogio span { font: 700 .8rem var(--f-corpo); color: var(--texto-suave); }
+.barra { width: 150px; height: 7px; border-radius: 4px; background: #14173a; overflow: hidden; }
+.barra i { display: block; height: 100%; background: var(--sol); transition: width .4s; }
+.barra.perigo i { background: var(--salmao); }
+.prof { font: 700 .95rem var(--f-corpo); }
+.prof.gasto { color: #6c70a6; text-decoration: line-through; }
 
-/* Cartões (sobrepostos) */
+/* Tabuleiro */
+#tabuleiro { position: relative; display: flex; justify-content: center; }
+#tabuleiro svg {
+  display: block; width: 100%; height: auto; max-height: calc(100vh - 250px); min-height: 260px;
+  border-radius: 14px; box-shadow: 0 0 0 3px #0f1230, 0 14px 40px rgba(0,0,0,.35);
+}
+.no { cursor: default; }
+.no circle.disco { fill: var(--papel); stroke: var(--salmao); stroke-width: 5; }
+.no text { pointer-events: none; }
+.no.livre { cursor: pointer; }
+.no.livre circle.disco { stroke: var(--sol); animation: pulso 1.1s ease-in-out infinite; }
+.no.feito circle.disco { fill: var(--tinta); stroke: var(--tinta); }
+.no.feito text.icone { fill: var(--papel); }
+@keyframes pulso { 0%, 100% { stroke-width: 6; } 50% { stroke-width: 13; } }
+#ficha { transition: transform .7s cubic-bezier(.5, 0, .3, 1); }
+.dica-tab { margin: 0; text-align: center; color: var(--texto-suave); font-size: .95rem; min-height: 1.4em; }
+.escolhas { display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; }
+.escolha {
+  font: 700 .95rem var(--f-corpo); color: var(--tinta); cursor: pointer;
+  background: var(--sol); border: 0; border-radius: 10px; padding: 11px 16px; box-shadow: 0 4px 0 #b88a10;
+  text-align: left; max-width: 100%;
+}
+.escolha small { display: block; font-weight: 400; font-size: .8rem; }
+.escolha.alt { background: var(--papel); box-shadow: 0 4px 0 #a99f88; }
+
+/* Cartões */
 #camada {
   position: fixed; inset: 0; z-index: 20;
   display: flex; align-items: flex-start; justify-content: center;
-  overflow-y: auto; background: rgba(15, 17, 44, .72);
+  overflow-y: auto; background: rgba(15, 17, 44, .74);
   padding: calc(env(safe-area-inset-top, 0px) + 16px) max(16px, env(safe-area-inset-right, 0px)) calc(env(safe-area-inset-bottom, 0px) + 16px) max(16px, env(safe-area-inset-left, 0px));
   box-sizing: border-box;
 }
 .cartao {
-  position: relative; margin: auto 0;
-  width: 100%; max-width: 640px; box-sizing: border-box;
-  background: var(--papel); color: var(--tinta);
-  border-radius: 6px;
-  padding: 26px 26px 22px 40px;
-  box-shadow: 0 20px 60px rgba(0,0,0,.45);
-  /* margem salmão, como no cartão-resposta */
+  position: relative; margin: auto 0; width: 100%; max-width: 660px; box-sizing: border-box;
+  background: var(--papel); color: var(--tinta); border-radius: 6px;
+  padding: 26px 26px 22px 40px; box-shadow: 0 20px 60px rgba(0,0,0,.45);
   background-image: linear-gradient(90deg, transparent 22px, var(--salmao) 22px, var(--salmao) 24px, transparent 24px);
 }
 .cartao::before {
-  content: ""; position: absolute; top: 0; left: 0; right: 0; height: 8px;
-  background: repeating-linear-gradient(90deg, var(--tinta) 0 10px, transparent 10px 18px);
-  opacity: .85; border-radius: 6px 6px 0 0;
+  content: ""; position: absolute; top: 0; left: 0; right: 0; height: 8px; border-radius: 6px 6px 0 0;
+  background: repeating-linear-gradient(90deg, var(--tinta) 0 10px, transparent 10px 18px); opacity: .85;
 }
 .olho { font: 700 .74rem var(--f-corpo); letter-spacing: .12em; text-transform: uppercase; color: var(--salmao); margin: 0 0 6px; }
 .cartao h2 { font-family: var(--f-display); font-weight: 400; font-size: clamp(1.35rem, 4.4vw, 1.9rem); line-height: 1.1; margin: 0 0 12px; text-wrap: balance; }
+.cartao h2.pergunta { font-family: var(--f-corpo); font-weight: 700; font-size: clamp(1.12rem, 3.6vw, 1.42rem); line-height: 1.3; }
 .cartao h3 { font-family: var(--f-display); font-weight: 400; font-size: 1rem; margin: 18px 0 8px; letter-spacing: .02em; }
 .cartao p { line-height: 1.5; margin: 0 0 10px; }
-.cartao ul.regras { margin: 0 0 6px; padding: 0; list-style: none; display: grid; gap: 7px; }
-.cartao ul.regras li { position: relative; padding-left: 26px; line-height: 1.42; }
-.cartao ul.regras li::before {
+ul.regras { margin: 0 0 6px; padding: 0; list-style: none; display: grid; gap: 7px; }
+ul.regras li { position: relative; padding-left: 26px; line-height: 1.42; }
+ul.regras li::before {
   content: ""; position: absolute; left: 2px; top: .28em; width: 13px; height: 13px;
   border-radius: 50%; border: 2px solid var(--salmao); box-sizing: border-box;
 }
-.cartao ul.regras.feitas li::before { background: var(--tinta); border-color: var(--tinta); }
-.cartao ul.regras.erros li::before { border-color: var(--erro); background: var(--erro); }
+ul.regras.feitas li::before { background: var(--tinta); border-color: var(--tinta); }
+ul.regras.erros li::before { border-color: var(--erro); background: var(--erro); }
 .botoes { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 18px; }
 .btn {
-  font: 400 1rem var(--f-display); letter-spacing: .03em;
-  border: 0; border-radius: 10px; padding: 13px 20px; cursor: pointer;
-  background: var(--tinta); color: var(--papel);
-  box-shadow: 0 4px 0 #000;
+  font: 400 1rem var(--f-display); letter-spacing: .03em; cursor: pointer;
+  border: 0; border-radius: 10px; padding: 13px 20px;
+  background: var(--tinta); color: var(--papel); box-shadow: 0 4px 0 #000;
 }
 .btn:active { transform: translateY(2px); box-shadow: 0 2px 0 #000; }
 .btn.sec { background: transparent; color: var(--tinta); box-shadow: inset 0 0 0 2px var(--tinta); }
 .btn.sol { background: var(--sol); color: var(--tinta); box-shadow: 0 4px 0 #b88a10; }
+.btn[disabled] { opacity: .4; cursor: not-allowed; }
 
-/* Menu: mapa de fases */
-.mapa { display: grid; gap: 14px; margin: 16px 0 4px; }
-.dia-rotulo { font: 700 .78rem var(--f-corpo); letter-spacing: .1em; text-transform: uppercase; margin: 0 0 6px; color: #5b5f7a; }
-.fases { display: grid; grid-template-columns: repeat(auto-fill, minmax(118px, 1fr)); gap: 8px; }
-.fase {
-  text-align: left; cursor: pointer;
-  font: 700 .86rem/1.25 var(--f-corpo); color: var(--tinta);
-  background: #fff; border: 2px solid var(--tinta); border-radius: 10px;
-  padding: 8px 10px; min-height: 74px;
-  display: flex; flex-direction: column; gap: 4px;
+.recursos-intro { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 8px; margin: 6px 0; }
+.recursos-intro div { background: #fff; border: 2px solid #e6dfcc; border-radius: 10px; padding: 9px 11px; line-height: 1.35; font-size: .92rem; }
+.recursos-intro b { display: block; font-family: var(--f-display); font-weight: 400; font-size: .85rem; letter-spacing: .02em; }
+
+/* Ferramentas dentro do desafio */
+.ferramentas { display: flex; gap: 8px; flex-wrap: wrap; margin: 4px 0 2px; }
+.ferr {
+  font: 700 .85rem var(--f-corpo); color: var(--tinta); cursor: pointer;
+  background: #fff; border: 2px dashed var(--tinta); border-radius: 999px; padding: 7px 12px;
 }
-.fase .n { font-family: var(--f-display); font-weight: 400; font-size: .8rem; color: var(--salmao); }
-.fase .estrelas { margin-top: auto; letter-spacing: 2px; font-size: .85rem; color: #c9a227; }
-.fase[disabled] { opacity: .45; cursor: not-allowed; border-style: dashed; }
-.fase.atual { background: var(--sol); }
-.nota-rodape { font-size: .82rem; color: #5b5f7a; margin-top: 14px !important; }
+.ferr[disabled] { opacity: .4; cursor: not-allowed; }
+.caixa-dica { background: #fff7d6; border: 2px solid var(--sol); border-radius: 10px; padding: 10px 12px; margin-top: 10px; }
+.caixa-dica ul.regras { font-size: .92rem; }
 
-/* Questões no estilo cartão-resposta */
+/* Múltipla escolha */
 .opcoes { list-style: none; margin: 14px 0 0; padding: 0; display: grid; gap: 8px; }
 .opcao {
-  width: 100%; text-align: left; cursor: pointer;
-  display: flex; gap: 12px; align-items: flex-start;
+  width: 100%; text-align: left; cursor: pointer; display: flex; gap: 12px; align-items: flex-start;
   font: 400 1rem/1.4 var(--f-corpo); color: var(--tinta);
   background: #fff; border: 2px solid #d9d2c0; border-radius: 10px; padding: 10px 12px;
 }
 .opcao:hover:not([disabled]) { border-color: var(--tinta); }
 .bolha {
-  flex: none; width: 28px; height: 28px; border-radius: 50%;
+  flex: none; width: 28px; height: 28px; border-radius: 50%; box-sizing: border-box;
   border: 2px solid var(--salmao); color: var(--salmao);
-  display: grid; place-items: center;
-  font: 700 .85rem var(--f-corpo);
+  display: grid; place-items: center; font: 700 .85rem var(--f-corpo);
 }
 .opcao.marcada .bolha { background: var(--tinta); border-color: var(--tinta); color: var(--tinta); }
 .opcao.certa { border-color: var(--mato); background: #e3f4f1; }
-.opcao.certa .bolha { border-color: var(--mato); }
 .opcao.errada { border-color: var(--erro); background: #fbe5e3; }
+.opcao.eliminada { opacity: .35; text-decoration: line-through; }
 .opcao[disabled] { cursor: default; }
 .retorno { margin-top: 14px; padding: 12px 14px; border-radius: 10px; line-height: 1.45; }
 .retorno.ok { background: #e3f4f1; }
 .retorno.nao { background: #fbe5e3; }
 .retorno strong { font-family: var(--f-display); font-weight: 400; letter-spacing: .02em; }
 
+/* Classificar */
+.linhas { display: grid; gap: 8px; margin-top: 12px; }
+.linha { background: #fff; border: 2px solid #d9d2c0; border-radius: 10px; padding: 9px 11px; display: grid; gap: 7px; }
+.linha .txt { font-weight: 700; line-height: 1.35; }
+.seg { display: flex; gap: 6px; flex-wrap: wrap; }
+.seg button {
+  flex: 1 1 120px; cursor: pointer; font: 700 .88rem var(--f-corpo); color: var(--tinta);
+  background: var(--papel); border: 2px solid #cfc6b0; border-radius: 8px; padding: 7px 8px;
+}
+.seg button.on { background: var(--tinta); border-color: var(--tinta); color: var(--papel); }
+.seg button[disabled] { cursor: default; }
+.linha.certa { border-color: var(--mato); background: #eef8f6; }
+.linha.errada { border-color: var(--erro); background: #fdf0ee; }
+.linha .exp { font-size: .88rem; color: #8a2a24; }
+.linha.certa .exp { color: #1d6a60; }
+
+/* Ordenar */
+.ordem { list-style: none; counter-reset: k; padding: 0; margin: 12px 0 0; display: grid; gap: 7px; }
+.ordem li { counter-increment: k; display: flex; align-items: center; gap: 10px; }
+.ordem li::before {
+  content: counter(k); flex: none; width: 28px; height: 28px; border-radius: 50%;
+  display: grid; place-items: center; font: 700 .85rem var(--f-corpo);
+  background: var(--tinta); color: var(--papel);
+}
+.vaga {
+  flex: 1; min-height: 44px; text-align: left; cursor: pointer; box-sizing: border-box;
+  font: 700 .95rem/1.3 var(--f-corpo); color: var(--tinta);
+  background: #fff; border: 2px dashed #cfc6b0; border-radius: 10px; padding: 9px 11px;
+}
+.vaga.cheia { border-style: solid; border-color: var(--tinta); }
+.vaga.trava { border-color: var(--mato); background: #eef8f6; cursor: default; }
+.vaga.errada { border-color: var(--erro); background: #fdf0ee; }
+.monte { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+.peca {
+  cursor: pointer; font: 700 .92rem/1.3 var(--f-corpo); color: var(--tinta); text-align: left;
+  background: var(--sol); border: 0; border-radius: 10px; padding: 9px 12px; box-shadow: 0 3px 0 #b88a10; max-width: 100%;
+}
+.instr { font-size: .9rem; color: var(--cinza); margin: 6px 0 0 !important; }
+
+/* Menu */
+.mapa { display: grid; gap: 14px; margin: 16px 0 4px; }
+.dia-rotulo { font: 700 .78rem var(--f-corpo); letter-spacing: .1em; text-transform: uppercase; margin: 0 0 6px; color: var(--cinza); }
+.fases { display: grid; grid-template-columns: repeat(auto-fill, minmax(118px, 1fr)); gap: 8px; }
+.fase {
+  text-align: left; cursor: pointer; font: 700 .86rem/1.25 var(--f-corpo); color: var(--tinta);
+  background: #fff; border: 2px solid var(--tinta); border-radius: 10px; padding: 8px 10px; min-height: 74px;
+  display: flex; flex-direction: column; gap: 4px;
+}
+.fase .n { font-family: var(--f-display); font-weight: 400; font-size: .8rem; color: var(--salmao); }
+.fase .estrelas { margin-top: auto; letter-spacing: 2px; font-size: .85rem; color: #c9a227; }
+.fase[disabled] { opacity: .45; cursor: not-allowed; border-style: dashed; }
+.fase.atual { background: var(--sol); }
+.nota-rodape { font-size: .82rem; color: var(--cinza); margin-top: 14px !important; }
 .placar { display: flex; gap: 18px; flex-wrap: wrap; margin: 4px 0 6px; }
 .placar div { display: flex; flex-direction: column; }
 .placar b { font: 400 1.6rem var(--f-display); font-variant-numeric: tabular-nums; }
-.placar span { font-size: .78rem; text-transform: uppercase; letter-spacing: .08em; color: #5b5f7a; }
+.placar span { font-size: .78rem; text-transform: uppercase; letter-spacing: .08em; color: var(--cinza); }
 .grande-estrela { font-size: 2rem; letter-spacing: 6px; color: #c9a227; margin: 2px 0 8px; }
-
+.evento { font-size: 3rem; line-height: 1; margin: 0 0 8px; }
 .revisao section { border-top: 2px dashed var(--salmao-claro); padding-top: 4px; }
 .campo { display: grid; gap: 6px; margin: 12px 0; }
 .campo label { font-weight: 700; font-size: .9rem; }
-.campo input {
-  font: 400 1.05rem var(--f-corpo); padding: 10px 12px; border-radius: 8px;
-  border: 2px solid var(--tinta); background: #fff; color: var(--tinta);
-}
-.certificado {
-  border: 3px double var(--tinta); border-radius: 8px; padding: 16px; margin: 10px 0;
-  text-align: center; background: #fff;
-}
+.campo input { font: 400 1.05rem var(--f-corpo); padding: 10px 12px; border-radius: 8px; border: 2px solid var(--tinta); background: #fff; color: var(--tinta); }
+.certificado { border: 3px double var(--tinta); border-radius: 8px; padding: 16px; margin: 10px 0; text-align: center; background: #fff; }
 .certificado .nome { font: 400 clamp(1.2rem, 4vw, 1.7rem) var(--f-display); margin: 6px 0; overflow-wrap: anywhere; }
-@media (max-width: 640px) {
-  #palco { aspect-ratio: 7 / 6; max-height: calc(100vh - 170px); }
-}
 @media (max-width: 520px) {
   .cartao { padding: 22px 16px 18px 34px; background-image: linear-gradient(90deg, transparent 16px, var(--salmao) 16px, var(--salmao) 18px, transparent 18px); }
-  #palco { border-radius: 10px; }
+  .hud { gap: 8px 16px; }
+  .barra { width: 110px; }
 }
-@media (prefers-reduced-motion: reduce) { #aviso { transition: none; } }
+@media (prefers-reduced-motion: reduce) {
+  #ficha, .barra i { transition: none; }
+  .no.livre circle.disco { animation: none; stroke-width: 9; }
+}
 </style>
 </head>
 <body>
@@ -209,16 +265,19 @@ button:focus-visible, input:focus-visible { outline: 3px solid var(--sol); outli
     <h1 class="marca">Partiu <span>ENEM</span></h1>
     <div class="acoes">
       <button type="button" class="btn-mini" id="b-som" aria-pressed="true">Som: ligado</button>
-      <button type="button" class="btn-mini" id="b-pausa">Pausar</button>
       <button type="button" class="btn-mini" id="b-revisao">Revisão</button>
       <button type="button" class="btn-mini" id="b-menu">Fases</button>
     </div>
   </header>
-  <div id="palco" aria-label="Tela do jogo. Toque ou aperte espaço para pular.">
-    <canvas id="cv"></canvas>
-    <div id="aviso" hidden></div>
-  </div>
-  <p class="ajuda">Pule com <kbd>Espaço</kbd>, <kbd>↑</kbd> ou tocando na tela. Pule de novo no ar para o pulo duplo. Pegue o que pode levar e desvie do que é proibido.</p>
+  <section class="hud" aria-label="Seus recursos">
+    <div class="hud-fase"><small id="h-quando">Dia 1</small><strong id="h-titulo">Mochila pronta</strong></div>
+    <div class="recurso"><small>Energia</small><div class="coracoes" id="h-energia" aria-live="polite"></div></div>
+    <div class="recurso"><small id="h-limite">Relógio</small><div class="relogio" id="h-relogio">20:00</div><div class="barra" id="h-barra"><i></i></div></div>
+    <div class="recurso"><small>Ajuda</small><div class="prof" id="h-prof">🧑‍🏫 Professor 1×</div></div>
+  </section>
+  <div id="tabuleiro"></div>
+  <p class="dica-tab" id="dica-tab" aria-live="polite"></p>
+  <div class="escolhas" id="escolhas"></div>
 </div>
 <div id="camada" hidden><div class="cartao" id="cartao" role="dialog" aria-modal="true" aria-labelledby="cartao-titulo"></div></div>
 
@@ -227,59 +286,12 @@ button:focus-visible, input:focus-visible { outline: 3px solid var(--sol); outli
 "use strict";
 
 /* ===================== CONTEÚDO ===================== */
-// Itens: good=1 pode/deve levar; good=0 proibido ou atrapalha.
-const IT = {
-  doc:     { e: "🆔", l: "RG original", good: 1, m: "Documento oficial ORIGINAL com foto: RG, CNH, passaporte, carteira de trabalho... Sem ele, você não entra." },
-  docd:    { e: "📲", l: "CNH ou RG digital", good: 1, m: "Documento digital vale se for aberto no aplicativo oficial (CNH digital, e-Título, RG digital)." },
-  pen:     { e: "🖊️", l: "Caneta preta transparente", good: 1, m: "Caneta esferográfica de tinta PRETA e corpo TRANSPARENTE. Leve mais de uma." },
-  card:    { e: "🎟️", l: "Cartão de Confirmação", good: 1, m: "O Cartão de Confirmação traz seu local de prova. Levar impresso é recomendado, não obrigatório." },
-  water:   { e: "💧", l: "Água", good: 1, m: "Água e lanche são permitidos. Os fiscais podem vistoriar." },
-  snack:   { e: "🍌", l: "Lanche leve", good: 1, m: "São mais de 5 horas de prova. Um lanche leve ajuda a manter a energia." },
-  coat:    { e: "🧥", l: "Casaco", good: 1, m: "Algumas salas são frias. Um casaco leve evita desconforto." },
-  sleep:   { e: "💤", l: "Noite bem dormida", good: 1, heal: 1, m: "Dormir bem vale uma vida extra! O sono fixa o que você estudou." },
-  copy:    { e: "📄", l: "Xerox do RG", good: 0, m: "Cópia de documento NÃO vale, nem autenticada. Só o original." },
-  student: { e: "🎫", l: "Carteira de estudante", good: 0, m: "Carteira de estudante não é aceita como documento de identificação." },
-  print:   { e: "🖼️", l: "Print do RG", good: 0, m: "Foto ou print de documento não vale. O digital só vale no aplicativo oficial." },
-  watch:   { e: "⌚", l: "Relógio", good: 0, m: "Relógio de QUALQUER tipo é proibido, até o analógico. Os fiscais avisam o horário." },
-  calc:    { e: "🧮", l: "Calculadora", good: 0, m: "Calculadora é proibida. As contas são feitas à mão, no Caderno de Questões." },
-  cap:     { e: "🧢", l: "Boné", good: 0, m: "Boné, chapéu, viseira e gorro são proibidos na sala de prova." },
-  shades:  { e: "🕶️", l: "Óculos escuros", good: 0, m: "Óculos escuros são proibidos. Óculos de grau podem." },
-  pencil:  { e: "✏️", l: "Lápis e borracha", good: 0, m: "Lápis, lapiseira, borracha e corretivo são proibidos. Tudo é feito com caneta preta." },
-  phoneOn: { e: "📱", l: "Celular ligado", good: 0, m: "Celular ligado ou tocando elimina o participante. Desligue e guarde no envelope porta-objetos." },
-  phoneOff:{ e: "📴", l: "Celular desligado", good: 1, m: "Celular DESLIGADO no envelope porta-objetos, embaixo da carteira, até você sair do local de prova." },
-  env:     { e: "✉️", l: "Envelope porta-objetos", good: 1, m: "O fiscal entrega o envelope porta-objetos. Ele fica lacrado embaixo da carteira." },
-  earbud:  { e: "🎧", l: "Fone de ouvido", good: 0, m: "Fone de ouvido é proibido. Vai desligado para o envelope porta-objetos." },
-  notes:   { e: "📝", l: "Resumo de bolso", good: 0, m: "Livros, resumos, anotações e impressos são proibidos na sala." },
-  bus:     { e: "🚌", l: "Sair cedo de casa", good: 1, m: "Saia cedo! Os portões abrem às 12h e fecham às 13h, horário de Brasília." },
-  pin:     { e: "📍", l: "Local conferido", good: 1, m: "Confira o local no Cartão de Confirmação e, se puder, visite o lugar antes." },
-  lunch:   { e: "🥗", l: "Almoço leve", good: 1, m: "Almoce cedo e leve. Comida pesada dá sono na prova." },
-  snooze:  { e: "😴", l: "Só mais 5 minutinhos", good: 0, m: "Às 13h em ponto o portão fecha. Um minuto de atraso e você perde a prova." },
-  heavy:   { e: "🍖", l: "Almoço pesado", good: 0, m: "Feijoada antes da prova é sono garantido às 15h. Prefira algo leve." },
-  bubble:  { e: "⚫", l: "Bolinha toda preenchida", good: 1, m: "No Cartão-Resposta, preencha a bolinha inteira com caneta preta. Uma só por questão." },
-  draft:   { e: "✍️", l: "Rascunho no caderno", good: 1, m: "Pode rabiscar e fazer contas no Caderno de Questões. Só o Cartão-Resposta é corrigido." },
-  time:    { e: "⏳", l: "Tempo planejado", good: 1, m: "Reserve tempo para passar as respostas ao Cartão-Resposta. Não existe tempo extra para isso." },
-  essay:   { e: "📃", l: "Redação de 8 a 30 linhas", good: 1, m: "Até 7 linhas a redação vale zero. O máximo é 30 linhas, a caneta preta, na Folha de Redação." },
-  cursive: { e: "🖋️", l: "Frase em letra cursiva", good: 1, m: "Copie em letra cursiva a frase da capa do caderno no Cartão-Resposta." },
-  color:   { e: "🎨", l: "Cor do caderno marcada", good: 1, m: "Marque no Cartão-Resposta a cor do seu Caderno de Questões. Cada cor tem uma ordem diferente." },
-  smudge:  { e: "❌", l: "Rasura no cartão", good: 0, m: "Rasura ou duas bolinhas marcadas anulam a questão. O Cartão-Resposta não é trocado por erro seu." },
-  sign:    { e: "✒️", l: "Assinar a redação", good: 0, m: "Nome, assinatura ou qualquer identificação fora do lugar indicado zera a redação." },
-  offtopic:{ e: "🌀", l: "Fugir do tema", good: 0, m: "Fugir totalmente do tema zera a redação. Leia a proposta e os textos com calma." },
-  draftEss:{ e: "🗒️", l: "Redação só no rascunho", good: 0, m: "O rascunho da redação não é corrigido. Passe o texto a limpo na Folha de Redação." },
-  review:  { e: "📚", l: "Revisão leve", good: 1, m: "Entre um domingo e outro: revisão leve, nada de maratona de conteúdo novo." },
-  fruit:   { e: "🍎", l: "Comer bem", good: 1, m: "Comida de verdade e água durante a semana deixam o cérebro pronto para o 2º dia." },
-  allnight:{ e: "🌙", l: "Virar a noite", good: 0, m: "Virar a noite estudando derruba memória e atenção. Durma." },
-  fake:    { e: "📢", l: "Gabarito de boato", good: 0, m: "Gabarito oficial só no site do Inep. Desconfie de \"gabaritos\" que circulam nas redes." },
-  gabarito:{ e: "✅", l: "Gabarito oficial", good: 1, m: "O Inep divulga o gabarito oficial poucos dias depois do 2º domingo." },
-  portal:  { e: "💻", l: "Página do Participante", good: 1, m: "Cartão de Confirmação e resultados ficam na Página do Participante, com login gov.br." },
-  sisu:    { e: "🎓", l: "SiSU", good: 1, m: "SiSU: vagas em universidades e institutos federais públicos com a nota do Enem." },
-  prouni:  { e: "🏛️", l: "Prouni", good: 1, m: "Prouni: bolsas de estudo em faculdades particulares usando a nota do Enem." },
-  fies:    { e: "💳", l: "Fies", good: 1, m: "Fies: financiamento estudantil que também usa a nota do Enem." },
-  password:{ e: "🔑", l: "Senha gov.br emprestada", good: 0, m: "Nunca compartilhe sua senha gov.br. Ela abre seus dados, inscrição e resultados." },
-};
-
+// Cada fase: regras (estudo), perguntas (casas "?"), dois desafios especiais (atalho e portão) e dois eventos.
+// Desafio "classificar": itens [texto, índice da coluna certa, explicação]. "ordenar": passos já na ordem certa.
+const VF = ["Verdadeiro", "Falso"];
 const FASES = [
   {
-    dia: 1, quando: "Sábado, véspera do 1º dia", relogio: ["20:00", "22:30"], cena: "noite",
+    dia: 1, quando: "Sábado, véspera do 1º dia", inicio: "20:00", limite: "22:30", rotLimite: "hora de dormir", cena: "noite",
     titulo: "Mochila pronta",
     regras: [
       "Documento oficial ORIGINAL com foto. Digital, só no aplicativo oficial (CNH digital, e-Título, RG digital).",
@@ -288,11 +300,6 @@ const FASES = [
       "Recomendado: Cartão de Confirmação impresso, água e lanche.",
       "Proibidos: relógio, calculadora, boné, óculos escuros, lápis, borracha e corretivo.",
     ],
-    bons: ["doc", "pen", "card", "water", "snack", "docd", "sleep"],
-    ruins: ["copy", "student", "print", "watch", "calc", "cap", "shades", "pencil"],
-    obst: ["Série até 3h", "Rede social", "Ansiedade"],
-    obrig: [["doc", "docd"], ["pen"]],
-    msgObrig: { doc: "Sem documento oficial com foto você não entra no local de prova.", pen: "Sem caneta preta de corpo transparente não dá para preencher o Cartão-Resposta." },
     perguntas: [
       { q: "Qual destes documentos é aceito para entrar na sala de prova?", o: ["Carteira de estudante", "Cópia autenticada do RG", "CNH digital aberta no aplicativo oficial", "Foto do RG salva no celular"], a: 2, x: "Documento digital vale só aberto no app oficial. Cópias, fotos, prints e carteira de estudante não são aceitos." },
       { q: "Que caneta você deve levar?", o: ["Qualquer caneta azul ou preta", "Esferográfica de tinta preta, de corpo transparente", "Caneta preta com corpo colorido", "Lápis e borracha, para poder corrigir"], a: 1, x: "Tinta preta e corpo transparente. Lápis e borracha são proibidos." },
@@ -300,9 +307,33 @@ const FASES = [
       { q: "Seu RG foi roubado uma semana antes da prova. O que fazer?", o: ["Ficar em casa: sem documento não tem jeito", "Levar Boletim de Ocorrência de no máximo 90 dias e passar por identificação especial", "Levar a carteira de estudante", "Mostrar uma foto antiga do RG"], a: 1, x: "Com o B.O. emitido há no máximo 90 dias, você faz a prova após a identificação especial." },
       { q: "Onde você confere o seu local de prova?", o: ["No Cartão de Confirmação, na Página do Participante", "No grupo da turma", "Só no dia, na porta da escola", "Não precisa: é sempre na sua escola"], a: 0, x: "O local pode não ser na sua escola. Confira com antecedência e, se der, visite antes." },
     ],
+    esp: [
+      { tipo: "classificar", titulo: "Arrume a mochila", enun: "Separe o que vai na mochila do Enem e o que fica em casa.", col: ["Levar", "Deixar em casa"], itens: [
+        ["RG original", 0, "Documento oficial original com foto: obrigatório."],
+        ["Caneta preta de corpo transparente", 0, "É a única caneta permitida."],
+        ["Cartão de Confirmação impresso", 0, "Recomendado: tem seu local e número de inscrição."],
+        ["Garrafa de água", 0, "Água e lanche são permitidos (podem ser vistoriados)."],
+        ["Xerox autenticada do RG", 1, "Cópia não vale, nem autenticada."],
+        ["Carteira de estudante", 1, "Não é aceita como documento de identificação."],
+        ["Lápis e borracha", 1, "Proibidos: tudo é feito com caneta preta."],
+        ["Relógio analógico", 1, "Relógio de qualquer tipo é proibido."],
+        ["Boné", 1, "Boné, chapéu, viseira e gorro são proibidos na sala."],
+      ] },
+      { tipo: "classificar", titulo: "Documento na mão", enun: "Verdadeiro ou falso?", col: VF, itens: [
+        ["CNH digital aberta no aplicativo oficial vale como documento.", 0, "Documentos digitais oficiais valem, abertos no app."],
+        ["Print do RG no celular vale como documento.", 1, "Print ou foto de documento não é aceito."],
+        ["Passaporte válido é aceito.", 0, "Passaporte é documento oficial com foto."],
+        ["Com o RG roubado, um B.O. de até 90 dias permite fazer a prova.", 0, "Você passa por identificação especial e faz a prova."],
+        ["Caneta preta de corpo colorido é permitida.", 1, "O corpo da caneta precisa ser transparente."],
+      ] },
+    ],
+    eventos: [
+      { ic: "🎒", t: "Boa escolha", txt: "Você separou a mochila e a roupa antes do jantar.", f: -.08 },
+      { ic: "📱", t: "Imprevisto", txt: "Ficou rolando o feed até tarde. Dormir cedo na véspera ajuda a memória.", f: .1 },
+    ],
   },
   {
-    dia: 1, quando: "Domingo, 1º dia, manhã", relogio: ["10:30", "12:15"], cena: "manha",
+    dia: 1, quando: "Domingo, 1º dia, manhã", inicio: "10:45", limite: "13:00", rotLimite: "portão fecha", cena: "manha",
     titulo: "Rumo ao local de prova",
     regras: [
       "Todos os horários seguem o horário de Brasília (no Ceará, é o mesmo relógio).",
@@ -310,9 +341,6 @@ const FASES = [
       "A prova começa às 13h30.",
       "Almoce cedo e leve, saia com folga e já saiba o caminho.",
     ],
-    bons: ["bus", "pin", "lunch", "water", "card", "doc", "pen"],
-    ruins: ["snooze", "heavy", "watch", "cap"],
-    obst: ["Trânsito", "Buraco", "Fila do ônibus"],
     perguntas: [
       { q: "Que horas os portões abrem e fecham?", o: ["Abrem 12h e fecham 13h (horário de Brasília)", "Abrem 13h e fecham 13h30", "Abrem 11h e fecham 12h", "Abrem 12h30 e fecham 14h"], a: 0, x: "12h às 13h, nos dois domingos." },
       { q: "A que horas a prova começa?", o: ["12h", "13h", "13h30", "14h"], a: 2, x: "Portões fecham às 13h, e a prova começa às 13h30." },
@@ -320,9 +348,23 @@ const FASES = [
       { q: "Os horários do Enem seguem qual relógio?", o: ["O horário local de cada cidade", "O horário de Brasília", "O horário de verão", "O horário do celular do fiscal"], a: 1, x: "Quem mora em estado com fuso diferente precisa fazer a conta. No Ceará, o horário é o mesmo de Brasília." },
       { q: "Qual a melhor hora para chegar ao local?", o: ["12h59, para não esperar", "Perto das 12h, quando os portões abrem", "13h15", "Tanto faz"], a: 1, x: "Chegar cedo dá tempo de achar a sala, ir ao banheiro e respirar." },
     ],
+    esp: [
+      { tipo: "ordenar", titulo: "Seu domingo em ordem", enun: "Toque nos passos na ordem em que acontecem.", passos: ["Almoçar cedo e leve", "Sair de casa com folga", "12h: portões abrem", "13h: portões fecham", "13h30: a prova começa"], x: "Almoço leve, saída com folga, e você já está lá dentro quando o portão fecha às 13h." },
+      { tipo: "classificar", titulo: "Portão do local de prova", enun: "Verdadeiro ou falso?", col: VF, itens: [
+        ["Os horários do Enem seguem o horário de Brasília.", 0, "Sempre. Quem tem outro fuso precisa ajustar."],
+        ["Quem chega às 13h01 ainda entra se mostrar o documento.", 1, "Às 13h o portão fecha. Sem tolerância."],
+        ["A prova começa às 13h30.", 0, "Meia hora depois do fechamento dos portões."],
+        ["Os portões abrem às 11h.", 1, "Abrem às 12h."],
+        ["O ideal é chegar perto das 12h.", 0, "Dá tempo de achar a sala com calma."],
+      ] },
+    ],
+    eventos: [
+      { ic: "🚌", t: "Imprevisto", txt: "O ônibus atrasou. É por isso que se sai de casa com folga!", f: .12 },
+      { ic: "📍", t: "Boa escolha", txt: "Você visitou o local de prova durante a semana e sabe o caminho.", f: -.1 },
+    ],
   },
   {
-    dia: 1, quando: "Domingo, entrando na sala", relogio: ["12:15", "13:30"], cena: "escola",
+    dia: 1, quando: "Domingo, entrando na sala", inicio: "12:00", limite: "13:30", rotLimite: "início da prova", cena: "escola",
     titulo: "Entrando na sala",
     regras: [
       "Celular e eletrônicos DESLIGADOS no envelope porta-objetos, lacrado, embaixo da carteira.",
@@ -331,9 +373,6 @@ const FASES = [
       "Ida ao banheiro sempre acompanhada por um fiscal.",
       "Confira o Caderno de Questões, marque a cor dele e copie a frase da capa em letra cursiva no Cartão-Resposta.",
     ],
-    bons: ["env", "phoneOff", "doc", "pen", "cursive", "color"],
-    ruins: ["phoneOn", "earbud", "watch", "cap", "notes", "shades"],
-    obst: ["Corredor cheio", "Nervosismo", "Escada"],
     perguntas: [
       { q: "O que fazer com o celular ao entrar na sala?", o: ["Deixar no silencioso, no bolso", "Desligar e guardar no envelope porta-objetos, embaixo da carteira", "Entregar a um colega de fora", "Deixar na mesa, virado para baixo"], a: 1, x: "Desligado e lacrado no envelope, embaixo da carteira, até você sair." },
       { q: "O celular tocou dentro do envelope durante a prova. E agora?", o: ["Nada, ele estava guardado", "O participante é eliminado", "Perde 10 pontos", "O fiscal só pede para desligar"], a: 1, x: "Qualquer som de aparelho elimina, mesmo dentro do envelope. Por isso: DESLIGADO." },
@@ -342,9 +381,32 @@ const FASES = [
       { q: "O que deve ser copiado em letra cursiva no Cartão-Resposta?", o: ["Seu nome completo", "A frase da capa do Caderno de Questões", "O tema da redação", "O número de inscrição"], a: 1, x: "A frase em letra cursiva ajuda a confirmar sua identidade." },
       { q: "Pode ir ao banheiro durante a prova?", o: ["Não, nunca", "Sim, acompanhado por um fiscal", "Sim, sozinho, quando quiser", "Só depois das 17h"], a: 1, x: "Sempre com fiscal, e pode haver detector de metais." },
     ],
+    esp: [
+      { tipo: "classificar", titulo: "Mesa ou envelope?", enun: "O que fica na carteira e o que vai desligado para o envelope porta-objetos?", col: ["Fica na mesa", "Vai para o envelope"], itens: [
+        ["Documento com foto", 0, "Fica à mão para a identificação."],
+        ["Caneta preta transparente", 0, "É com ela que você faz a prova."],
+        ["Água e lanche", 0, "Permitidos, podem ser vistoriados."],
+        ["Celular (desligado)", 1, "Desligado e lacrado no envelope, embaixo da carteira."],
+        ["Relógio", 1, "Proibido durante a prova: vai para o envelope."],
+        ["Fone de ouvido", 1, "Proibido: vai para o envelope."],
+        ["Calculadora", 1, "Proibida: vai para o envelope."],
+        ["Óculos escuros", 1, "Proibidos durante a prova."],
+      ] },
+      { tipo: "classificar", titulo: "Regras da sala", enun: "Verdadeiro ou falso?", col: VF, itens: [
+        ["O envelope porta-objetos só pode ser aberto fora do local de prova.", 0, "Ele fica lacrado até você sair."],
+        ["Se o celular tocar dentro do envelope, não acontece nada.", 1, "Qualquer som elimina o participante."],
+        ["A ida ao banheiro é acompanhada por um fiscal.", 0, "Sempre, e pode ter detector de metais."],
+        ["A frase da capa do caderno é copiada em letra cursiva no Cartão-Resposta.", 0, "Ela ajuda a confirmar sua identidade."],
+        ["Relógio analógico pode ficar no pulso.", 1, "Nenhum tipo de relógio é permitido."],
+      ] },
+    ],
+    eventos: [
+      { ic: "🚶", t: "Imprevisto", txt: "Fila enorme na entrada do prédio.", f: .1 },
+      { ic: "🎟️", t: "Boa escolha", txt: "Você já sabia o número da sala pelo Cartão de Confirmação.", f: -.1 },
+    ],
   },
   {
-    dia: 1, quando: "Domingo, 13h30 às 19h", relogio: ["13:30", "19:00"], cena: "sala",
+    dia: 1, quando: "Domingo, 13h30 às 19h", inicio: "13:30", limite: "19:00", rotLimite: "fim da prova", cena: "sala",
     titulo: "Dia 1: Linguagens, Humanas e Redação",
     regras: [
       "90 questões (45 de Linguagens, com 5 de inglês ou espanhol, e 45 de Ciências Humanas) + Redação.",
@@ -353,9 +415,6 @@ const FASES = [
       "Zeram a redação: fuga total ao tema, outro tipo de texto, assinatura ou identificação, desenhos, cópia dos textos motivadores, folha em branco.",
       "Só pode sair depois de 2h de prova (15h30). Levar o caderno, só nos últimos 30 minutos (18h30).",
     ],
-    bons: ["bubble", "draft", "time", "essay", "water", "snack"],
-    ruins: ["smudge", "sign", "offtopic", "draftEss", "pencil", "watch"],
-    obst: ["Texto longo", "Branco", "Cansaço"],
     perguntas: [
       { q: "Quanto tempo dura a prova do 1º dia?", o: ["5h, até 18h30", "5h30, até 19h", "4h, até 17h30", "6h, até 19h30"], a: 1, x: "1º dia: 5h30, porque tem a redação." },
       { q: "O que cai no 1º dia?", o: ["Linguagens, Ciências Humanas e Redação", "Matemática e Ciências da Natureza", "Só Redação", "Linguagens e Matemática"], a: 0, x: "Natureza e Matemática ficam para o 2º domingo." },
@@ -365,42 +424,74 @@ const FASES = [
       { q: "Qual o tipo de texto exigido na redação?", o: ["Narrativo", "Dissertativo-argumentativo", "Poema", "Carta pessoal"], a: 1, x: "Defenda um ponto de vista com argumentos e termine com proposta de intervenção que respeite os direitos humanos." },
       { q: "Você terminou tudo às 15h. Pode ir embora?", o: ["Sim, a qualquer hora", "Não: só 2 horas depois do início, a partir das 15h30", "Só às 18h", "Só com autorização da escola"], a: 1, x: "Ninguém sai antes de 2 horas de prova. Use o tempo para revisar!" },
     ],
+    esp: [
+      { tipo: "classificar", titulo: "Zera ou não zera?", enun: "Quais situações dão nota zero na redação?", col: ["Zera a redação", "Não zera"], itens: [
+        ["Texto com 7 linhas", 0, "Até 7 linhas = texto insuficiente, nota zero."],
+        ["Assinatura no fim do texto", 0, "Identificação fora do lugar indicado anula a redação."],
+        ["Fuga total ao tema", 0, "Fugir do tema zera. Leia a proposta com calma."],
+        ["Contar uma história (texto narrativo)", 0, "O texto precisa ser dissertativo-argumentativo."],
+        ["Desenhos na folha", 0, "Desenhos e recados são considerados anulação proposital."],
+        ["Texto de 24 linhas, no tema", 1, "Está dentro do limite de 8 a 30 linhas."],
+        ["Citar um filósofo como repertório", 1, "Repertório bem usado ajuda a nota."],
+        ["Proposta de intervenção detalhada", 1, "É exigida na Competência 5."],
+      ] },
+      { tipo: "ordenar", titulo: "Linha do tempo do 1º dia", enun: "Coloque os horários do 1º domingo em ordem.", passos: ["13h: portões fecham", "13h30: a prova começa", "15h30: já pode sair, sem o caderno", "18h30: pode sair levando o caderno", "19h: fim da prova"], x: "No 1º dia são 5h30 de prova. Saída só após 2h; o caderno só nos últimos 30 minutos." },
+    ],
+    eventos: [
+      { ic: "🧠", t: "Boa estratégia", txt: "Travou numa questão enorme, pulou e voltou depois. Tempo salvo!", f: -.08 },
+      { ic: "⏳", t: "Imprevisto", txt: "Deixou para passar tudo para o Cartão-Resposta no fim. Não existe tempo extra para isso!", f: .1 },
+    ],
   },
   {
-    dia: 2, quando: "Segunda a sábado, entre as provas", relogio: ["Seg", "Sáb"], cena: "tarde",
-    titulo: "Semana de recarga",
+    dia: 2, quando: "Sábado, véspera do 2º dia", inicio: "18:00", limite: "22:00", rotLimite: "hora de dormir", cena: "tarde",
+    titulo: "Recarga para o 2º dia",
     regras: [
       "O 2º dia tem 90 questões: 45 de Ciências da Natureza e 45 de Matemática.",
       "Duração: 5h, das 13h30 às 18h30.",
       "Horários dos portões iguais: abrem 12h, fecham 13h.",
-      "Mesmos documentos, mesma caneta, mesmo envelope. Separe tudo de novo no sábado.",
+      "Mesmos documentos, mesma caneta, mesmo envelope. Separe tudo de novo.",
       "Descanse, durma bem e revise de leve. Gabarito de boato só gera ansiedade.",
     ],
-    bons: ["sleep", "review", "fruit", "water", "doc", "pen"],
-    ruins: ["allnight", "fake", "calc", "watch"],
-    obst: ["Preguiça", "Notificação", "Maratona"],
-    obrig: [["doc", "docd"], ["pen"]],
-    msgObrig: { doc: "No 2º dia o documento original com foto é exigido de novo.", pen: "A caneta preta transparente também é obrigatória no 2º dia." },
     perguntas: [
       { q: "O que cai no 2º dia?", o: ["Ciências da Natureza e Matemática", "Linguagens e Redação", "Humanas e Matemática", "Só Matemática"], a: 0, x: "Física, Química, Biologia e Matemática." },
       { q: "Quanto tempo dura a prova do 2º dia?", o: ["5h30, até 19h", "5h, até 18h30", "4h30, até 18h", "6h, até 19h30"], a: 1, x: "Meia hora a menos que o 1º dia, porque não tem redação." },
       { q: "No 2º domingo, os portões...", o: ["Abrem às 11h", "Abrem 12h e fecham 13h, como no 1º dia", "Não têm horário", "Abrem às 13h30"], a: 1, x: "Os horários se repetem nos dois domingos." },
-      { q: "Na semana entre as provas, o melhor é:", o: ["Virar noites com conteúdo novo", "Descansar, dormir bem e revisar de leve", "Conferir gabaritos de boato o tempo todo", "Não comer para não dar sono"], a: 1, x: "Seu cérebro rende mais descansado." },
+      { q: "Na véspera do 2º dia, o melhor é:", o: ["Virar a noite com conteúdo novo", "Descansar, dormir bem e revisar de leve", "Conferir gabaritos de boato o tempo todo", "Não comer para não dar sono"], a: 1, x: "Seu cérebro rende mais descansado." },
       { q: "Quantas questões objetivas tem cada dia?", o: ["45", "90", "180", "60"], a: 1, x: "90 por dia, 180 no total." },
+    ],
+    esp: [
+      { tipo: "classificar", titulo: "Verdade sobre o 2º dia", enun: "Verdadeiro ou falso?", col: VF, itens: [
+        ["O 2º dia também tem redação.", 1, "A redação é só no 1º dia."],
+        ["A prova do 2º dia dura 5 horas.", 0, "Das 13h30 às 18h30."],
+        ["Os portões abrem e fecham nos mesmos horários do 1º dia.", 0, "12h às 13h, horário de Brasília."],
+        ["Virar a noite estudando ajuda no 2º dia.", 1, "Sono fixa a memória. Durma."],
+        ["Os documentos e a caneta exigidos são os mesmos.", 0, "Documento original com foto e caneta preta transparente."],
+      ] },
+      { tipo: "classificar", titulo: "Mochila do 2º dia", enun: "Separe o que vai na mochila e o que fica em casa.", col: ["Levar", "Deixar em casa"], itens: [
+        ["CNH ou RG original", 0, "Documento obrigatório de novo."],
+        ["Duas canetas pretas transparentes", 0, "Leve reserva."],
+        ["Lanche e água", 0, "Permitidos."],
+        ["Calculadora", 1, "Proibida, mesmo no dia de Matemática."],
+        ["Régua", 1, "Proibida."],
+        ["Tabela periódica impressa", 1, "Impressos e anotações são proibidos."],
+        ["Relógio", 1, "Proibido de qualquer tipo."],
+      ] },
+    ],
+    eventos: [
+      { ic: "💤", t: "Boa escolha", txt: "Você dormiu 8 horas nas noites da semana.", f: -.08 },
+      { ic: "📺", t: "Imprevisto", txt: "Começou uma maratona de série \"só um episódio\".", f: .12 },
     ],
   },
   {
-    dia: 2, quando: "Domingo, 13h30 às 18h30", relogio: ["13:30", "18:30"], cena: "sala",
+    dia: 2, quando: "Domingo, 13h30 às 18h30", inicio: "13:30", limite: "18:30", rotLimite: "fim da prova", cena: "sala",
     titulo: "Dia 2: Natureza e Matemática",
     regras: [
       "Calculadora é proibida. Faça as contas no Caderno de Questões.",
       "Só o Cartão-Resposta é corrigido, e não há tempo extra para preenchê-lo.",
+      "Bolinha toda preenchida a caneta preta. Rasura ou duas marcações anulam a questão.",
       "Levar o caderno: a partir das 18h (últimos 30 minutos).",
       "Os 3 últimos participantes da sala saem juntos, depois de assinar a ata.",
     ],
-    bons: ["draft", "bubble", "time", "color", "water", "snack"],
-    ruins: ["calc", "smudge", "watch", "pencil", "phoneOn"],
-    obst: ["Fórmula difícil", "Sono", "Gráfico enorme"],
     perguntas: [
       { q: "Pode usar calculadora no 2º dia?", o: ["Sim, a científica", "Só a simples", "Não, calculadora é proibida", "Só na última hora"], a: 2, x: "Nem calculadora, nem régua. Treine contas à mão." },
       { q: "Quem são os últimos a sair da sala?", o: ["Os 3 últimos participantes saem juntos, após assinar a ata", "O último sai sozinho", "Os fiscais escolhem", "Ninguém precisa esperar"], a: 0, x: "Se você estiver entre os 3 últimos, espere os outros dois." },
@@ -408,9 +499,23 @@ const FASES = [
       { q: "Existe tempo extra para passar as respostas ao Cartão-Resposta?", o: ["Sim, 15 minutos", "Não, esse tempo faz parte da prova", "Sim, se pedir ao fiscal", "Só para quem fez redação"], a: 1, x: "Comece a passar as respostas com folga, pelo menos 30 minutos antes do fim." },
       { q: "O que vale para a correção das questões?", o: ["O Caderno de Questões", "Só o Cartão-Resposta", "O rascunho", "O que estiver marcado em qualquer lugar"], a: 1, x: "Resposta só no caderno não conta. Passe tudo para o Cartão-Resposta." },
     ],
+    esp: [
+      { tipo: "ordenar", titulo: "Linha do tempo do 2º dia", enun: "Coloque os horários do 2º domingo em ordem.", passos: ["13h: portões fecham", "13h30: a prova começa", "15h30: já pode sair, sem o caderno", "18h: pode sair levando o caderno", "18h30: fim da prova"], x: "No 2º dia são 5h de prova, e o caderno sai a partir das 18h." },
+      { tipo: "classificar", titulo: "Cartão-Resposta", enun: "Verdadeiro ou falso?", col: VF, itens: [
+        ["Pode fazer contas e rabiscos no Caderno de Questões.", 0, "O caderno serve de rascunho."],
+        ["Existem 15 minutos extras para passar as respostas ao Cartão-Resposta.", 1, "Não há tempo extra."],
+        ["Os 3 últimos participantes saem juntos, depois de assinar a ata.", 0, "Regra de todas as salas."],
+        ["Marcar duas bolinhas na mesma questão anula a questão.", 0, "Uma só bolinha, toda preenchida."],
+        ["Calculadora simples é permitida.", 1, "Nenhuma calculadora é permitida."],
+      ] },
+    ],
+    eventos: [
+      { ic: "✍️", t: "Boa estratégia", txt: "Você fez as contas no caderno com calma e organização.", f: -.08 },
+      { ic: "🌀", t: "Imprevisto", txt: "Ficou 40 minutos numa questão só. Pule e volte depois!", f: .12 },
+    ],
   },
   {
-    dia: 2, quando: "Depois da prova", relogio: ["18:30", "Jan"], cena: "fim",
+    dia: 2, quando: "Depois da prova", inicio: "19:00", limite: "22:00", rotLimite: "hora de descansar", cena: "fim",
     titulo: "E depois?",
     regras: [
       "Gabarito oficial: só no site do Inep, poucos dias depois do 2º domingo.",
@@ -419,15 +524,27 @@ const FASES = [
       "Quem está no 2º ano faz como treineiro: a nota serve para autoavaliação.",
       "Faltou e tinha isenção? Justifique a ausência no prazo para não perder a isenção no ano seguinte.",
     ],
-    bons: ["gabarito", "portal", "sisu", "prouni", "fies", "sleep"],
-    ruins: ["fake", "password"],
-    obst: ["Boato", "Ansiedade", "Fake news"],
     perguntas: [
       { q: "Onde sai o gabarito oficial?", o: ["Em perfis de redes sociais", "No site do Inep, poucos dias depois da prova", "Na escola, no dia seguinte", "Só junto com a nota"], a: 1, x: "Correções extraoficiais aparecem antes, mas o que vale é o do Inep." },
       { q: "Quem está no 2º ano e faz o Enem participa como...", o: ["Treineiro: a nota serve para autoavaliação", "Candidato ao SiSU", "Fiscal", "Não pode fazer"], a: 0, x: "É o melhor treino: no ano seguinte você já conhece a prova." },
       { q: "Para que serve a nota do Enem?", o: ["Só para o diploma", "SiSU, Prouni, Fies e outros processos seletivos", "Para nada", "Só para escolas particulares"], a: 1, x: "Muitas universidades e programas usam a nota." },
       { q: "Você tinha isenção da taxa e faltou sem justificar. O que pode acontecer?", o: ["Nada", "Perder a isenção no ano seguinte, se não justificar no prazo", "Ser proibido de fazer o Enem para sempre", "Pagar multa"], a: 1, x: "Fique de olho no prazo de justificativa de ausência." },
       { q: "Onde você consulta seus resultados?", o: ["Na Página do Participante, com login gov.br", "No mural da escola", "Em links recebidos de desconhecidos", "No grupo da família"], a: 0, x: "E a senha gov.br é só sua." },
+    ],
+    esp: [
+      { tipo: "classificar", titulo: "Confiar ou desconfiar?", enun: "Em que fonte você confia depois da prova?", col: ["Confiável", "Desconfie"], itens: [
+        ["Gabarito no site do Inep", 0, "É o gabarito oficial."],
+        ["Página do Participante com seu login gov.br", 0, "Lugar oficial do resultado."],
+        ["Edital do Enem publicado pelo Inep", 0, "É onde estão as regras oficiais."],
+        ["Gabarito \"vazado\" em grupo de WhatsApp", 1, "Boato. Só vale o gabarito do Inep."],
+        ["Link que pede sua senha gov.br", 1, "Golpe. Nunca informe sua senha."],
+        ["Perfil que promete aumentar sua nota", 1, "Ninguém altera nota. É golpe."],
+      ] },
+      { tipo: "ordenar", titulo: "Do Enem à faculdade", enun: "Coloque as etapas em ordem.", passos: ["Fazer os dois dias de prova", "Conferir o gabarito oficial do Inep", "Consultar o resultado na Página do Participante", "Usar a nota no SiSU, Prouni ou Fies"], x: "Primeiro a prova, depois o gabarito, o resultado e, por fim, os programas que usam a nota." },
+    ],
+    eventos: [
+      { ic: "📢", t: "Imprevisto", txt: "Você perdeu tempo com um boato de gabarito.", f: .1 },
+      { ic: "⭐", t: "Boa escolha", txt: "Salvou o site do Inep nos favoritos para acompanhar as datas.", f: -.08 },
     ],
   },
 ];
@@ -445,14 +562,51 @@ const MANDAMENTOS = [
   "Dia 1: 5h30 (até 19h). Dia 2: 5h (até 18h30).",
 ];
 
-/* ===================== ESTADO SALVO ===================== */
-const CHAVE = "partiu-enem-v1";
+/* ===================== TABULEIRO ===================== */
+// Coordenadas para tela larga (1000×560) e tela em pé (600×860).
+const NOS = {
+  ini:  { L: [90, 470],  P: [110, 790], prox: ["q1"], rot: "Início" },
+  q1:   { L: [250, 380], P: [320, 700], prox: ["q2"], tipo: "q", rot: "Pergunta" },
+  q2:   { L: [420, 455], P: [470, 570], prox: ["a", "b1"], tipo: "q", rot: "Pergunta" },
+  a:    { L: [580, 230], P: [170, 420], prox: ["gate"], tipo: "esp", esp: 0, rot: "Atalho: desafio" },
+  b1:   { L: [610, 470], P: [500, 410], prox: ["b2"], tipo: "q", rot: "Pergunta" },
+  b2:   { L: [780, 420], P: [440, 270], prox: ["gate"], tipo: "q", rot: "Pergunta" },
+  gate: { L: [890, 210], P: [250, 140], prox: [], tipo: "esp", esp: 1, rot: "Desafio final" },
+};
+const ARESTAS = [["ini", "q1"], ["q1", "q2"], ["q2", "a"], ["a", "gate"], ["q2", "b1"], ["b1", "b2"], ["b2", "gate"]];
+const CENAS = {
+  noite:  { chao: "#252a5e", chao2: "#2d3370", deco: "casa", cor: "#3a4190", luz: "#ffd36b", estrada: "#14173a" },
+  manha:  { chao: "#86c27a", chao2: "#7ab86e", deco: "arvore", cor: "#3f8f5a", luz: "#e6f6ff", estrada: "#5d5f6e" },
+  escola: { chao: "#d8c49a", chao2: "#cfb98c", deco: "escola", cor: "#e3a948", luz: "#bfe6f5", estrada: "#9b8667" },
+  sala:   { chao: "#c8915a", chao2: "#bd8650", deco: "carteira", cor: "#3a6ea5", luz: "#f4e7d0", estrada: "#8a5d36" },
+  tarde:  { chao: "#efbb7c", chao2: "#e6ae6c", deco: "arvore", cor: "#5f9a62", luz: "#ffe9b8", estrada: "#8e7660" },
+  fim:    { chao: "#3f3678", chao2: "#463d84", deco: "estrela", cor: "#7a6ad0", luz: "#ffd36b", estrada: "#221d4a" },
+};
+function h(n) { const x = Math.sin(n * 127.1 + 11.7) * 43758.5453; return x - Math.floor(x); }
+
+/* ===================== ESTADO ===================== */
+const CHAVE = "partiu-enem-v2";
 function ler() {
   try { const s = JSON.parse(localStorage.getItem(CHAVE)); if (s && Array.isArray(s.estrelas)) return s; } catch (e) {}
   return { liberada: 0, estrelas: [], pontos: [], nome: "", som: true };
 }
 let salvo = ler();
 function gravar() { try { localStorage.setItem(CHAVE, JSON.stringify(salvo)); } catch (e) {} }
+
+let S = null;      // estado da fase em andamento
+let D = null;      // desafio aberto
+let ori = "L";     // orientação do tabuleiro
+let modo = "menu"; // menu | tabuleiro | desafio | fim
+
+const minutos = s => { const [a, b] = s.split(":").map(Number); return a * 60 + b; };
+const hora = m => String(Math.floor(m / 60) % 24).padStart(2, "0") + ":" + String(Math.round(m) % 60).padStart(2, "0");
+const r5 = v => Math.max(5, Math.round(v / 5) * 5);
+function custos(F) {
+  const W = minutos(F.limite) - minutos(F.inicio);
+  return { W, passo: r5(W * .1), erro: r5(W * .17), dica: r5(W * .07) };
+}
+const embaralhar = a => { for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; };
+const esc = s => String(s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
 
 /* ===================== SOM ===================== */
 let ac = null;
@@ -467,427 +621,312 @@ function bip(f, d = .09, tipo = "square", vol = .05) {
     o.connect(g).connect(ac.destination); o.start(); o.stop(ac.currentTime + d);
   } catch (e) {}
 }
-const somPulo = () => bip(520, .08, "square", .03);
-const somBom = () => { bip(880, .07); setTimeout(() => bip(1320, .09), 60); };
-const somRuim = () => bip(150, .25, "sawtooth", .06);
+const somPasso = () => { bip(440, .06, "triangle", .06); setTimeout(() => bip(520, .06, "triangle", .06), 120); };
 const somCerto = () => { bip(660, .08); setTimeout(() => bip(990, .08), 80); setTimeout(() => bip(1320, .12), 160); };
+const somErro = () => bip(150, .28, "sawtooth", .06);
 
-/* ===================== CANVAS ===================== */
-let W = 960;
-const H = 480, CHAO = 404;
-const cv = document.getElementById("cv"), ctx = cv.getContext("2d");
-const palco = document.getElementById("palco");
-function ajustar() {
-  const r = palco.getBoundingClientRect(), dpr = Math.min(window.devicePixelRatio || 1, 2);
-  if (!r.width || !r.height) return;
-  W = Math.round(Math.max(560, Math.min(1100, H * r.width / r.height)));
-  cv.width = Math.round(r.width * dpr); cv.height = Math.round(r.height * dpr);
-  ctx.setTransform(cv.width / W, 0, 0, cv.height / H, 0, 0);
+/* ===================== DESENHO DO TABULEIRO ===================== */
+const elTab = document.getElementById("tabuleiro");
+function pos(id) { return NOS[id][ori]; }
+function curva(a, b) {
+  const [x1, y1] = pos(a), [x2, y2] = pos(b);
+  const mx = (x1 + x2) / 2, my = (y1 + y2) / 2, dx = x2 - x1, dy = y2 - y1;
+  const k = (ARESTAS.findIndex(e => e[0] === a && e[1] === b) % 2 ? 1 : -1) * .18;
+  return `M${x1} ${y1} Q${mx - dy * k} ${my + dx * k} ${x2} ${y2}`;
 }
-window.addEventListener("resize", ajustar);
-
-const CENAS = {
-  noite:  { ceu: ["#141a45", "#3a3c7c"], longe: "#262c66", perto: "#323a7a", chao: "#2a2a40", faixa: "#45456a", estrelas: 1, lua: 1, janelas: "#ffd36b" },
-  manha:  { ceu: ["#6fcaf0", "#d6f2ff"], longe: "#9fc3dc", perto: "#4f9e63", chao: "#5d5f6e", faixa: "#f2f2f2", sol: 1, janelas: "#e8f6ff" },
-  escola: { ceu: ["#86cfe9", "#e6f6fb"], longe: "#e3a948", perto: "#3f8f5a", chao: "#c8b597", faixa: "#b39f80", sol: 1, janelas: "#bfe6f5", escola: 1 },
-  sala:   { interno: 1, parede: "#ebe5d3", rodape: "#9a6b42", chao: "#b88655", faixa: "#a7764a" },
-  tarde:  { ceu: ["#ff9f5e", "#ffe2ab"], longe: "#e1825a", perto: "#5f9a62", chao: "#857565", faixa: "#9e8d7a", sol: 1, janelas: "#ffe9b8" },
-  fim:    { ceu: ["#4a3a8a", "#ff8a65"], longe: "#7a4f8f", perto: "#3c6d5e", chao: "#55506a", faixa: "#77708e", estrelas: 1, sol: 1, janelas: "#ffd36b" },
-};
-function h(n) { const x = Math.sin(n * 127.1 + 11.7) * 43758.5453; return x - Math.floor(x); }
-
-function fundo(cena, off, t) {
-  const c = CENAS[cena];
-  if (c.interno) return fundoSala(c, off);
-  const g = ctx.createLinearGradient(0, 0, 0, CHAO);
-  g.addColorStop(0, c.ceu[0]); g.addColorStop(1, c.ceu[1]);
-  ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
-  if (c.estrelas) {
-    ctx.fillStyle = "rgba(255,255,255,.8)";
-    for (let i = 0; i < 60; i++) {
-      const x = (h(i) * W * 1.3 - off * .02) % W, y = h(i + 99) * 200;
-      const s = (Math.sin(t * 2 + i) + 1) * .6 + .4;
-      ctx.fillRect((x + W) % W, y, s, s);
-    }
+function decoracao(c, Wv, Hv) {
+  let s = "";
+  const longe = (x, y) => Object.keys(NOS).every(id => { const [nx, ny] = pos(id); return Math.hypot(nx - x, ny - y) > 95; });
+  for (let i = 0; i < 70; i++) {
+    const x = h(i) * Wv, y = h(i + 50) * Hv;
+    if (!longe(x, y)) continue;
+    const t = .7 + h(i + 9) * .6;
+    if (c.deco === "casa") s += `<g transform="translate(${x} ${y}) scale(${t})"><rect x="-22" y="-16" width="44" height="32" rx="3" fill="${c.cor}"/><path d="M-26 -14 L0 -34 L26 -14Z" fill="#4c55b0"/><rect x="-12" y="-6" width="9" height="9" fill="${c.luz}" opacity="${h(i + 3) > .4 ? .9 : .2}"/><rect x="4" y="-6" width="9" height="9" fill="${c.luz}" opacity="${h(i + 4) > .4 ? .9 : .2}"/></g>`;
+    else if (c.deco === "arvore") s += `<g transform="translate(${x} ${y}) scale(${t})"><circle r="20" fill="${c.cor}"/><circle cx="-9" cy="-6" r="11" fill="#ffffff" opacity=".12"/></g>`;
+    else if (c.deco === "escola") s += h(i + 7) > .5 ? `<g transform="translate(${x} ${y}) scale(${t})"><rect x="-34" y="-20" width="68" height="40" rx="3" fill="${c.cor}"/><rect x="-26" y="-12" width="12" height="10" fill="${c.luz}"/><rect x="-6" y="-12" width="12" height="10" fill="${c.luz}"/><rect x="14" y="-12" width="12" height="10" fill="${c.luz}"/></g>` : `<circle cx="${x}" cy="${y}" r="${16 * t}" fill="#5ea36b"/>`;
+    else if (c.deco === "carteira") s += `<g transform="translate(${x} ${y}) scale(${t})"><rect x="-22" y="-14" width="44" height="28" rx="3" fill="#e0c39a"/><rect x="-14" y="-8" width="16" height="11" fill="#fff"/><rect x="-22" y="18" width="44" height="10" rx="3" fill="${c.cor}"/></g>`;
+    else s += `<circle cx="${x}" cy="${y}" r="${1.5 + t * 2}" fill="${c.luz}" opacity="${.4 + h(i + 2) * .6}"/>`;
   }
-  if (c.lua) { ctx.fillStyle = "#fff6d5"; ctx.beginPath(); ctx.arc(W - 160, 110, 30, 0, 7); ctx.fill(); ctx.fillStyle = c.ceu[0]; ctx.beginPath(); ctx.arc(W - 146, 102, 26, 0, 7); ctx.fill(); }
-  if (c.sol) {
-    const sy = cena === "fim" ? 300 : cena === "tarde" ? 210 : 86;
-    ctx.fillStyle = cena === "fim" || cena === "tarde" ? "rgba(255,240,180,.95)" : "#ffe680";
-    ctx.beginPath(); ctx.arc(W - 220, sy + 30, 40, 0, 7); ctx.fill();
-  }
-  // nuvens
-  if (!c.lua) {
-    ctx.fillStyle = "rgba(255,255,255,.75)";
-    for (let i = -1; i < 5; i++) {
-      const base = Math.floor(off * .08 / 320);
-      const k = base + i, x = k * 320 - off * .08 + h(k) * 120, y = 50 + h(k + 3) * 90;
-      ctx.beginPath(); ctx.ellipse(x, y, 46, 16, 0, 0, 7); ctx.ellipse(x + 30, y - 10, 30, 16, 0, 0, 7); ctx.fill();
-    }
-  }
-  predios(off * .2, c.longe, 150, 250, 90, c.janelas, .25);
-  if (c.escola) escolaFundo(off * .45, c);
-  else predios(off * .45, c.perto, 70, 150, 120, c.janelas, .5, true);
-  chaoRua(c, off);
+  return s;
 }
-function predios(off, cor, hmin, hmax, larg, jan, alfa, arvores) {
-  const ini = Math.floor(off / larg) - 1;
-  for (let i = ini; i < ini + W / larg + 3; i++) {
-    const x = i * larg - off;
-    if (arvores && h(i * 3.1) > .55) {
-      const r = 26 + h(i) * 18;
-      ctx.fillStyle = "#6b4a2b"; ctx.fillRect(x + larg / 2 - 4, CHAO - 40, 8, 40);
-      ctx.fillStyle = cor; ctx.beginPath(); ctx.arc(x + larg / 2, CHAO - 40 - r * .7, r, 0, 7); ctx.fill();
-      continue;
-    }
-    const alt = hmin + h(i) * (hmax - hmin), w = larg - 10 - h(i + 7) * 20;
-    ctx.fillStyle = cor; ctx.fillRect(x, CHAO - alt, w, alt);
-    if (jan) {
-      ctx.globalAlpha = alfa; ctx.fillStyle = jan;
-      for (let yy = CHAO - alt + 12; yy < CHAO - 18; yy += 22)
-        for (let xx = x + 8; xx < x + w - 12; xx += 16) if (h(xx * .3 + yy) > .35) ctx.fillRect(xx, yy, 8, 10);
-      ctx.globalAlpha = 1;
-    }
+function desenharTabuleiro() {
+  const F = FASES[S ? S.fase : 0], c = CENAS[F.cena];
+  ori = elTab.clientWidth < 640 ? "P" : "L";
+  const [Wv, Hv] = ori === "L" ? [1000, 560] : [600, 860];
+  const R = ori === "L" ? 34 : 40;
+  let s = `<svg viewBox="0 0 ${Wv} ${Hv}" role="img" aria-label="Tabuleiro da fase ${esc(F.titulo)}" preserveAspectRatio="xMidYMid meet">
+    <defs><pattern id="xadrez" width="80" height="80" patternUnits="userSpaceOnUse"><rect width="80" height="80" fill="${c.chao}"/><rect width="40" height="40" fill="${c.chao2}"/><rect x="40" y="40" width="40" height="40" fill="${c.chao2}"/></pattern></defs>
+    <rect width="${Wv}" height="${Hv}" fill="url(#xadrez)"/>${decoracao(c, Wv, Hv)}`;
+  for (const [a, b] of ARESTAS) s += `<path d="${curva(a, b)}" fill="none" stroke="${c.estrada}" stroke-width="30" stroke-linecap="round"/>`;
+  for (const [a, b] of ARESTAS) s += `<path d="${curva(a, b)}" fill="none" stroke="#fbf6ea" stroke-width="3" stroke-dasharray="12 12" opacity=".7"/>`;
+  for (const id of Object.keys(NOS)) {
+    const n = NOS[id], [x, y] = pos(id);
+    const ic = id === "ini" ? "▶" : n.tipo === "q" ? "?" : "★";
+    s += `<g class="no" id="no-${id}" data-no="${id}" tabindex="-1" role="button" aria-label="${esc(n.rot)}">
+      <circle class="disco" cx="${x}" cy="${y}" r="${R}"/>
+      <text class="icone" x="${x}" y="${y + 12}" text-anchor="middle" font-family="Bungee, sans-serif" font-size="${R * .95}" fill="#191c2e">${ic}</text>
+      <rect x="${x - 70}" y="${y + R + 6}" width="140" height="24" rx="8" fill="rgba(25,28,46,.82)"/>
+      <text x="${x}" y="${y + R + 23}" text-anchor="middle" font-family="'Atkinson Hyperlegible', sans-serif" font-weight="700" font-size="15" fill="#fff">${esc(n.rot)}</text></g>`;
   }
+  const esc2 = ori === "L" ? 1 : 1.15;
+  s += `<g id="ficha" style="transform: translate(${pos(S ? S.pos : "ini").join("px,")}px)"><g transform="translate(0 ${-R - 6}) scale(${esc2})">
+    <ellipse cx="0" cy="46" rx="18" ry="5" fill="rgba(0,0,0,.25)"/>
+    <rect x="-17" y="2" width="12" height="22" rx="4" fill="#e7695d"/>
+    <rect x="-10" y="2" width="22" height="26" rx="6" fill="#fff" stroke="#191c2e" stroke-width="2"/>
+    <rect x="-10" y="12" width="22" height="4" fill="#2a9d8f"/>
+    <rect x="-7" y="28" width="6" height="16" rx="3" fill="#1f3b73"/><rect x="3" y="28" width="6" height="16" rx="3" fill="#1f3b73"/>
+    <circle cx="1" cy="-8" r="11" fill="#8d5a3b" stroke="#191c2e" stroke-width="2"/>
+    <path d="M-10 -10 A11 11 0 0 1 12 -11 Q2 -14 -10 -6Z" fill="#1b1b1b"/>
+    <circle cx="6" cy="-7" r="1.8" fill="#111"/></g></g></svg>`;
+  elTab.innerHTML = s;
+  atualizarNos();
 }
-function escolaFundo(off, c) {
-  const larg = 520, ini = Math.floor(off / larg) - 1;
-  for (let i = ini; i < ini + 4; i++) {
-    const x = i * larg - off;
-    ctx.fillStyle = c.longe; ctx.fillRect(x, CHAO - 150, 470, 150);
-    ctx.fillStyle = "#c98a30"; ctx.fillRect(x - 6, CHAO - 160, 482, 14);
-    ctx.fillStyle = c.janelas;
-    for (let k = 0; k < 6; k++) { ctx.fillRect(x + 24 + k * 74, CHAO - 128, 44, 34); ctx.fillRect(x + 24 + k * 74, CHAO - 76, 44, 34); }
-    ctx.fillStyle = "#7a4a22"; ctx.fillRect(x + 205, CHAO - 70, 60, 70);
-    ctx.fillStyle = "#fff"; ctx.font = "16px Bungee, sans-serif"; ctx.textAlign = "center";
-    ctx.fillText("LOCAL DE PROVA", x + 235, CHAO - 136);
-    // grade do portão
-    ctx.strokeStyle = "#2e3348"; ctx.lineWidth = 3;
-    for (let k = 0; k < 6; k++) { ctx.beginPath(); ctx.moveTo(x + 480 + k * 7, CHAO); ctx.lineTo(x + 480 + k * 7, CHAO - 60); ctx.stroke(); }
-  }
+function livres() {
+  if (!S || modo !== "tabuleiro") return [];
+  if (S.pos !== "ini" && !S.feitos.has(S.pos)) return [];
+  return NOS[S.pos].prox;
 }
-function chaoRua(c, off) {
-  ctx.fillStyle = c.chao; ctx.fillRect(0, CHAO, W, H - CHAO);
-  ctx.fillStyle = c.faixa;
-  const p = 80, d = off % p;
-  for (let x = -d; x < W; x += p) ctx.fillRect(x, CHAO + 34, 40, 6);
-  ctx.fillStyle = "rgba(0,0,0,.18)"; ctx.fillRect(0, CHAO, W, 4);
-}
-function fundoSala(c, off) {
-  ctx.fillStyle = c.parede; ctx.fillRect(0, 0, W, CHAO);
-  const larg = 640, o = off * .35, ini = Math.floor(o / larg) - 1;
-  for (let i = ini; i < ini + 3; i++) {
-    const x = i * larg - o;
-    // quadro
-    ctx.fillStyle = "#7a5634"; ctx.fillRect(x + 40, 70, 330, 170);
-    ctx.fillStyle = "#2f5b47"; ctx.fillRect(x + 50, 80, 310, 150);
-    ctx.fillStyle = "rgba(255,255,255,.85)"; ctx.font = "22px Bungee, sans-serif"; ctx.textAlign = "left";
-    ctx.fillText(i % 2 ? "BOA PROVA!" : "SILÊNCIO", x + 72, 130);
-    ctx.font = "15px 'Atkinson Hyperlegible', sans-serif";
-    ctx.fillText(i % 2 ? "Celular desligado no envelope" : "Caneta preta, corpo transparente", x + 72, 165);
-    ctx.fillText("Saída após 2h de prova", x + 72, 192);
-    // janela
-    ctx.fillStyle = "#9fd6ee"; ctx.fillRect(x + 440, 80, 150, 130);
-    ctx.strokeStyle = "#fff"; ctx.lineWidth = 6; ctx.strokeRect(x + 440, 80, 150, 130);
-    ctx.beginPath(); ctx.moveTo(x + 515, 80); ctx.lineTo(x + 515, 210); ctx.stroke();
+function atualizarNos() {
+  const L = livres();
+  for (const id of Object.keys(NOS)) {
+    const g = document.getElementById("no-" + id); if (!g) continue;
+    g.classList.toggle("feito", !!S && (S.feitos.has(id) || id === "ini"));
+    g.classList.toggle("livre", L.includes(id));
+    g.setAttribute("tabindex", L.includes(id) ? "0" : "-1");
   }
-  // carteiras ao fundo
-  const lc = 170, o2 = off * .6, i2 = Math.floor(o2 / lc) - 1;
-  for (let i = i2; i < i2 + W / lc + 3; i++) {
-    const x = i * lc - o2;
-    ctx.fillStyle = "#c9a477"; ctx.fillRect(x, CHAO - 62, 90, 10);
-    ctx.fillStyle = "#4a4f63"; ctx.fillRect(x + 8, CHAO - 52, 5, 52); ctx.fillRect(x + 77, CHAO - 52, 5, 52);
-    ctx.fillStyle = "#3a6ea5"; ctx.fillRect(x + 100, CHAO - 44, 34, 8); ctx.fillRect(x + 128, CHAO - 80, 6, 44);
-    ctx.fillStyle = "#fff"; ctx.fillRect(x + 20, CHAO - 66, 30, 4);
-  }
-  ctx.fillStyle = c.rodape; ctx.fillRect(0, CHAO - 12, W, 12);
-  ctx.fillStyle = c.chao; ctx.fillRect(0, CHAO, W, H - CHAO);
-  ctx.fillStyle = c.faixa;
-  const p = 64, d = off % p;
-  for (let x = -d; x < W; x += p) ctx.fillRect(x, CHAO, 2, H - CHAO);
+  const fi = document.getElementById("ficha");
+  if (fi && S) fi.style.transform = `translate(${pos(S.pos).join("px,")}px)`;
+  // escolhas acessíveis abaixo do tabuleiro
+  const el = document.getElementById("escolhas"), dica = document.getElementById("dica-tab");
+  if (!S || modo !== "tabuleiro") { el.innerHTML = ""; dica.textContent = ""; return; }
+  const k = custos(FASES[S.fase]);
+  if (L.length === 2) {
+    dica.textContent = "Bifurcação! Escolha seu caminho.";
+    el.innerHTML = `<button type="button" class="escolha" data-ir="a">Atalho <small>1 desafio mais difícil · economiza ${k.passo} min</small></button>
+      <button type="button" class="escolha alt" data-ir="b1">Caminho longo <small>2 perguntas comuns · +${k.passo} min</small></button>`;
+  } else if (L.length === 1) {
+    dica.textContent = S.pos === "ini" ? "Toque na casa que está piscando para começar a andar." : "Toque na próxima casa para avançar.";
+    el.innerHTML = `<button type="button" class="escolha" data-ir="${L[0]}">Avançar para: ${esc(NOS[L[0]].rot)} <small>cada passo custa ${k.passo} min</small></button>`;
+  } else { el.innerHTML = ""; dica.textContent = ""; }
 }
 
-/* ===================== PERSONAGEM ===================== */
-function desenharJogador(p, t) {
-  const x = p.x, y = p.y; // y = topo
-  if (p.invul > 0 && Math.floor(p.invul * 14) % 2) return;
-  ctx.fillStyle = "rgba(0,0,0,.22)";
-  const sombra = Math.max(.4, 1 - (CHAO - (y + p.h)) / 220);
-  ctx.beginPath(); ctx.ellipse(x + p.w / 2, CHAO + 4, 22 * sombra, 6 * sombra, 0, 0, 7); ctx.fill();
-  const corre = p.chao ? Math.sin(t * 20) : .6;
-  // pernas
-  ctx.strokeStyle = "#1f3b73"; ctx.lineWidth = 9; ctx.lineCap = "round";
-  const qx = x + p.w / 2, qy = y + 44;
-  ctx.beginPath(); ctx.moveTo(qx, qy); ctx.lineTo(qx + corre * 12, qy + 18); ctx.stroke();
-  ctx.beginPath(); ctx.moveTo(qx, qy); ctx.lineTo(qx - corre * 12, qy + 18); ctx.stroke();
-  ctx.fillStyle = "#111"; ctx.fillRect(qx + corre * 12 - 5, qy + 17, 12, 5); ctx.fillRect(qx - corre * 12 - 5, qy + 17, 12, 5);
-  // mochila
-  ctx.fillStyle = "#e7695d"; roundRect(x - 4, y + 18, 16, 26, 5); ctx.fill();
-  // corpo (farda)
-  ctx.fillStyle = "#ffffff"; roundRect(x + 6, y + 18, 26, 30, 7); ctx.fill();
-  ctx.fillStyle = "#2a9d8f"; ctx.fillRect(x + 6, y + 30, 26, 5);
-  // braço
-  ctx.strokeStyle = "#8d5a3b"; ctx.lineWidth = 7;
-  ctx.beginPath(); ctx.moveTo(x + 20, y + 24); ctx.lineTo(x + 20 - corre * 10, y + 40); ctx.stroke();
-  // cabeça
-  ctx.fillStyle = "#8d5a3b"; ctx.beginPath(); ctx.arc(x + 21, y + 9, 12, 0, 7); ctx.fill();
-  ctx.fillStyle = "#1b1b1b"; ctx.beginPath(); ctx.arc(x + 19, y + 4, 12, Math.PI * 1.02, Math.PI * 2.05); ctx.fill();
-  ctx.beginPath(); ctx.arc(x + 10, y + 8, 5, 0, 7); ctx.fill();
-  ctx.fillStyle = "#fff"; ctx.beginPath(); ctx.arc(x + 27, y + 9, 3, 0, 7); ctx.fill();
-  ctx.fillStyle = "#111"; ctx.beginPath(); ctx.arc(x + 28, y + 9, 1.6, 0, 7); ctx.fill();
-}
-function roundRect(x, y, w, hh, r) {
-  ctx.beginPath(); ctx.moveTo(x + r, y); ctx.arcTo(x + w, y, x + w, y + hh, r); ctx.arcTo(x + w, y + hh, x, y + hh, r);
-  ctx.arcTo(x, y + hh, x, y, r); ctx.arcTo(x, y, x + w, y, r); ctx.closePath();
+/* ===================== PAINEL ===================== */
+function atualizarHud() {
+  const F = FASES[S ? S.fase : 0], k = custos(F);
+  document.getElementById("h-quando").textContent = `Dia ${F.dia} · Fase ${(S ? S.fase : 0) + 1} de ${FASES.length}`;
+  document.getElementById("h-titulo").textContent = F.titulo;
+  const en = S ? S.energia : 3;
+  document.getElementById("h-energia").innerHTML = "❤".repeat(en) + `<span class="vazio">${"❤".repeat(Math.max(0, 3 - en))}</span>`;
+  document.getElementById("h-energia").setAttribute("aria-label", `${en} de 3 de energia`);
+  const gasto = S ? S.gasto : 0;
+  document.getElementById("h-relogio").innerHTML = `${hora(minutos(F.inicio) + gasto)} <span>/ ${F.limite}</span>`;
+  document.getElementById("h-limite").textContent = `Relógio · ${F.rotLimite} às ${F.limite}`;
+  const p = Math.min(1, gasto / k.W), b = document.getElementById("h-barra");
+  b.querySelector("i").style.width = (p * 100) + "%"; b.classList.toggle("perigo", p > .75);
+  const pr = document.getElementById("h-prof"), tem = !S || S.prof;
+  pr.textContent = "🧑‍🏫 Professor " + (tem ? "1×" : "usado"); pr.classList.toggle("gasto", !tem);
 }
 
-/* ===================== JOGO ===================== */
-const G = 2500, PULO = -860, PULO2 = -720;
-let estado = "menu", faseIdx = 0, J, ents, tempo, dist, vel, proxSpawn, vidas, pontos, acertos, nPerg, aprendidos, erros, pegos, perguntasFase, gatesFeitos, cenaAtual = "manha", tGlobal = 0, offMenu = 0;
-const DURACAO = 46;
-
-function novoJogador() { return { x: W < 700 ? 96 : 150, y: CHAO - 66, w: 38, h: 66, vy: 0, chao: true, pulos: 0, invul: 0 }; }
-
+/* ===================== FLUXO DA FASE ===================== */
 function iniciarFase(i) {
-  faseIdx = i; const F = FASES[i];
-  cenaAtual = F.cena; J = novoJogador(); ents = [];
-  tempo = 0; dist = 0; vel = 330; proxSpawn = 1.2; vidas = 3; pontos = 0; acertos = 0; nPerg = 0;
-  aprendidos = new Map(); erros = new Map(); pegos = new Set(); gatesFeitos = 0;
-  perguntasFase = embaralhar(F.perguntas.slice()).slice(0, 3);
-  agenda = [];
-  // itens obrigatórios garantidos
-  (F.obrig || []).forEach((grupo, k) => { agenda.push({ t: 5 + k * 6, item: grupo[0], alt: "chao" }); agenda.push({ t: 27 + k * 5, item: grupo[0], alt: "meio", seFalta: grupo }); });
-  [.26, .56, .84].forEach(f => agenda.push({ t: DURACAO * f, gate: true }));
-  agenda.push({ t: DURACAO, fim: true });
-  agenda.sort((a, b) => a.t - b.t);
-  estado = "jogo"; fecharCamada(); ultimoTs = performance.now();
+  S = { fase: i, energia: 3, gasto: 0, prof: true, pos: "ini", feitos: new Set(), usadas: new Set(), acertos: 0, erros: 0, revisar: [], eventos: embaralhar(FASES[i].eventos.slice()), dicas: 0 };
+  modo = "tabuleiro"; fecharCamada();
+  desenharTabuleiro(); atualizarHud();
 }
-let agenda = [];
-function embaralhar(a) { for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; }
-const sortear = a => a[Math.floor(Math.random() * a.length)];
+function ir(id) {
+  if (!livres().includes(id)) return;
+  const F = FASES[S.fase], k = custos(F);
+  S.pos = id; S.gasto += k.passo; modo = "andando";
+  somPasso(); atualizarNos(); atualizarHud();
+  setTimeout(() => {
+    if (tempoEsgotado()) return;
+    const ev = id === "q2" ? S.eventos[0] : id === "b1" ? S.eventos[1] : null;
+    if (ev) mostrarEvento(ev, () => abrirDesafio(id)); else abrirDesafio(id);
+  }, 750);
+}
+function tempoEsgotado() {
+  const F = FASES[S.fase];
+  if (S.gasto > custos(F).W) { falhar("tempo"); return true; }
+  return false;
+}
+function mostrarEvento(ev, depois) {
+  const F = FASES[S.fase], W = custos(F).W, m = r5(Math.abs(ev.f) * W) * Math.sign(ev.f);
+  S.gasto = Math.max(0, S.gasto + m); atualizarHud();
+  modo = "desafio";
+  abrirCamada(`<div class="evento" aria-hidden="true">${ev.ic}</div>
+    <p class="olho">${esc(ev.t)} · carta do caminho</p>
+    <h2 id="cartao-titulo">${m < 0 ? `Ganhou ${-m} minutos` : `Perdeu ${m} minutos`}</h2>
+    <p>${esc(ev.txt)}</p>
+    <div class="botoes"><button type="button" class="btn" data-acao="evento-ok" data-foco>Continuar</button></div>`);
+  eventoDepois = () => { if (!tempoEsgotado()) depois(); };
+}
+let eventoDepois = null;
 
-function pular() {
-  if (estado !== "jogo") return;
-  if (J.chao) { J.vy = PULO; J.chao = false; J.pulos = 1; somPulo(); }
-  else if (J.pulos < 2) { J.vy = PULO2; J.pulos = 2; somPulo(); }
-}
-function soltar() { if (estado === "jogo" && J.vy < -340) J.vy = -340; }
-
-function criarItem(chave, alt) {
-  const y = alt === "chao" ? CHAO - 30 : alt === "meio" ? CHAO - 126 : CHAO - 206;
-  ents.push({ tipo: "item", k: chave, x: W + 40, y, r: 24, bob: Math.random() * 6 });
-}
-function criarObst() {
-  const F = FASES[faseIdx], alto = 38 + Math.random() * 22, larg = 46 + Math.random() * 20;
-  ents.push({ tipo: "obst", x: W + 40, y: CHAO - alto, w: larg, h: alto, rot: sortear(F.obst) });
-}
-function spawnAleatorio() {
-  const F = FASES[faseIdx], r = Math.random();
-  if (r < .3) return criarObst();
-  const bom = Math.random() < .55;
-  const k = bom ? sortear(F.bons) : sortear(F.ruins);
-  if (IT[k].heal && (vidas >= 3 || Math.random() < .5)) return criarItem(sortear(F.bons.filter(b => !IT[b].heal)), "meio");
-  let alt;
-  if (bom) alt = sortear(["chao", "meio", "meio", "alto"]);
-  else alt = sortear(["chao", "chao", "meio"]);
-  criarItem(k, alt);
-}
-
-let ultimoTs = 0;
-function quadro(ts) {
-  const dt = Math.min(.033, (ts - ultimoTs) / 1000 || 0); ultimoTs = ts; tGlobal += dt;
-  if (estado === "jogo") atualizar(dt);
-  else { offMenu += dt * 60; }
-  desenhar();
-  requestAnimationFrame(quadro);
-}
-
-function atualizar(dt) {
-  tempo += dt; vel = 330 + Math.min(110, tempo * 2.4); dist += vel * dt;
-  // física
-  J.vy += G * dt; J.y += J.vy * dt;
-  if (J.y + J.h >= CHAO) { J.y = CHAO - J.h; J.vy = 0; J.chao = true; J.pulos = 0; }
-  if (J.invul > 0) J.invul -= dt;
-  // agenda
-  while (agenda.length && agenda[0].t <= tempo) {
-    const a = agenda.shift();
-    if (a.gate) ents.push({ tipo: "gate", x: W + 60, y: CHAO - 190, w: 70, h: 190 });
-    else if (a.fim) ents.push({ tipo: "fim", x: W + 60, y: CHAO - 210, w: 24, h: 210 });
-    else if (a.item) { if (!a.seFalta || !a.seFalta.some(k => pegos.has(k))) criarItem(a.item, a.alt); }
-    proxSpawn = Math.max(proxSpawn, tempo + .9);
-  }
-  // aleatório (afastado dos portais e do fim)
-  const perto = agenda.length && agenda[0].t - tempo < 1;
-  if (tempo >= proxSpawn && !perto && tempo < DURACAO - 1.2) { spawnAleatorio(); proxSpawn = tempo + .95 + Math.random() * .75; }
-  // mover e colidir
-  for (const e of ents) e.x -= vel * dt;
-  for (const e of ents) {
-    if (e.morto) continue;
-    if (e.tipo === "item") {
-      const cx = e.x, cy = e.y + Math.sin(tGlobal * 4 + e.bob) * 4;
-      if (cx > J.x - 18 && cx < J.x + J.w + 18 && cy > J.y - 16 && cy < J.y + J.h + 16) { e.morto = true; pegar(e.k); }
-    } else if (e.tipo === "obst") {
-      if (J.invul <= 0 && e.x < J.x + J.w - 8 && e.x + e.w > J.x + 8 && J.y + J.h > e.y + 6) { e.morto = true; dano(null, e.rot); }
-    } else if (e.tipo === "gate") {
-      if (e.x <= J.x + J.w && !e.feito) { e.feito = true; e.morto = true; abrirPergunta(); return; }
-    } else if (e.tipo === "fim") {
-      if (e.x <= J.x + J.w) { e.morto = true; terminarFase(); return; }
-    }
-  }
-  ents = ents.filter(e => !e.morto && e.x > -120);
-}
-
-function pegar(k) {
-  const it = IT[k];
-  if (it.good) {
-    pontos += 10; somBom(); pegos.add(k);
-    if (it.heal) vidas = Math.min(5, vidas + 1);
-    if (!aprendidos.has(k)) { aprendidos.set(k, it.m); avisar(`<b>${it.l}</b> — ${it.m}`, false); }
+function abrirDesafio(id) {
+  modo = "desafio";
+  const n = NOS[id], F = FASES[S.fase];
+  if (n.tipo === "q") {
+    let pool = F.perguntas.map((_, i) => i).filter(i => !S.usadas.has(i));
+    if (!pool.length) { S.usadas.clear(); pool = F.perguntas.map((_, i) => i); }
+    const qi = pool[Math.floor(Math.random() * pool.length)]; S.usadas.add(qi);
+    D = { no: id, tipo: "q", P: F.perguntas[qi], elim: [], dica: false, resp: null };
   } else {
-    dano(k);
+    const E = F.esp[n.esp];
+    if (E.tipo === "classificar") D = { no: id, tipo: "classificar", E, itens: embaralhar(E.itens.map(([t, c, x]) => ({ t, c, x, sel: null, trava: false, err: false }))), dica: false, fim: false };
+    else D = { no: id, tipo: "ordenar", E, monte: embaralhar(E.passos.map((_, i) => i)), seq: E.passos.map(() => null), trava: E.passos.map(() => false), errs: [], dica: false, fim: false };
   }
+  renderDesafio();
 }
-function dano(k, rotulo) {
-  if (J.invul > 0 && !k) return;
-  vidas -= 1; J.invul = 1.3; somRuim();
-  if (k) { const it = IT[k]; erros.set(k, it.m); avisar(`<b>${it.l}</b> — ${it.m}`, true); }
-  else avisar(`<b>${rotulo}</b> — pule por cima dos obstáculos!`, true, 1600);
-  if (vidas <= 0) { estado = "fimDeJogo"; setTimeout(telaDerrota, 700); }
+function cabecalho() {
+  const n = NOS[D.no], k = custos(FASES[S.fase]);
+  const especial = D.tipo !== "q";
+  return `<p class="olho">${especial ? (D.no === "gate" ? "Desafio final" : "Atalho · desafio especial") : "Pergunta"} · Fase ${S.fase + 1}</p>`
+    + (especial ? `<h2 id="cartao-titulo">${esc(D.E.titulo)}</h2><p>${esc(D.E.enun)}</p>` : `<h2 id="cartao-titulo" class="pergunta">${esc(D.P.q)}</h2>`)
+    + `<div class="ferramentas">
+        <button type="button" class="ferr" data-acao="dica" ${D.dica || travado() ? "disabled" : ""}>💡 Ver regras (+${k.dica} min)</button>
+        <button type="button" class="ferr" data-acao="prof" ${!S.prof || travado() ? "disabled" : ""}>🧑‍🏫 Professor${especial ? ": resolve 2 itens" : ": elimina 2"} ${S.prof ? "(1×)" : "(usado)"}</button>
+      </div>`
+    + (D.dica ? `<div class="caixa-dica"><ul class="regras">${FASES[S.fase].regras.map(r => `<li>${esc(r)}</li>`).join("")}</ul></div>` : "");
+}
+function travado() { return D.tipo === "q" ? D.resp !== null : D.fim; }
+
+function renderDesafio() {
+  let html = cabecalho();
+  if (D.tipo === "q") {
+    const P = D.P;
+    html += `<ol class="opcoes">${P.o.map((o, k) => {
+      let cls = "opcao";
+      if (D.elim.includes(k)) cls += " eliminada";
+      if (D.resp !== null) { if (k === D.resp) cls += " marcada"; if (k === P.a) cls += " certa"; else if (k === D.resp) cls += " errada"; }
+      const dis = D.resp !== null || D.elim.includes(k);
+      return `<li><button type="button" class="${cls}" data-op="${k}" ${dis ? "disabled" : ""}><span class="bolha">${"ABCD"[k]}</span><span>${esc(o)}</span></button></li>`;
+    }).join("")}</ol>`;
+    if (D.resp !== null) html += retornoQ();
+  } else if (D.tipo === "classificar") {
+    html += `<div class="linhas">${D.itens.map((it, i) => {
+      const cls = it.trava ? " certa" : it.err ? " errada" : "";
+      return `<div class="linha${cls}"><div class="txt">${esc(it.t)}</div>
+        <div class="seg" role="group" aria-label="${esc(it.t)}">${D.E.col.map((c, j) => `<button type="button" data-it="${i}" data-col="${j}" class="${it.sel === j ? "on" : ""}" aria-pressed="${it.sel === j}" ${it.trava ? "disabled" : ""}>${esc(c)}</button>`).join("")}</div>
+        ${it.trava || it.err ? `<div class="exp">${esc(it.x)}</div>` : ""}</div>`;
+    }).join("")}</div>`;
+    html += D.fim ? retornoEsp(true) : `<div class="botoes"><button type="button" class="btn" data-acao="conferir">Conferir</button></div><p class="instr" id="aviso-conf"></p>`;
+  } else {
+    const E = D.E;
+    html += `<p class="instr">Toque nas peças amarelas para preencher a ordem. Toque numa vaga preenchida para tirar a peça.</p>
+      <ol class="ordem">${D.seq.map((v, k) => {
+        const cls = D.trava[k] ? " trava" : D.errs.includes(k) && v === null ? " errada" : v !== null ? " cheia" : "";
+        return `<li><button type="button" class="vaga${cls}" data-vaga="${k}" ${D.trava[k] || D.fim ? "disabled" : ""}>${v === null ? (D.errs.includes(k) ? "Errou aqui. Qual passo vem nesta posição?" : "…") : esc(E.passos[v])}</button></li>`;
+      }).join("")}</ol>
+      <div class="monte">${D.monte.filter(i => !D.seq.includes(i)).map(i => `<button type="button" class="peca" data-peca="${i}" ${D.fim ? "disabled" : ""}>${esc(E.passos[i])}</button>`).join("")}</div>`;
+    html += D.fim ? retornoEsp(true) : `<div class="botoes"><button type="button" class="btn" data-acao="conferir">Conferir</button></div><p class="instr" id="aviso-conf"></p>`;
+  }
+  abrirCamada(html, true);
+}
+function retornoQ() {
+  const certo = D.resp === D.P.a, k = custos(FASES[S.fase]);
+  return `<div class="retorno ${certo ? "ok" : "nao"}"><strong>${certo ? "Isso! Caminho liberado" : `Errou: −1 energia, +${k.erro} min`}</strong><br>${esc(D.P.x)}</div>
+    <div class="botoes">${certo ? `<button type="button" class="btn sol" data-acao="liberar" data-foco>Seguir no tabuleiro</button>`
+      : S.energia > 0 && !passouTempo() ? `<button type="button" class="btn" data-acao="outra" data-foco>Tentar outra pergunta</button>` : `<button type="button" class="btn" data-acao="falhou" data-foco>Continuar</button>`}</div>`;
+}
+function retornoEsp() {
+  const x = D.tipo === "ordenar" ? D.E.x : "Tudo certo! Leia as explicações acima: elas são as regras do Enem.";
+  return `<div class="retorno ok"><strong>Desafio vencido!</strong><br>${esc(x)}</div>
+    <div class="botoes"><button type="button" class="btn sol" data-acao="liberar" data-foco>${D.no === "gate" ? "Concluir a fase" : "Seguir no tabuleiro"}</button></div>`;
+}
+const passouTempo = () => S.gasto > custos(FASES[S.fase]).W;
+
+function errar(itens) {
+  const k = custos(FASES[S.fase]);
+  S.energia--; S.gasto += k.erro; S.erros++; somErro();
+  [].concat(itens).forEach(t => { if (!S.revisar.includes(t)) S.revisar.push(t); });
+  atualizarHud();
+}
+function responderQ(op) {
+  if (D.resp !== null || D.elim.includes(op)) return;
+  D.resp = op;
+  if (op === D.P.a) { S.acertos++; somCerto(); }
+  else errar(`${D.P.q} → ${D.P.o[D.P.a]}`);
+  renderDesafio();
+}
+function conferir() {
+  const aviso = document.getElementById("aviso-conf");
+  if (D.tipo === "classificar") {
+    if (D.itens.some(it => it.sel === null)) { aviso.textContent = "Responda todos os itens antes de conferir."; return; }
+    let erradas = [];
+    D.itens.forEach(it => { if (it.trava) return; if (it.sel === it.c) { it.trava = true; it.err = false; } else { it.err = true; erradas.push(it); } });
+    if (!erradas.length) { D.fim = true; S.acertos++; somCerto(); }
+    else { errar(erradas.map(it => `${it.t} → ${D.E.col[it.c]}. ${it.x}`)); erradas.forEach(it => it.sel = null); }
+  } else {
+    if (D.seq.some(v => v === null)) { aviso.textContent = "Coloque todas as peças antes de conferir."; return; }
+    D.errs = [];
+    D.seq.forEach((v, k) => { if (v === k) D.trava[k] = true; else D.errs.push(k); });
+    if (!D.errs.length) { D.fim = true; S.acertos++; somCerto(); }
+    else { errar(`${D.E.titulo}: ${D.E.passos.join(" → ")}`); D.errs.forEach(k => D.seq[k] = null); }
+  }
+  if (S.energia <= 0) return falhar("energia");
+  if (passouTempo()) return falhar("tempo");
+  renderDesafio();
+}
+function usarDica() {
+  if (D.dica) return;
+  D.dica = true; S.dicas++; S.gasto += custos(FASES[S.fase]).dica; atualizarHud();
+  if (passouTempo()) return falhar("tempo");
+  renderDesafio();
+}
+function usarProf() {
+  if (!S.prof) return;
+  S.prof = false;
+  if (D.tipo === "q") {
+    const erradas = D.P.o.map((_, i) => i).filter(i => i !== D.P.a);
+    D.elim = embaralhar(erradas).slice(0, 2);
+  } else if (D.tipo === "classificar") {
+    embaralhar(D.itens.filter(it => !it.trava)).slice(0, 2).forEach(it => { it.sel = it.c; it.trava = true; it.err = false; });
+    if (D.itens.every(it => it.trava)) { D.fim = true; S.acertos++; }
+  } else {
+    let n = 0;
+    for (let k = 0; k < D.seq.length && n < 2; k++) {
+      if (D.trava[k]) continue;
+      const j = D.seq.indexOf(k); if (j >= 0 && !D.trava[j]) D.seq[j] = null;
+      D.seq[k] = k; D.trava[k] = true; n++;
+    }
+    if (D.trava.every(Boolean)) { D.fim = true; S.acertos++; }
+  }
+  atualizarHud(); renderDesafio();
+}
+function liberar() {
+  S.feitos.add(D.no);
+  const era = D.no; D = null;
+  if (era === "gate") return vencer();
+  modo = "tabuleiro"; fecharCamada(); atualizarNos();
+  const L = livres(); const g = L.length && document.getElementById("no-" + L[0]); if (g) g.focus({ preventScroll: true });
 }
 
-let tAviso = null;
-const elAviso = document.getElementById("aviso");
-function avisar(html, ruim, ms = 3400) {
-  elAviso.innerHTML = html; elAviso.classList.toggle("ruim", !!ruim); elAviso.hidden = false; elAviso.style.opacity = 1;
-  clearTimeout(tAviso); tAviso = setTimeout(() => { elAviso.style.opacity = 0; setTimeout(() => elAviso.hidden = true, 260); }, ms);
-}
-function limparAviso() { clearTimeout(tAviso); elAviso.hidden = true; }
-
-/* ===================== DESENHO ===================== */
-function relogioAtual() {
-  const F = FASES[faseIdx], [a, b] = F.relogio;
-  const p = Math.min(1, tempo / DURACAO);
-  if (!/^\d/.test(a) || !/^\d/.test(b)) {
-    if (a === "Seg") return ["Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"][Math.min(5, Math.floor(p * 6))];
-    return p < .5 ? "18:30" : "Depois";
-  }
-  const m = s => { const [hh, mm] = s.split(":").map(Number); return hh * 60 + mm; };
-  const v = Math.round(m(a) + (m(b) - m(a)) * p);
-  return String(Math.floor(v / 60)).padStart(2, "0") + ":" + String(v % 60).padStart(2, "0");
-}
-
-function desenhar() {
-  const emJogo = estado === "jogo" || estado === "pergunta" || estado === "pausa" || estado === "fimDeJogo";
-  const off = emJogo ? dist : offMenu * 3;
-  fundo(cenaAtual, off, tGlobal);
-  if (!emJogo) { desenharJogador({ x: W < 700 ? 96 : 150, y: CHAO - 66, w: 38, h: 66, chao: true, invul: 0 }, tGlobal); return; }
-  for (const e of ents) {
-    if (e.tipo === "item") desenharItem(e);
-    else if (e.tipo === "obst") desenharObst(e);
-    else if (e.tipo === "gate") desenharGate(e);
-    else if (e.tipo === "fim") desenharFim(e);
-  }
-  desenharJogador(J, tGlobal);
-  hud();
-}
-function desenharItem(e) {
-  const it = IT[e.k], y = e.y + Math.sin(tGlobal * 4 + e.bob) * 4;
-  ctx.fillStyle = "rgba(255,255,255,.92)";
-  ctx.beginPath(); ctx.arc(e.x, y, e.r, 0, 7); ctx.fill();
-  ctx.strokeStyle = "#191c2e"; ctx.lineWidth = 3; ctx.stroke();
-  ctx.font = "26px 'Apple Color Emoji','Segoe UI Emoji','Noto Color Emoji',sans-serif"; ctx.textAlign = "center"; ctx.textBaseline = "middle";
-  ctx.fillStyle = "#000"; ctx.fillText(it.e, e.x, y + 1);
-  ctx.textBaseline = "alphabetic";
-  rotulo(it.l, e.x, y + e.r + 16);
-}
-function rotulo(txt, x, y) {
-  const fs = W < 700 ? 16 : 13;
-  ctx.font = `700 ${fs}px 'Atkinson Hyperlegible', sans-serif`; ctx.textAlign = "center";
-  const w = ctx.measureText(txt).width + 12;
-  ctx.fillStyle = "rgba(25,28,46,.82)"; roundRect(x - w / 2, y - fs, w, fs + 5, 6); ctx.fill();
-  ctx.fillStyle = "#fff"; ctx.fillText(txt, x, y);
-}
-function desenharObst(e) {
-  ctx.fillStyle = "#3b3f5c"; roundRect(e.x, e.y, e.w, e.h, 6); ctx.fill();
-  ctx.fillStyle = "#ffc83d";
-  for (let i = 0; i < e.w; i += 14) ctx.fillRect(e.x + i, e.y + 6, 7, 6);
-  rotulo(e.rot, e.x + e.w / 2, e.y - 8);
-}
-function desenharGate(e) {
-  const x = e.x, y = e.y;
-  ctx.fillStyle = "#191c2e"; ctx.fillRect(x, y, 10, e.h); ctx.fillRect(x + e.w - 10, y, 10, e.h);
-  ctx.fillStyle = "#fbf6ea"; roundRect(x - 14, y - 8, e.w + 28, 66, 10); ctx.fill();
-  ctx.strokeStyle = "#e7695d"; ctx.lineWidth = 3; ctx.stroke();
-  ctx.fillStyle = "#191c2e"; ctx.font = "34px Bungee, sans-serif"; ctx.textAlign = "center"; ctx.fillText("?", x + e.w / 2, y + 40);
-  ctx.font = "700 11px 'Atkinson Hyperlegible', sans-serif"; ctx.fillText("QUESTÃO", x + e.w / 2, y + 54);
-  ctx.globalAlpha = .25 + .15 * Math.sin(tGlobal * 6); ctx.fillStyle = "#ffc83d"; ctx.fillRect(x + 10, y + 58, e.w - 20, e.h - 58); ctx.globalAlpha = 1;
-}
-function desenharFim(e) {
-  ctx.fillStyle = "#191c2e"; ctx.fillRect(e.x, e.y, 8, e.h);
-  const s = 14;
-  for (let i = 0; i < 6; i++) for (let j = 0; j < 4; j++) {
-    ctx.fillStyle = (i + j) % 2 ? "#191c2e" : "#fbf6ea"; ctx.fillRect(e.x + 8 + i * s, e.y + j * s, s, s);
-  }
-  rotulo("CHEGADA", e.x + 50, e.y + 76);
-}
-function hud() {
-  // barra de progresso
-  const p = Math.min(1, tempo / DURACAO);
-  const bw = Math.min(460, W - 380), bx = (W - bw) / 2;
-  ctx.fillStyle = "rgba(25,28,46,.55)"; roundRect(bx, 18, bw, 12, 6); ctx.fill();
-  ctx.fillStyle = "#ffc83d"; roundRect(bx, 18, Math.max(12, bw * p), 12, 6); ctx.fill();
-  [.26, .56, .84].forEach((f, i) => { ctx.fillStyle = i < gatesFeitos ? "#191c2e" : "#fbf6ea"; ctx.beginPath(); ctx.arc(bx + bw * f, 24, 7, 0, 7); ctx.fill(); ctx.strokeStyle = "#191c2e"; ctx.lineWidth = 2; ctx.stroke(); });
-  ctx.font = "700 13px 'Atkinson Hyperlegible', sans-serif"; ctx.textAlign = "center"; ctx.fillStyle = "#fff";
-  ctx.strokeStyle = "rgba(0,0,0,.5)"; ctx.lineWidth = 3;
-  const tit = `Fase ${faseIdx + 1}: ${FASES[faseIdx].titulo}`;
-  const ty = W < 700 ? 92 : 50;
-  ctx.strokeText(tit, W / 2, ty); ctx.fillText(tit, W / 2, ty);
-  // vidas
-  for (let i = 0; i < Math.max(3, vidas); i++) coracao(28 + i * 30, 26, i < vidas);
-  // pontos
-  ctx.textAlign = "left"; ctx.font = "18px Bungee, sans-serif";
-  ctx.strokeText(`${pontos} pts`, 18, 64); ctx.fillText(`${pontos} pts`, 18, 64);
-  // relógio do enredo (painel do fiscal)
-  ctx.fillStyle = "#191c2e"; roundRect(W - 150, 12, 136, 46, 8); ctx.fill();
-  ctx.fillStyle = "#ffc83d"; ctx.font = "24px Bungee, sans-serif"; ctx.textAlign = "center";
-  ctx.fillText(relogioAtual(), W - 82, 44);
-  ctx.font = "700 10px 'Atkinson Hyperlegible', sans-serif"; ctx.fillStyle = "#b9bde6";
-  ctx.fillText(faseIdx === 4 ? "SEMANA" : faseIdx === 6 ? "RESULTADOS" : "HORA DE BRASÍLIA", W - 82, 70);
-  if (faseIdx === 1) { ctx.fillStyle = "#fff"; ctx.strokeText("Portão fecha 13h", W - 82, 86); ctx.fillText("Portão fecha 13h", W - 82, 86); }
-}
-function coracao(x, y, cheio) {
-  ctx.save(); ctx.translate(x, y); ctx.scale(1.1, 1.1);
-  ctx.beginPath(); ctx.moveTo(0, 5); ctx.bezierCurveTo(-12, -4, -6, -14, 0, -7); ctx.bezierCurveTo(6, -14, 12, -4, 0, 5); ctx.closePath();
-  ctx.fillStyle = cheio ? "#e7695d" : "rgba(255,255,255,.3)"; ctx.fill();
-  ctx.strokeStyle = "#191c2e"; ctx.lineWidth = 2; ctx.stroke(); ctx.restore();
-}
-
-/* ===================== CARTÕES ===================== */
+/* ===================== TELAS ===================== */
 const camada = document.getElementById("camada"), cartao = document.getElementById("cartao");
-const esc = s => String(s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
-function abrirCamada(html) {
-  cartao.innerHTML = html; camada.hidden = false; camada.scrollTop = 0;
-  const f = cartao.querySelector("[data-foco]") || cartao.querySelector("button");
+function abrirCamada(html, manterScroll) {
+  const y = camada.scrollTop;
+  cartao.innerHTML = html; camada.hidden = false; camada.scrollTop = manterScroll ? y : 0;
+  const f = cartao.querySelector("[data-foco]");
   if (f) setTimeout(() => f.focus({ preventScroll: true }), 30);
 }
 function fecharCamada() { camada.hidden = true; cartao.innerHTML = ""; }
 const estrelasTxt = n => "★".repeat(n) + "☆".repeat(3 - n);
-const quandoTxt = F => `Dia ${F.dia} · ${F.quando}`;
 
 function telaMenu() {
-  estado = "menu"; limparAviso(); cenaAtual = "manha";
+  modo = "menu"; D = null;
   const total = salvo.estrelas.reduce((s, v) => s + (v || 0), 0);
+  const atual = Math.min(salvo.liberada, FASES.length - 1);
   const botaoFase = (F, i) => {
     const bloq = i > salvo.liberada;
-    return `<button type="button" class="fase${i === Math.min(salvo.liberada, 6) ? " atual" : ""}" data-fase="${i}" ${bloq ? "disabled" : ""}>
+    return `<button type="button" class="fase${i === atual ? " atual" : ""}" data-fase="${i}" ${bloq ? "disabled" : ""}>
       <span class="n">Fase ${i + 1}</span>${esc(F.titulo)}<span class="estrelas" aria-label="${salvo.estrelas[i] || 0} estrelas">${bloq ? "🔒" : estrelasTxt(salvo.estrelas[i] || 0)}</span></button>`;
   };
   abrirCamada(`
-    <p class="olho">Treino para os dois domingos do Enem</p>
+    <p class="olho">Jogo de estratégia para os dois domingos do Enem</p>
     <h2 id="cartao-titulo">Partiu ENEM</h2>
-    <p>Corra do sábado à noite até o resultado. Pegue o que pode levar, desvie do que é proibido e responda às questões que aparecem no caminho. Cada erro mostra a regra certa.</p>
+    <p>Atravesse o tabuleiro do sábado à noite até o resultado. Em cada casa há uma pergunta ou um desafio, e só respondendo certo o caminho abre. Cuide da sua <strong>energia</strong>, do <strong>relógio</strong> e da única ajuda do <strong>professor</strong>.</p>
     <div class="botoes" style="margin-top:8px">
-      <button type="button" class="btn sol" data-acao="jogar" data-foco>${salvo.liberada > 0 ? "Continuar" : "Começar"} · Fase ${Math.min(salvo.liberada, 6) + 1}</button>
+      <button type="button" class="btn sol" data-acao="jogar" data-foco>${salvo.liberada > 0 ? "Continuar" : "Começar"} · Fase ${atual + 1}</button>
       <button type="button" class="btn sec" data-acao="revisao">Revisão das regras</button>
     </div>
     <div class="mapa">
@@ -896,121 +935,83 @@ function telaMenu() {
     </div>
     <p class="nota-rodape">${total} de ${FASES.length * 3} estrelas. As regras seguem os editais recentes do Enem. Confira sempre o edital do ano e a Página do Participante.</p>`);
 }
-
 function telaIntro(i) {
-  const F = FASES[i]; estado = "intro"; faseIdx = i; cenaAtual = F.cena; limparAviso();
+  const F = FASES[i], k = custos(F);
+  S = null; modo = "menu";
+  S = { fase: i, energia: 3, gasto: 0, prof: true, pos: "ini", feitos: new Set() };
+  desenharTabuleiro(); atualizarHud(); atualizarNos();
   abrirCamada(`
-    <p class="olho">${esc(quandoTxt(F))} · Fase ${i + 1} de ${FASES.length}</p>
+    <p class="olho">Dia ${F.dia} · ${esc(F.quando)} · Fase ${i + 1} de ${FASES.length}</p>
     <h2 id="cartao-titulo">${esc(F.titulo)}</h2>
-    <h3>Fique ligado</h3>
+    <h3>Estude antes de andar</h3>
     <ul class="regras">${F.regras.map(r => `<li>${esc(r)}</li>`).join("")}</ul>
-    ${F.obrig ? `<p style="margin-top:10px"><strong>Para passar:</strong> pegue o documento e a caneta antes da chegada.</p>` : ""}
+    <h3>Seus recursos</h3>
+    <div class="recursos-intro">
+      <div><b>❤ Energia: 3</b>Cada erro custa 1. Sem energia, a fase recomeça.</div>
+      <div><b>⏱ Relógio: ${F.inicio} → ${F.limite}</b>Passo: ${k.passo} min. Erro: +${k.erro} min. Ver regras: +${k.dica} min. Passou de ${F.limite} (${esc(F.rotLimite)}), perdeu.</div>
+      <div><b>🧑‍🏫 Professor: 1 vez</b>Elimina 2 alternativas ou resolve 2 itens de um desafio. Guarde para a hora certa.</div>
+      <div><b>🔀 Bifurcação</b>O atalho economiza um passo, mas traz um desafio especial no lugar de 2 perguntas.</div>
+    </div>
     <div class="botoes">
-      <button type="button" class="btn sol" data-acao="iniciar" data-foco>Correr</button>
+      <button type="button" class="btn sol" data-acao="iniciar" data-foco>Ir para o tabuleiro</button>
       <button type="button" class="btn sec" data-acao="menu">Fases</button>
     </div>`);
 }
-
-let pergAtual = null;
-function abrirPergunta() {
-  estado = "pergunta"; limparAviso();
-  pergAtual = perguntasFase[gatesFeitos] || sortear(FASES[faseIdx].perguntas);
-  nPerg++;
-  const P = pergAtual;
+function falhar(motivo) {
+  modo = "fim"; const F = FASES[S.fase];
+  const tit = motivo === "tempo" ? (S.fase === 1 ? "O portão fechou!" : "O tempo acabou!") : "Sem energia!";
+  const txt = motivo === "tempo"
+    ? `O relógio passou de ${F.limite} (${F.rotLimite}). Erros e consultas custam minutos: planeje melhor os passos e o atalho.`
+    : "Os erros gastaram toda a sua energia. Leia o que você precisa revisar e tente de novo.";
   abrirCamada(`
-    <p class="olho">Questão ${gatesFeitos + 1} de 3 · Fase ${faseIdx + 1}</p>
-    <h2 id="cartao-titulo" style="font-family:var(--f-corpo);font-weight:700;font-size:clamp(1.15rem,3.6vw,1.45rem);line-height:1.3">${esc(P.q)}</h2>
-    <ol class="opcoes">${P.o.map((o, k) => `<li><button type="button" class="opcao" data-op="${k}" ${k === 0 ? "data-foco" : ""}><span class="bolha">${"ABCDE"[k]}</span><span>${esc(o)}</span></button></li>`).join("")}</ol>
-    <div id="retorno"></div>`);
+    <p class="olho">Dia ${F.dia} · ${esc(F.quando)}</p>
+    <h2 id="cartao-titulo">${tit}</h2>
+    <p>${esc(txt)}</p>
+    ${listaRevisar()}
+    <div class="botoes"><button type="button" class="btn sol" data-acao="repetir" data-foco>Tentar de novo</button><button type="button" class="btn sec" data-acao="menu">Fases</button></div>`);
 }
-function responder(k) {
-  const P = pergAtual; if (!P || cartao.querySelector(".opcao[disabled]")) return;
-  const certo = k === P.a;
-  cartao.querySelectorAll(".opcao").forEach((b, i) => {
-    b.disabled = true;
-    if (i === k) b.classList.add("marcada");
-    if (i === P.a) b.classList.add("certa");
-    else if (i === k) b.classList.add("errada");
-  });
-  if (certo) { acertos++; pontos += 50; somCerto(); }
-  else { vidas = Math.max(1, vidas - 1); somRuim(); erros.set("q" + nPerg, `${P.q} → ${P.o[P.a]}`); }
-  const ret = document.getElementById("retorno");
-  ret.innerHTML = `<div class="retorno ${certo ? "ok" : "nao"}"><strong>${certo ? "Isso! +50" : "Quase. −1 vida"}</strong><br>${esc(P.x)}</div>
-    <div class="botoes"><button type="button" class="btn" data-acao="seguir">Seguir correndo</button></div>`;
-  ret.querySelector("button").focus({ preventScroll: true });
+function listaRevisar() {
+  if (!S.revisar.length) return "";
+  return `<h3>Para revisar</h3><ul class="regras erros">${S.revisar.map(r => `<li>${esc(r)}</li>`).join("")}</ul>`;
 }
-function seguir() { gatesFeitos++; pergAtual = null; fecharCamada(); estado = "jogo"; ultimoTs = performance.now(); }
-
-function terminarFase() {
-  const F = FASES[faseIdx];
-  const faltando = (F.obrig || []).filter(g => !g.some(k => pegos.has(k)));
-  limparAviso();
-  if (faltando.length) {
-    estado = "resultado";
-    abrirCamada(`
-      <p class="olho">${esc(quandoTxt(F))}</p>
-      <h2 id="cartao-titulo">Barrado no portão!</h2>
-      <ul class="regras erros">${faltando.map(g => `<li>${esc(F.msgObrig[g[0]])}</li>`).join("")}</ul>
-      <p style="margin-top:10px">Esses dois itens são obrigatórios. Tente de novo e pegue os dois.</p>
-      <div class="botoes"><button type="button" class="btn sol" data-acao="repetir" data-foco>Tentar de novo</button><button type="button" class="btn sec" data-acao="menu">Fases</button></div>`);
-    return;
-  }
-  pontos += vidas * 20;
-  const est = acertos === 3 && vidas >= 2 ? 3 : acertos >= 2 ? 2 : 1;
-  salvo.estrelas[faseIdx] = Math.max(salvo.estrelas[faseIdx] || 0, est);
-  salvo.pontos[faseIdx] = Math.max(salvo.pontos[faseIdx] || 0, pontos);
-  salvo.liberada = Math.max(salvo.liberada, Math.min(FASES.length - 1, faseIdx + 1));
-  const ultima = faseIdx === FASES.length - 1;
+function vencer() {
+  modo = "fim"; const F = FASES[S.fase], k = custos(F);
+  const sobra = Math.max(0, k.W - S.gasto);
+  const pontos = S.acertos * 100 + S.energia * 50 + sobra + (S.prof ? 50 : 0);
+  const est = S.erros === 0 ? 3 : S.erros <= 1 ? 2 : 1;
+  salvo.estrelas[S.fase] = Math.max(salvo.estrelas[S.fase] || 0, est);
+  salvo.pontos[S.fase] = Math.max(salvo.pontos[S.fase] || 0, pontos);
+  salvo.liberada = Math.max(salvo.liberada, Math.min(FASES.length - 1, S.fase + 1));
+  const ultima = S.fase === FASES.length - 1;
   if (ultima) salvo.concluiu = true;
-  gravar();
-  estado = "resultado"; somCerto();
+  gravar(); somCerto();
   abrirCamada(`
-    <p class="olho">${esc(quandoTxt(F))} · Fase concluída</p>
+    <p class="olho">Dia ${F.dia} · ${esc(F.quando)} · Fase concluída</p>
     <h2 id="cartao-titulo">${esc(F.titulo)}</h2>
     <div class="grande-estrela" aria-label="${est} de 3 estrelas">${estrelasTxt(est)}</div>
-    <div class="placar"><div><b>${pontos}</b><span>pontos</span></div><div><b>${acertos}/3</b><span>questões</span></div><div><b>${vidas}</b><span>vidas</span></div></div>
-    ${listaAprendidos()}${listaErros()}
+    <div class="placar"><div><b>${pontos}</b><span>pontos</span></div><div><b>${hora(minutos(F.inicio) + S.gasto)}</b><span>chegou às</span></div><div><b>${S.energia}</b><span>energia</span></div><div><b>${S.erros}</b><span>erros</span></div></div>
+    <p>${S.erros === 0 ? "Sem nenhum erro! Você domina esta parte do Enem." : "Três estrelas exigem zero erros. Que tal tentar de novo?"}</p>
+    <h3>Regras desta fase</h3><ul class="regras feitas">${F.regras.map(r => `<li>${esc(r)}</li>`).join("")}</ul>
+    ${listaRevisar()}
     <div class="botoes">
       <button type="button" class="btn sol" data-acao="${ultima ? "certificado" : "proxima"}" data-foco>${ultima ? "Ver certificado" : "Próxima fase"}</button>
       <button type="button" class="btn sec" data-acao="repetir">Jogar de novo</button>
       <button type="button" class="btn sec" data-acao="menu">Fases</button>
     </div>`);
 }
-function listaAprendidos() {
-  if (!aprendidos.size) return "";
-  return `<h3>Você levou certo</h3><ul class="regras feitas">${[...aprendidos].map(([k, m]) => `<li><strong>${esc(IT[k].l)}:</strong> ${esc(m)}</li>`).join("")}</ul>`;
-}
-function listaErros() {
-  if (!erros.size) return "";
-  return `<h3>Para revisar</h3><ul class="regras erros">${[...erros].map(([k, m]) => `<li>${IT[k] ? `<strong>${esc(IT[k].l)}:</strong> ` : ""}${esc(m)}</li>`).join("")}</ul>`;
-}
-function telaDerrota() {
-  const F = FASES[faseIdx]; estado = "resultado"; limparAviso();
-  abrirCamada(`
-    <p class="olho">${esc(quandoTxt(F))}</p>
-    <h2 id="cartao-titulo">Acabaram as vidas</h2>
-    <p>Sem problema: é para isso que serve o treino. Leia o que derrubou você e tente de novo.</p>
-    ${listaErros()}
-    <div class="botoes"><button type="button" class="btn sol" data-acao="repetir" data-foco>Tentar de novo</button><button type="button" class="btn sec" data-acao="menu">Fases</button></div>`);
-}
-
+let voltaRevisao = null;
 function telaRevisao() {
-  if (estado === "pergunta") return;
-  const anterior = estado; if (estado === "jogo") estado = "pausa";
-  revisaoVolta = anterior;
+  if (modo === "desafio" || modo === "andando") return;
+  voltaRevisao = modo === "tabuleiro" ? "tabuleiro" : "menu";
   abrirCamada(`
     <p class="olho">Tudo o que o jogo ensina, num lugar só</p>
     <h2 id="cartao-titulo">Revisão das regras</h2>
-    <div class="revisao">
-      ${FASES.map((F, i) => `<section><h3>${i + 1}. ${esc(F.titulo)}</h3><ul class="regras">${F.regras.map(r => `<li>${esc(r)}</li>`).join("")}</ul></section>`).join("")}
-    </div>
-    <p class="nota-rodape">Baseado nos editais recentes do Enem (Inep). Regras podem mudar de um ano para outro: confira o edital e a Página do Participante.</p>
-    <div class="botoes"><button type="button" class="btn" data-acao="fechar-revisao" data-foco>${anterior === "jogo" ? "Voltar ao jogo" : "Voltar"}</button></div>`);
+    <div class="revisao">${FASES.map((F, i) => `<section><h3>${i + 1}. ${esc(F.titulo)}</h3><ul class="regras">${F.regras.map(r => `<li>${esc(r)}</li>`).join("")}</ul></section>`).join("")}</div>
+    <p class="nota-rodape">Baseado nos editais recentes do Enem (Inep). As regras podem mudar de um ano para outro: confira o edital e a Página do Participante.</p>
+    <div class="botoes"><button type="button" class="btn" data-acao="fechar-revisao" data-foco>Voltar</button></div>`);
 }
-let revisaoVolta = "menu";
-
 function telaCertificado() {
-  estado = "resultado";
+  modo = "fim";
   const total = salvo.estrelas.reduce((s, v) => s + (v || 0), 0), pts = salvo.pontos.reduce((s, v) => s + (v || 0), 0);
   abrirCamada(`
     <p class="olho">Você chegou ao fim da jornada</p>
@@ -1023,88 +1024,77 @@ function telaCertificado() {
     </div>
     <h3>Os 10 mandamentos do Enem</h3>
     <ul class="regras feitas">${MANDAMENTOS.map(m => `<li>${esc(m)}</li>`).join("")}</ul>
-    <div class="botoes">
-      <button type="button" class="btn sol" data-acao="copiar" data-foco>Copiar resultado</button>
-      <button type="button" class="btn sec" data-acao="menu">Fases</button>
-    </div>
+    <div class="botoes"><button type="button" class="btn sol" data-acao="copiar" data-foco>Copiar resultado</button><button type="button" class="btn sec" data-acao="menu">Fases</button></div>
     <p id="copiado" class="nota-rodape" aria-live="polite"></p>
     <textarea id="txt-copia" readonly hidden style="width:100%;min-height:90px;margin-top:8px;font:inherit"></textarea>`);
   const inp = document.getElementById("nome");
   inp.addEventListener("input", () => { salvo.nome = inp.value.trim(); gravar(); document.getElementById("cert-nome").textContent = salvo.nome || "Estudante"; });
 }
-function textoResultado() {
-  const total = salvo.estrelas.reduce((s, v) => s + (v || 0), 0), pts = salvo.pontos.reduce((s, v) => s + (v || 0), 0);
-  return `${salvo.nome || "Eu"} completei o Partiu ENEM: ${total}/${FASES.length * 3} estrelas e ${pts} pontos. Documento original com foto, caneta preta transparente, portão fecha às 13h. Partiu ENEM!`;
-}
 function copiar() {
-  const t = textoResultado(), msg = document.getElementById("copiado"), ta = document.getElementById("txt-copia");
-  const mostrar = () => { ta.value = t; ta.hidden = false; ta.select(); msg.textContent = "Selecione o texto acima e copie."; };
-  try { navigator.clipboard.writeText(t).then(() => { msg.textContent = "Resultado copiado. Cole no grupo da turma!"; }, mostrar); } catch (e) { mostrar(); }
+  const total = salvo.estrelas.reduce((s, v) => s + (v || 0), 0), pts = salvo.pontos.reduce((s, v) => s + (v || 0), 0);
+  const t = `${salvo.nome || "Eu"} completei o Partiu ENEM: ${total}/${FASES.length * 3} estrelas e ${pts} pontos. Documento original com foto, caneta preta transparente, portão fecha às 13h. Partiu ENEM!`;
+  const msg = document.getElementById("copiado"), ta = document.getElementById("txt-copia");
+  const manual = () => { ta.value = t; ta.hidden = false; ta.select(); msg.textContent = "Selecione o texto acima e copie."; };
+  try { navigator.clipboard.writeText(t).then(() => { msg.textContent = "Resultado copiado. Cole no grupo da turma!"; }, manual); } catch (e) { manual(); }
 }
 
 /* ===================== ENTRADAS ===================== */
 cartao.addEventListener("click", ev => {
-  const op = ev.target.closest("[data-op]"); if (op) return responder(+op.dataset.op);
+  const op = ev.target.closest("[data-op]"); if (op && !op.disabled) return responderQ(+op.dataset.op);
+  const col = ev.target.closest("[data-col]");
+  if (col && !col.disabled) { const it = D.itens[+col.dataset.it]; it.sel = +col.dataset.col; it.err = false; return renderDesafio(); }
+  const peca = ev.target.closest("[data-peca]");
+  if (peca && !peca.disabled) { const k = D.seq.indexOf(null); if (k >= 0) { D.seq[k] = +peca.dataset.peca; D.errs = D.errs.filter(e => e !== k); } return renderDesafio(); }
+  const vaga = ev.target.closest("[data-vaga]");
+  if (vaga && !vaga.disabled) { const k = +vaga.dataset.vaga; if (!D.trava[k]) D.seq[k] = null; return renderDesafio(); }
   const f = ev.target.closest("[data-fase]"); if (f && !f.disabled) return telaIntro(+f.dataset.fase);
-  const b = ev.target.closest("[data-acao]"); if (!b) return;
+  const b = ev.target.closest("[data-acao]"); if (!b || b.disabled) return;
   const a = b.dataset.acao;
   if (a === "jogar") telaIntro(Math.min(salvo.liberada, FASES.length - 1));
   else if (a === "revisao") telaRevisao();
-  else if (a === "iniciar" || a === "repetir") iniciarFase(faseIdx);
-  else if (a === "proxima") telaIntro(faseIdx + 1);
+  else if (a === "iniciar" || a === "repetir") iniciarFase(S ? S.fase : 0);
+  else if (a === "proxima") telaIntro(S.fase + 1);
   else if (a === "menu") telaMenu();
-  else if (a === "seguir") seguir();
+  else if (a === "evento-ok") { const d = eventoDepois; eventoDepois = null; if (d) d(); }
+  else if (a === "dica") usarDica();
+  else if (a === "prof") usarProf();
+  else if (a === "conferir") conferir();
+  else if (a === "liberar") liberar();
+  else if (a === "outra") abrirDesafio(D.no);
+  else if (a === "falhou") falhar(S.energia <= 0 ? "energia" : "tempo");
   else if (a === "certificado") telaCertificado();
   else if (a === "copiar") copiar();
-  else if (a === "continuar") retomar();
-  else if (a === "fechar-revisao") { if (revisaoVolta === "jogo") retomar(); else if (revisaoVolta === "menu") telaMenu(); else telaMenu(); }
+  else if (a === "fechar-revisao") { if (voltaRevisao === "tabuleiro") { modo = "tabuleiro"; fecharCamada(); atualizarNos(); } else telaMenu(); }
 });
 cartao.addEventListener("keydown", ev => {
-  if (estado === "pergunta" && !cartao.querySelector(".opcao[disabled]")) {
-    const i = "abcde".indexOf(ev.key.toLowerCase()), n = "12345".indexOf(ev.key);
-    const k = i >= 0 ? i : n;
-    if (k >= 0 && k < pergAtual.o.length) { ev.preventDefault(); responder(k); }
+  if (D && D.tipo === "q" && D.resp === null) {
+    const k = "abcd".indexOf(ev.key.toLowerCase()), n = "1234".indexOf(ev.key), i = k >= 0 ? k : n;
+    if (i >= 0 && i < D.P.o.length) { ev.preventDefault(); responderQ(i); }
   }
 });
-
-function pausar() {
-  if (estado !== "jogo") return;
-  estado = "pausa"; limparAviso();
-  abrirCamada(`<p class="olho">Fase ${faseIdx + 1} · ${esc(FASES[faseIdx].titulo)}</p><h2 id="cartao-titulo">Pausado</h2>
-    <div class="botoes"><button type="button" class="btn sol" data-acao="continuar" data-foco>Continuar</button><button type="button" class="btn sec" data-acao="repetir">Recomeçar fase</button><button type="button" class="btn sec" data-acao="menu">Fases</button></div>`);
-}
-function retomar() { fecharCamada(); estado = "jogo"; ultimoTs = performance.now(); }
-
-document.addEventListener("keydown", ev => {
-  if (ev.target.tagName === "INPUT" || ev.target.tagName === "TEXTAREA") return;
-  if (estado === "jogo") {
-    if (ev.code === "Space" || ev.code === "ArrowUp" || ev.code === "KeyW") { ev.preventDefault(); if (!ev.repeat) pular(); }
-    else if (ev.code === "KeyP" || ev.code === "Escape") pausar();
-  } else if (estado === "pausa" && (ev.code === "KeyP" || ev.code === "Escape") && camada.querySelector("[data-acao=continuar]")) retomar();
-});
-document.addEventListener("keyup", ev => { if (ev.code === "Space" || ev.code === "ArrowUp" || ev.code === "KeyW") soltar(); });
-palco.addEventListener("pointerdown", ev => {
-  ev.preventDefault();
-  if (estado === "jogo") pular();
-  else if (estado === "menu" && camada.hidden) telaMenu();
-});
-palco.addEventListener("pointerup", soltar);
-palco.addEventListener("pointercancel", soltar);
-document.addEventListener("visibilitychange", () => { if (document.hidden) pausar(); });
+elTab.addEventListener("click", ev => { const g = ev.target.closest("[data-no]"); if (g) ir(g.dataset.no); });
+elTab.addEventListener("keydown", ev => { if ((ev.key === "Enter" || ev.key === " ") && ev.target.dataset && ev.target.dataset.no) { ev.preventDefault(); ir(ev.target.dataset.no); } });
+document.getElementById("escolhas").addEventListener("click", ev => { const b = ev.target.closest("[data-ir]"); if (b) ir(b.dataset.ir); });
 
 const bSom = document.getElementById("b-som");
 function rotuloSom() { bSom.textContent = "Som: " + (salvo.som ? "ligado" : "desligado"); bSom.setAttribute("aria-pressed", String(!!salvo.som)); }
 bSom.addEventListener("click", () => { salvo.som = !salvo.som; gravar(); rotuloSom(); });
-document.getElementById("b-pausa").addEventListener("click", () => { if (estado === "jogo") pausar(); else if (estado === "pausa") retomar(); });
 document.getElementById("b-revisao").addEventListener("click", telaRevisao);
-document.getElementById("b-menu").addEventListener("click", telaMenu);
+document.getElementById("b-menu").addEventListener("click", () => { if (modo !== "andando") telaMenu(); });
+
+let tRes = null, oriAntes = null;
+window.addEventListener("resize", () => {
+  clearTimeout(tRes);
+  tRes = setTimeout(() => { const o = elTab.clientWidth < 640 ? "P" : "L"; if (o !== oriAntes) { oriAntes = o; desenharTabuleiro(); } }, 150);
+});
 
 /* ===================== INÍCIO ===================== */
 if (salvo.som === undefined) salvo.som = true;
-rotuloSom(); ajustar();
+rotuloSom();
+S = { fase: Math.min(salvo.liberada, FASES.length - 1), energia: 3, gasto: 0, prof: true, pos: "ini", feitos: new Set() };
+desenharTabuleiro(); oriAntes = ori; atualizarHud();
 telaMenu();
-requestAnimationFrame(t => { ultimoTs = t; requestAnimationFrame(quadro); });
-if (document.fonts && document.fonts.ready) document.fonts.ready.then(ajustar);
+if (document.fonts && document.fonts.ready) document.fonts.ready.then(() => { if (modo !== "andando") desenharTabuleiro(); });
 })();
 </script>
 
