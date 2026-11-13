@@ -6,7 +6,7 @@
    Estratégia: responde do que está guardado (rápido e sem rede) e, quando há
    internet, busca a versão nova por trás e guarda para a próxima abertura.
    Mudou um arquivo do app? Suba VERSAO para limpar os guardados antigos. */
-const VERSAO = 'montador-v10';
+const VERSAO = 'montador-v11';
 const ARQUIVOS = [
     './',
     './index.html',
@@ -50,6 +50,9 @@ self.addEventListener('fetch', (evento) => {
     /* a fonte da interface (Outfit) também fica guardada, quando vier */
     const fonte = /fonts\.(googleapis|gstatic)\.com$/.test(url.hostname);
     if (!daqui && !fonte) return;
+    /* os guias em vídeo são grandes e pedidos em pedaços: vão direto pela rede,
+       sem ocupar o guardado (sem internet, só os vídeos ficam de fora) */
+    if (daqui && /\.mp4$/.test(url.pathname)) return;
 
     evento.respondWith(caches.open(VERSAO).then((cache) =>
         cache.match(pedido, { ignoreSearch: daqui }).then((guardado) => {
