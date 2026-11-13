@@ -79,6 +79,17 @@ a função que cria as contas estão em `supabase/`:
 O endereço e a chave publicável do Supabase estão em `js/config.js` — a chave
 publicável é feita para ir no navegador; os dados ficam protegidos pelas regras.
 
+## Guias em vídeo
+
+A tela inicial traz dois vídeos narrados sobre a prova bimestral (seção
+*Prova bimestral: veja como se faz*): o **guia do PCA** (criar a prova da
+área, distribuir as seções, fazer a sua parte, revisar, aprovar, travar e
+salvar o PDF) e o **guia do professor** (entrar, abrir a prova, escrever ou
+colar as questões, conferir e marcar como pronta). Os arquivos ficam em
+`videos/` (`.mp4` e a capa `.jpg`). Eles só carregam quando alguém aperta o
+play e não entram no guardado do service worker: sem internet, o app
+funciona, mas os vídeos não tocam.
+
 ## Os modelos
 
 O modelo decide o **formato**; o conteúdo é sempre do professor.
