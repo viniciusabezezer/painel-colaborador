@@ -1,20 +1,23 @@
 /* Um Supabase de mentira, para o teste de navegador das provas da área.
    Guarda as tabelas montador_* em memória e aplica as MESMAS regras do banco
    (supabase/001_montador.sql): quem vê, quem cria, quem altera. Também faz o
-   papel da função montador-usuarios, do login e do storage das imagens.
+   papel da função montador-usuarios, da função montador-convites, do login
+   e do storage das imagens. O cliente não lê montador_convites (RLS fechada).
    O cliente correspondente (cliente-falso.js) roda no navegador e fala com
    este servidor por POST /__falso — assim vários navegadores (gestão, PCA,
    professores) compartilham a mesma prova, como no servidor de verdade. */
-import { randomUUID } from 'node:crypto';
+import { createHash, randomUUID } from 'node:crypto';
+import { avaliarConvite, erroSenha, expiraEm, novoToken, tokenNoFormato } from '../supabase/functions/_shared/convite-regras.js';
 
 export function criarServidorFalso() {
     const db = {
-        usuarios: [],            /* { id, email, senha, banido } */
+        usuarios: [],            /* { id, email, senha, banido, entrou } */
         montador_perfis: [],
         montador_provas: [],
         montador_secoes: [],
         montador_questoes: [],
         montador_comentarios: [],
+        montador_convites: [],   /* token só como hash; a API do cliente não lê */
         storage: {},
         versao: 0
     };
@@ -69,8 +72,16 @@ export function criarServidorFalso() {
             criar: (uid, r) => podeVer(uid, r.prova_id) && r.autor === uid && (r.tipo === 'comentario' || coordena(uid, r.prova_id)),
             alterar: (uid, r) => r.autor === uid || coordena(uid, r.prova_id),
             apagar: (uid, r) => r.autor === uid || coordena(uid, r.prova_id)
+        },
+        /* RLS fechada: nem a gestão lê a tabela pela API; só a função */
+        montador_convites: {
+            ver: () => false,
+            criar: () => false,
+            alterar: () => false,
+            apagar: () => false
         }
     };
+    const hashHex = (token) => createHash('sha256').update(String(token)).digest('hex');
     const recusa = (msg = 'new row violates row-level security policy') => ({ error: { message: msg } });
 
     function filtrar(linhas, filtros) {
@@ -189,12 +200,16 @@ export function criarServidorFalso() {
             const papelNovo = papelFixo || d.papel;
             if (!d.nome) return { status: 400, erro: 'Informe o nome.' };
             if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(d.email || '')) return { status: 400, erro: 'E-mail inválido.' };
-            if (String(d.senha || '').length < 8) return { status: 400, erro: 'A senha precisa ter pelo menos 8 caracteres.' };
+            const senhaInformada = String(d.senha || '');
+            if (senhaInformada.length < 8 && !(senhaInformada.length === 0 && !papelFixo)) {
+                return { status: 400, erro: 'A senha precisa ter pelo menos 8 caracteres.' };
+            }
             if (papelNovo !== 'gestao' && !d.area) return { status: 400, erro: 'Escolha a área do professor.' };
             const email = d.email.toLowerCase();
             if (db.usuarios.some((u) => u.email === email)) return { status: 400, erro: 'Já existe uma conta com este e-mail.' };
             const id = randomUUID();
-            db.usuarios.push({ id, email, senha: d.senha, banido: false });
+            const senhaGuardada = senhaInformada || ('tmp-' + randomUUID() + randomUUID()).replace(/-/g, '').slice(0, 32);
+            db.usuarios.push({ id, email, senha: senhaGuardada, banido: false, entrou: false });
             const disciplinas = (Array.isArray(d.disciplinas) ? d.disciplinas : String(d.disciplinas || '').split(/[,;\n]/)).map((x) => x.trim()).filter(Boolean);
             const p = { id, nome: d.nome, email, papel: papelNovo, area: d.area || null, disciplinas, ativo: true, criado_em: agora() };
             db.montador_perfis.push(p);
@@ -218,6 +233,7 @@ export function criarServidorFalso() {
             if (alvo.id === uid) return { status: 400, erro: 'Você não pode excluir a própria conta.' };
             db.usuarios = db.usuarios.filter((u) => u.id !== alvo.id);
             db.montador_perfis = db.montador_perfis.filter((p) => p.id !== alvo.id);
+            db.montador_convites = db.montador_convites.filter((c) => c.perfil_id !== alvo.id);
             db.versao++;
             return { status: 200, ok: true };
         }
@@ -230,6 +246,67 @@ export function criarServidorFalso() {
         return { status: 200, ok: true };
     }
 
+    /* a função montador-convites — mesmas frases de convite-regras.js */
+    function convites(uid, corpo) {
+        const exigirGestao = () => {
+            if (!uid) return { status: 401, erro: 'Entre com a sua conta.' };
+            if (papel(uid) !== 'gestao') return { status: 403, erro: 'Só a gestão cadastra e altera professores.' };
+            return null;
+        };
+        if (corpo.acao === 'acessos') {
+            const negado = exigirGestao();
+            if (negado) return negado;
+            return {
+                status: 200,
+                ok: true,
+                acessos: db.montador_perfis.map((p) => ({
+                    id: p.id,
+                    nuncaEntrou: !(db.usuarios.find((u) => u.id === p.id) || {}).entrou
+                }))
+            };
+        }
+        if (corpo.acao === 'gerar') {
+            const negado = exigirGestao();
+            if (negado) return negado;
+            const alvo = db.montador_perfis.find((p) => p.id === corpo.id);
+            if (!alvo) return { status: 404, erro: 'Professor não encontrado.' };
+            const usuario = db.usuarios.find((u) => u.id === alvo.id);
+            if (!alvo.ativo || (usuario && usuario.banido)) return { status: 403, erro: 'Conta desativada não recebe convite. Reative a pessoa antes.' };
+            const agoraIso = agora();
+            db.montador_convites.forEach((c) => {
+                if (c.perfil_id === alvo.id && !c.usado_em && !c.revogado_em) c.revogado_em = agoraIso;
+            });
+            const token = novoToken();
+            const expira = expiraEm();
+            db.montador_convites.push({
+                id: randomUUID(), perfil_id: alvo.id, token_hash: hashHex(token),
+                criado_em: agoraIso, expira_em: expira, usado_em: null, revogado_em: null, criado_por: uid
+            });
+            return { status: 200, ok: true, token, expiraEm: expira, nome: alvo.nome, email: alvo.email };
+        }
+        if (corpo.acao === 'ver' || corpo.acao === 'aceitar') {
+            const token = String(corpo.token || '');
+            if (!tokenNoFormato(token)) return { status: 404, erro: 'Convite inválido.' };
+            if (corpo.acao === 'aceitar') {
+                const falhaSenha = erroSenha(corpo.senha);
+                if (falhaSenha) return { status: 400, erro: falhaSenha };
+            }
+            const convite = db.montador_convites.find((c) => c.token_hash === hashHex(token)) || null;
+            const perfilAlvo = convite && db.montador_perfis.find((p) => p.id === convite.perfil_id);
+            const usuario = perfilAlvo && db.usuarios.find((u) => u.id === perfilAlvo.id);
+            const efetivo = perfilAlvo
+                ? { ativo: !!(perfilAlvo.ativo && !(usuario && usuario.banido)), nome: perfilAlvo.nome, email: perfilAlvo.email }
+                : null;
+            const julgado = avaliarConvite(convite, efetivo, new Date());
+            if (!julgado.ok) return { status: julgado.status, erro: julgado.erro };
+            if (corpo.acao === 'ver') return { status: 200, ok: true, nome: perfilAlvo.nome, email: perfilAlvo.email, expiraEm: convite.expira_em };
+            convite.usado_em = agora();
+            usuario.senha = String(corpo.senha);
+            return { status: 200, ok: true, email: perfilAlvo.email, nome: perfilAlvo.nome };
+        }
+        return { status: 400, erro: 'Ação desconhecida.' };
+    }
+
     function tratar(corpo) {
         const uid = corpo.token && db.usuarios.some((u) => u.id === corpo.token && !u.banido) ? corpo.token : null;
         switch (corpo.op) {
@@ -237,6 +314,7 @@ export function criarServidorFalso() {
                 const u = db.usuarios.find((x) => x.email === String(corpo.email).toLowerCase() && x.senha === corpo.senha);
                 if (!u) return { error: { message: 'Invalid login credentials' } };
                 if (u.banido) return { error: { message: 'User is banned' } };
+                u.entrou = true;
                 return { data: { token: u.id } };
             }
             case 'senha': {
@@ -247,7 +325,11 @@ export function criarServidorFalso() {
             case 'sessao': return { data: uid ? { id: uid } : null };
             case 'consulta': return consulta(uid, corpo.q);
             case 'rpc': return uid ? rpc(uid, corpo.nome, corpo.args) : recusa();
-            case 'funcao': return { data: funcao(uid, corpo.corpo || {}) };
+            case 'funcao': {
+                const nome = corpo.nome || 'montador-usuarios';
+                const data = nome === 'montador-convites' ? convites(uid, corpo.corpo || {}) : funcao(uid, corpo.corpo || {});
+                return { data };
+            }
             case 'upload': {
                 const pasta = corpo.caminho.split('/')[0];
                 if (!uid || !podeVer(uid, pasta)) return recusa();

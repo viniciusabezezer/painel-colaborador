@@ -8,7 +8,9 @@
 // Ações (POST, JSON { acao, ... }):
 //   situacao         — { primeiroAcesso } (sem login)
 //   primeiro-acesso  — { nome, email, senha } (sem login; só sem gestão)
-//   criar            — { nome, email, senha, papel, area, disciplinas }
+//   criar            — { nome, email, senha?, papel, area, disciplinas }
+//                      senha vazia: a conta nasce com uma senha aleatória que
+//                      não é devolvida; a pessoa entra pelo convite (montador-convites)
 //   atualizar        — { id, nome?, email?, papel?, area?, disciplinas?, ativo?, senha? }
 //   excluir          — { id }
 import { createClient } from 'npm:@supabase/supabase-js@2';
@@ -47,6 +49,14 @@ function validarSenha(senha: string) {
     return senha;
 }
 
+/* Senha que ninguém vê, para a conta existir antes do convite. Não volta na resposta. */
+function senhaAleatoria() {
+    const letras = 'abcdefghjkmnpqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+    const n = new Uint32Array(32);
+    crypto.getRandomValues(n);
+    return Array.from(n, (v) => letras[v % letras.length]).join('');
+}
+
 function validarPapel(papel: string, area: string | null) {
     if (!PAPEIS.includes(papel)) throw new Recusa('Papel inválido.');
     if (papel !== 'gestao' && !(area && AREAS.includes(area))) throw new Recusa('Escolha a área do professor.');
@@ -74,11 +84,12 @@ async function quemChama(req: Request) {
     return perfil;
 }
 
-async function criarConta(dados: Record<string, unknown>, papelFixo?: string) {
+async function criarConta(dados: Record<string, unknown>, papelFixo?: string, senhaOpcional = false) {
     const nome = texto(dados.nome, 120);
     if (!nome) throw new Recusa('Informe o nome.');
     const email = validarEmail(texto(dados.email, 200));
-    const senha = validarSenha(String(dados.senha ?? ''));
+    const informada = String(dados.senha ?? '');
+    const senha = informada ? validarSenha(informada) : (senhaOpcional ? senhaAleatoria() : validarSenha(''));
     const papel = papelFixo || texto(dados.papel, 20);
     const area = papel === 'gestao' ? (texto(dados.area, 3) || null) : texto(dados.area, 3);
     validarPapel(papel, area);
@@ -120,7 +131,7 @@ Deno.serve(async (req: Request) => {
         const eu = await quemChama(req);
 
         if (acao === 'criar') {
-            return resposta({ ok: true, perfil: await criarConta(corpo) });
+            return resposta({ ok: true, perfil: await criarConta(corpo, undefined, true) });
         }
 
         if (acao === 'atualizar' || acao === 'excluir') {

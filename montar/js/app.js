@@ -13,6 +13,7 @@
     const Icones = window.MontarIcones;
     const Colar = window.MontarColar;
     const Nuvem = window.MontarNuvem;
+    const Convite = window.MontarConvite;
 
     const $ = function (id) { return document.getElementById(id); };
     const esc = Texto.escapar;
@@ -69,7 +70,7 @@
     /* ===================== telas ===================== */
 
     function mostrar(tela) {
-        ['inicio', 'editor', 'modelo', 'entrar', 'admin'].forEach(function (t) { $('tela-' + t).hidden = t !== tela; });
+        ['inicio', 'editor', 'modelo', 'entrar', 'admin', 'convite'].forEach(function (t) { $('tela-' + t).hidden = t !== tela; });
         document.body.dataset.tela = tela;
         window.scrollTo(0, 0);
     }
@@ -84,6 +85,7 @@
             return;
         }
         if (partes[0] === 'entrar') { prova = null; abrirEntrar(); return; }
+        if (partes[0] === 'convite') { prova = null; abrirConvite(partes[1] ? decodeURIComponent(partes.slice(1).join('/')) : ''); return; }
         if (partes[0] === 'admin') { prova = null; abrirAdmin(); return; }
         if (partes[0] === 'prova' && partes[1]) {
             const achada = await Armazem.obter(decodeURIComponent(partes[1]));
@@ -2173,6 +2175,38 @@
     /* ----- administração (gestão) ----- */
 
     let professoresAdmin = [];
+    let acessosPorId = null;
+
+    function erroConvite(falha) {
+        const m = (falha && falha.message) || '';
+        if (/not found|Function not found|não encontrad/i.test(m)) {
+            return 'O convite ainda não está no servidor. Falta aplicar a função montador-convites no Supabase.';
+        }
+        return Nuvem.mensagem(falha);
+    }
+
+    async function copiarTexto(texto) {
+        try {
+            await navigator.clipboard.writeText(texto);
+            return true;
+        } catch (e) { return false; }
+    }
+
+    async function mostrarConvite(dados, copiar) {
+        const url = Convite.url(dados.token);
+        const texto = Convite.mensagem({ nome: dados.nome, email: dados.email, url: url, dias: Convite.PRAZO_DIAS });
+        $('convite-titulo').textContent = 'Convite de ' + dados.nome;
+        $('convite-link').value = url;
+        $('convite-mensagem').value = texto;
+        $('convite-painel').hidden = false;
+        const aviso = $('convite-copiado');
+        if (copiar) {
+            const copiou = await copiarTexto(texto);
+            aviso.hidden = false;
+            aviso.textContent = copiou ? 'Mensagem copiada. Cole no WhatsApp.' : 'Não deu para copiar sozinho. Selecione a mensagem e copie.';
+        } else aviso.hidden = true;
+        $('convite-painel').scrollIntoView({ block: 'nearest' });
+    }
 
     async function abrirAdmin() {
         const p = Nuvem.perfil();
@@ -2181,35 +2215,62 @@
         mostrar('admin');
         document.title = 'Professores — Montador de Provas da Malu';
         limparFormProfessor();
+        $('convite-painel').hidden = true;
         await desenharProfessores();
     }
 
-    async function desenharProfessores() {
+    async function carregarAcessos() {
+        const lista = await Nuvem.acessos();
+        if (!lista) { acessosPorId = null; return; }
+        acessosPorId = {};
+        lista.forEach(function (a) { acessosPorId[a.id] = !!a.nuncaEntrou; });
+    }
+
+    async function desenharProfessores(opcoes) {
         const destino = $('lista-prof');
+        if (!opcoes || opcoes.acessos !== false) await carregarAcessos();
         try {
             professoresAdmin = await Nuvem.perfis();
         } catch (e) {
             destino.innerHTML = '<p class="aviso aviso--erro">' + esc(Nuvem.mensagem(e)) + '</p>';
             return;
         }
+        const filtroNunca = $('prof-so-nunca').checked && !!acessosPorId;
+        $('prof-filtro-nunca').hidden = !acessosPorId;
+        if (!acessosPorId) $('prof-so-nunca').checked = false;
+        const resumo = $('prof-resumo');
+        if (acessosPorId) {
+            const n = professoresAdmin.filter(function (x) { return acessosPorId[x.id]; }).length;
+            resumo.hidden = false;
+            resumo.textContent = n === 0 ? 'todo mundo já entrou' : (n === 1 ? '1 pessoa ainda não entrou' : n + ' pessoas ainda não entraram');
+        } else resumo.hidden = true;
         const termo = normalizar($('busca-prof').value);
         destino.innerHTML = '';
         const lista = professoresAdmin.filter(function (x) {
+            if (filtroNunca && !acessosPorId[x.id]) return false;
             return !termo || normalizar([x.nome, x.email, NOMES_AREA[x.area], (x.disciplinas || []).join(' ')].join(' ')).indexOf(termo) !== -1;
         });
-        if (!lista.length) destino.appendChild(el('p', 'vazio', 'Ninguém cadastrado ainda.'));
+        if (!lista.length) {
+            const vazio = !professoresAdmin.length ? 'Ninguém cadastrado ainda.'
+                : ($('prof-so-nunca').checked ? 'Ninguém nesta lista está sem entrar.' : 'Ninguém encontrado nessa busca.');
+            destino.appendChild(el('p', 'vazio', vazio));
+        }
         lista.forEach(function (x) {
             const meta = [NOMES_PAPEL[x.papel], NOMES_AREA[x.area], (x.disciplinas || []).join(', '), x.email].filter(Boolean).join(' · ');
+            const selos = (x.ativo ? '' : ' ' + situacaoHtml('devolvida', 'desativado'))
+                + (acessosPorId && acessosPorId[x.id] ? ' ' + situacaoHtml('aberta', 'nunca entrou') : '');
             destino.appendChild(el('div', 'prova-linha',
-                '<div class="info"><strong>' + esc(x.nome) + (x.ativo ? '' : ' ' + situacaoHtml('devolvida', 'desativado')) + '</strong><span class="meta">' + esc(meta) + '</span></div>' +
+                '<div class="info"><strong>' + esc(x.nome) + selos + '</strong><span class="meta">' + esc(meta) + '</span></div>' +
                 '<div class="acoes">' +
                 '<button type="button" class="btn btn--pequeno" data-prof-editar="' + esc(x.id) + '">Editar</button>' +
+                '<button type="button" class="btn btn--pequeno" data-prof-convite="' + esc(x.id) + '"' + (x.ativo ? '' : ' disabled') + ' title="' + (x.ativo ? 'Gera um link de 7 dias. Um novo convite cancela o anterior, se ainda não foi usado.' : 'Reative a conta para gerar um convite.') + '">Copiar convite</button>' +
                 '<button type="button" class="btn btn--pequeno" data-prof-ativo="' + esc(x.id) + '">' + (x.ativo ? 'Desativar' : 'Reativar') + '</button>' +
                 (x.id === Nuvem.perfil().id ? '' : '<button type="button" class="btn btn--pequeno" data-prof-excluir="' + esc(x.id) + '">Excluir</button>') +
                 '</div>'));
         });
     }
-    $('busca-prof').addEventListener('input', desenharProfessores);
+    $('busca-prof').addEventListener('input', function () { desenharProfessores({ acessos: false }); });
+    $('prof-so-nunca').addEventListener('change', function () { desenharProfessores({ acessos: false }); });
 
     function limparFormProfessor() {
         $('prof-id').value = '';
@@ -2218,6 +2279,7 @@
         $('prof-area').value = '';
         $('form-professor-titulo').textContent = 'Cadastrar professor';
         $('prof-senha-rotulo').textContent = 'Senha provisória (mín. 8)';
+        $('prof-senha-ajuda').textContent = 'Opcional. Em branco, a pessoa cria a própria senha pelo convite. Se preencher, anote e passe ao professor.';
         $('prof-salvar').textContent = 'Cadastrar';
         $('prof-cancelar').hidden = true;
         $('prof-erro').hidden = true;
@@ -2245,15 +2307,19 @@
         };
         const senha = $('prof-senha').value;
         if (senha) dados.senha = senha;
-        if (!id && !senha) { erro.textContent = 'Defina a senha provisória (o botão Gerar cria uma).'; erro.hidden = false; return; }
         $('prof-salvar').disabled = true;
         try {
+            let criado = null;
             if (id) await Nuvem.atualizarProfessor(id, dados);
-            else await Nuvem.criarProfessor(dados);
+            else criado = await Nuvem.criarProfessor(dados);
             ok.textContent = (id ? 'Alterações salvas: ' : 'Cadastrado: ') + dados.nome + (senha ? ' — senha: ' + senha + ' (anote e passe ao professor)' : '') + '.';
             ok.hidden = false;
             limparFormProfessor();
             await desenharProfessores();
+            if (criado && criado.perfil) {
+                try { await mostrarConvite(await Nuvem.gerarConvite(criado.perfil.id), true); }
+                catch (falhaConvite) { ok.textContent += ' Não consegui gerar o convite: ' + erroConvite(falhaConvite); }
+            }
         } catch (falha) {
             erro.textContent = falha.message;
             erro.hidden = false;
@@ -2265,11 +2331,15 @@
     $('lista-prof').addEventListener('click', async function (e) {
         const b = e.target.closest('button');
         if (!b) return;
-        const id = b.dataset.profEditar || b.dataset.profAtivo || b.dataset.profExcluir;
+        const id = b.dataset.profEditar || b.dataset.profAtivo || b.dataset.profExcluir || b.dataset.profConvite;
         const x = professoresAdmin.find(function (y) { return y.id === id; });
         if (!x) return;
         try {
-            if (b.dataset.profEditar) {
+            if (b.dataset.profConvite) {
+                if (!x.ativo) return;
+                b.disabled = true;
+                await mostrarConvite(await Nuvem.gerarConvite(x.id), true);
+            } else if (b.dataset.profEditar) {
                 $('prof-id').value = x.id;
                 $('prof-nome').value = x.nome;
                 $('prof-email').value = x.email;
@@ -2279,6 +2349,7 @@
                 $('prof-senha').value = '';
                 $('form-professor-titulo').textContent = 'Editar ' + x.nome;
                 $('prof-senha-rotulo').textContent = 'Nova senha (deixe vazio para manter a atual)';
+                $('prof-senha-ajuda').textContent = 'Deixe em branco para manter a senha atual. O convite, se precisar, fica na lista.';
                 $('prof-salvar').textContent = 'Salvar alterações';
                 $('prof-cancelar').hidden = false;
                 $('prof-ok').hidden = true;
@@ -2293,7 +2364,84 @@
                 await Nuvem.excluirProfessor(x.id);
                 await desenharProfessores();
             }
-        } catch (falha) { alert(falha.message); }
+        } catch (falha) { alert(erroConvite(falha)); }
+        finally { if (b.dataset.profConvite) b.disabled = !x.ativo; }
+    });
+
+    $('convite-copiar-msg').onclick = async function () {
+        const aviso = $('convite-copiado');
+        const copiou = await copiarTexto($('convite-mensagem').value);
+        aviso.hidden = false;
+        aviso.textContent = copiou ? 'Mensagem copiada. Cole no WhatsApp.' : 'Não deu para copiar sozinho. Selecione a mensagem e copie.';
+    };
+    $('convite-copiar-link').onclick = async function () {
+        const aviso = $('convite-copiado');
+        const copiou = await copiarTexto($('convite-link').value);
+        aviso.hidden = false;
+        aviso.textContent = copiou ? 'Link copiado.' : 'Não deu para copiar sozinho. Selecione o link e copie.';
+    };
+
+    /* ----- convite público: a pessoa cria a senha e entra ----- */
+
+    let conviteToken = '';
+
+    async function abrirConvite(token) {
+        mostrar('convite');
+        document.title = 'Convite — Montador de Provas da Malu';
+        conviteToken = token || '';
+        $('form-convite').hidden = true;
+        $('convite-erro').hidden = true;
+        $('convite-form-erro').hidden = true;
+        $('convite-senha').value = '';
+        $('convite-senha2').value = '';
+        $('convite-nome').textContent = '';
+        $('convite-email').textContent = '';
+        $('convite-carregando').hidden = false;
+        if (!conviteToken) {
+            $('convite-carregando').hidden = true;
+            $('convite-erro').textContent = 'Convite inválido.';
+            $('convite-erro').hidden = false;
+            return;
+        }
+        try {
+            const dados = await Nuvem.verConvite(conviteToken);
+            $('convite-nome').textContent = dados.nome || '';
+            $('convite-email').textContent = dados.email ? 'E-mail de acesso: ' + dados.email : '';
+            $('form-convite').hidden = false;
+        } catch (falha) {
+            $('convite-erro').textContent = erroConvite(falha);
+            $('convite-erro').hidden = false;
+        } finally {
+            $('convite-carregando').hidden = true;
+        }
+    }
+
+    $('form-convite').addEventListener('submit', async function (e) {
+        e.preventDefault();
+        const erro = $('convite-form-erro');
+        erro.hidden = true;
+        const senha = $('convite-senha').value;
+        if (senha.length < 8) { erro.textContent = 'A senha precisa ter pelo menos 8 caracteres.'; erro.hidden = false; return; }
+        if (senha !== $('convite-senha2').value) { erro.textContent = 'As duas senhas não são iguais.'; erro.hidden = false; return; }
+        $('convite-botao').disabled = true;
+        try {
+            const aceito = await Nuvem.aceitarConvite(conviteToken, senha);
+            try {
+                await Nuvem.entrar(aceito.email, senha);
+            } catch (falhaEntrar) {
+                erro.textContent = 'A senha foi criada, mas não consegui entrar agora. Vá em Entrar e use o e-mail e a senha que você acabou de definir. ' + Nuvem.mensagem(falhaEntrar);
+                erro.hidden = false;
+                return;
+            }
+            $('convite-senha').value = '';
+            $('convite-senha2').value = '';
+            location.hash = '#/';
+        } catch (falha) {
+            erro.textContent = erroConvite(falha);
+            erro.hidden = false;
+        } finally {
+            $('convite-botao').disabled = false;
+        }
     });
 
 

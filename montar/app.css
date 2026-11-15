@@ -299,6 +299,12 @@ body[data-tela="editor"], body[data-tela="modelo"] { overflow: hidden; }
 .dica--pequena { font-size: 12.5px; margin: 6px 0 0; }
 .selo-offline { margin-top: 6px; font-size: 13px !important; font-weight: 600; color: var(--green) !important; }
 .busca { margin: 4px 0 10px; max-width: 360px; }
+.filtros-prof { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.filtros-prof .busca { margin: 0; }
+.filtros-prof label { display: inline-flex; align-items: center; gap: 6px; cursor: pointer; }
+.convite-nome { font-size: 22px; font-weight: 800; margin: 0 0 4px; }
+#convite-mensagem { min-height: 140px; }
+#convite-painel label { display: flex; flex-direction: column; gap: 5px; margin-bottom: 10px; }
 .btn--verde { border-color: hsl(130, 40%, 60%); color: var(--green-dark); background: #eef7f0; }
 
 .campo-texto { display: flex; flex-direction: column; gap: 4px; }
