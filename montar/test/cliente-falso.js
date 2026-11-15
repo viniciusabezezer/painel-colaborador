@@ -68,7 +68,7 @@
         },
         functions: {
             invoke: async function (nome, opcoes) {
-                const r = await chamar({ op: 'funcao', corpo: opcoes.body });
+                const r = await chamar({ op: 'funcao', nome: nome, corpo: opcoes.body });
                 const d = r.data || {};
                 if (d.status && d.status >= 400) {
                     return { data: null, error: { message: 'Edge Function returned a non-2xx status code', context: { json: async function () { return { erro: d.erro }; } } } };

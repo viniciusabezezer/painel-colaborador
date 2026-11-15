@@ -56,12 +56,19 @@ cada um com o seu login.
 - Quem decide o que cada um pode fazer é o **banco** (regras RLS), não a tela:
   mesmo forçando pelo navegador, um professor não grava na seção do colega.
 
-**Primeiro acesso e senhas.** Na primeira vez, em *Entrar*, aparece o
+**Primeiro acesso, convite e senhas.** Na primeira vez, em *Entrar*, aparece o
 **Primeiro acesso da gestão**: quem o usa cria a primeira conta da gestão e,
 com ela, cadastra os demais. Essa opção some assim que existe uma conta da
-gestão. Esqueceu a senha? A gestão define uma nova em *Professores → Editar*;
-cada um troca a própria em *Trocar senha*. Conta desativada não entra, mas as
-questões dela continuam nas provas.
+gestão. Para cada professor, a gestão pode definir uma senha provisória ou
+deixar em branco e mandar um **convite por link** (*Copiar convite*, ou logo
+depois de cadastrar): a pessoa abre o link, vê o próprio nome, cria a senha e
+já entra. O link vale 7 dias, um uso só; gerar outro cancela o anterior. Conta
+desativada não usa o convite. O token fica só como hash, na tabela
+`montador_convites`, e quem grava a senha é a função `montador-convites` — sem
+e-mail e sem mexer no Auth do projeto (ele é compartilhado com o Mapa de
+Aulas). Esqueceu a senha? A gestão manda um convite novo, ou define uma senha
+em *Professores → Editar*; cada um troca a própria em *Trocar senha*. Conta
+desativada não entra, mas as questões dela continuam nas provas.
 
 **Onde ficam os dados.** No projeto Supabase **MapaDeAulas** (o plano gratuito
 só permite dois projetos ativos), em tabelas próprias com o prefixo
@@ -73,8 +80,10 @@ a função que cria as contas estão em `supabase/`:
 | `supabase/001_montador.sql` | tabelas, regras de acesso (RLS), gatilhos, armazenamento das imagens, tempo real |
 | `supabase/002_funcoes_privadas.sql` | as funções das regras fora da API |
 | `supabase/003_ver_prova_pela_linha.sql` | ajuste da regra de leitura das provas |
+| `supabase/004_montador_convites.sql` | convites por link (tabela com RLS fechada; não mexe no Auth) |
 | `supabase/functions/montador-usuarios/` | a função que cria e altera contas (só a gestão a usa) |
-| `supabase/teste_permissoes.sql` | 25 verificações das regras, para rodar no SQL Editor (não grava nada) |
+| `supabase/functions/montador-convites/` | gera o link, confere o token e grava a senha (só a gestão gera) |
+| `supabase/teste_permissoes.sql` | 28 verificações das regras, para rodar no SQL Editor (não grava nada) |
 
 O endereço e a chave publicável do Supabase estão em `js/config.js` — a chave
 publicável é feita para ir no navegador; os dados ficam protegidos pelas regras.
@@ -315,7 +324,8 @@ HTML, CSS e JavaScript sem framework, sem build e sem biblioteca de fora.
 | `js/colar.js` | texto formatado e imagens da área de transferência |
 | `js/paginar.js` | as folhas A4: blocos, colunas, quebras, alternativas, folha de correção |
 | `js/armazem.js` | provas, últimos arquivos gerados e imagens das provas da área (IndexedDB) |
-| `js/nuvem.js` | login, cadastro e provas da área: envio por diferença, mudanças dos colegas, imagens, comentários |
+| `js/nuvem.js` | login, cadastro, convite e provas da área: envio por diferença, mudanças dos colegas, imagens, comentários |
+| `js/convite.js` | o link do convite e a mensagem para colar no WhatsApp |
 | `js/config.js` | endereço e chave publicável do Supabase |
 | `vendor/supabase.js` | cliente do Supabase (MIT), servido do próprio site |
 | `js/app.js` | as telas |
@@ -327,8 +337,9 @@ HTML, CSS e JavaScript sem framework, sem build e sem biblioteca de fora.
 
 ```bash
 node --test montar/test/montar.test.cjs   # 24 testes: marcação, modelos, ícones, versão B, gabarito, colagem
+node --test montar/test/convite.test.mjs  # convite por link e os controles de admin, com servidor de mentira
 node montar/test/montar-browser.mjs        # 80 verificações na tela, com Chromium
-node montar/test/area-browser.mjs          # 52 verificações da prova da área, com cinco navegadores
+node montar/test/area-browser.mjs          # 76 verificações da prova da área e do convite, com Chromium
 ```
 
 O teste de navegador precisa do `playwright` (global serve). Ele monta uma

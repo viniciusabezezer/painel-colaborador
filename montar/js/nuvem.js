@@ -134,8 +134,8 @@
 
     /* ===================== gestão (função montador-usuarios) ===================== */
 
-    async function funcao(corpo) {
-        const { data, error } = await obterCliente().functions.invoke(CONFIG.funcaoUsuarios || 'montador-usuarios', { body: corpo });
+    async function funcaoNome(nome, corpo) {
+        const { data, error } = await obterCliente().functions.invoke(nome, { body: corpo });
         if (data && data.erro) throw new Error(data.erro);
         if (error) {
             /* o corpo do erro traz a explicação da função */
@@ -144,6 +144,14 @@
             throw new Error(texto || mensagem(error));
         }
         return data;
+    }
+
+    function funcao(corpo) {
+        return funcaoNome(CONFIG.funcaoUsuarios || 'montador-usuarios', corpo);
+    }
+
+    function funcaoConvites(corpo) {
+        return funcaoNome(CONFIG.funcaoConvites || 'montador-convites', corpo);
     }
 
     async function primeiroAcessoAberto() {
@@ -158,6 +166,18 @@
     function criarProfessor(dados) { return funcao(Object.assign({ acao: 'criar' }, dados)); }
     function atualizarProfessor(id, dados) { return funcao(Object.assign({ acao: 'atualizar', id: id }, dados)); }
     function excluirProfessor(id) { return funcao({ acao: 'excluir', id: id }); }
+
+    function gerarConvite(id) { return funcaoConvites({ acao: 'gerar', id: id }); }
+    function verConvite(token) { return funcaoConvites({ acao: 'ver', token: token }); }
+    function aceitarConvite(token, senha) { return funcaoConvites({ acao: 'aceitar', token: token, senha: senha }); }
+
+    /* null = o servidor ainda não responde; a lista de professores segue sem o selo */
+    async function acessos() {
+        try {
+            const r = await funcaoConvites({ acao: 'acessos' });
+            return r && r.acessos ? r.acessos : [];
+        } catch (e) { return null; }
+    }
 
     async function perfis() {
         return (await exigir(obterCliente().from('montador_perfis').select('*').order('nome'))) || [];
@@ -672,6 +692,10 @@
         criarProfessor: criarProfessor,
         atualizarProfessor: atualizarProfessor,
         excluirProfessor: excluirProfessor,
+        gerarConvite: gerarConvite,
+        verConvite: verConvite,
+        aceitarConvite: aceitarConvite,
+        acessos: acessos,
         perfis: perfis,
         coordena: coordena,
         listarProvas: listarProvas,

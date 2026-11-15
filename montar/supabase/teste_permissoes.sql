@@ -4,7 +4,8 @@
 -- da prova da área e, no fim, desfaz tudo com um erro proposital — que traz
 -- na mensagem a lista de verificações. Nada fica gravado.
 --
--- Esperado: 25 linhas terminando em "ok", nenhuma "FALHA".
+-- Esperado: 28 linhas terminando em "ok", nenhuma "FALHA".
+-- Rode depois de 004_montador_convites.sql (a tabela de convites precisa existir).
 
 do $teste$
 declare
@@ -126,6 +127,26 @@ begin
     select count(*) into n from public.montador_provas;
     resultados := resultados || ('Sem login não vê nada: ' || case when n=0 then 'ok' else 'FALHA' end);
   exception when others then resultados := resultados || 'Sem login não vê nada: ok (sem permissão)'::text; end;
+  execute 'reset role';
+
+  -- convites: RLS fechada. Nem anon nem authenticated leem ou gravam.
+  perform set_config('request.jwt.claims', json_build_object('sub', b, 'role','authenticated')::text, true);
+  execute 'set local role authenticated';
+  begin
+    insert into public.montador_convites (perfil_id, token_hash, expira_em)
+      values (b, repeat('ab', 32), now() + interval '1 day');
+    resultados := resultados || 'FALHA: autenticado gravou convite'::text;
+  exception when others then resultados := resultados || 'Autenticado não grava convite: ok'::text; end;
+  begin
+    select count(*) into n from public.montador_convites;
+    resultados := resultados || ('Autenticado não lê convites: ' || case when n = 0 then 'ok' else 'FALHA' end);
+  exception when others then resultados := resultados || 'Autenticado não lê convites: ok (sem permissão)'::text; end;
+  execute 'reset role';
+  execute 'set local role anon';
+  begin
+    select count(*) into n from public.montador_convites;
+    resultados := resultados || ('Anon não lê convites: ' || case when n = 0 then 'ok' else 'FALHA' end);
+  exception when others then resultados := resultados || 'Anon não lê convites: ok (sem permissão)'::text; end;
   execute 'reset role';
 
   raise exception 'RESULTADO|%', array_to_string(resultados, ' || ');

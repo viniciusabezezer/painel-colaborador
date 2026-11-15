@@ -6,5 +6,6 @@ window.MONTADOR_NUVEM = {
     url: 'https://yncpicdkrntvwfdxrvab.supabase.co',
     chave: 'sb_publishable_LbDAh1pdkGAlWc7KY0v1ow_LusWcVg-',
     funcaoUsuarios: 'montador-usuarios',
+    funcaoConvites: 'montador-convites',
     bucketImagens: 'montador-imagens'
 };

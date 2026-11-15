@@ -50,7 +50,7 @@ function conferir(certo, mensagem) {
     feitos.push(mensagem);
 }
 
-const navegador = await chromium.launch();
+const navegador = await chromium.launch(process.env.CHROME_PATH ? { executablePath: process.env.CHROME_PATH } : {});
 const erros = [];
 const RUIDO = /fonts\.googleapis|fonts\.gstatic|ERR_CERT_AUTHORITY_INVALID|ERR_INTERNET_DISCONNECTED|Failed to fetch|net::ERR_FAILED/;
 const respostas = {}; /* respostas para prompt() por pessoa */
@@ -333,6 +333,110 @@ try {
     await p.waitForSelector('#tela-editor:not([hidden]) .folha');
     conferir(!(await p.$eval('#editor fieldset.passo', (f) => f.disabled)) && await p.isHidden('#ed-nuvem') && await p.isHidden('#area-painel'),
         'a prova pessoal abre como antes, sem nada da nuvem');
+
+    /* ===== convite por link, sem mexer nas contas que o resto do teste usa ===== */
+    p = gestao.pagina;
+    await p.goto(`http://127.0.0.1:${PORTA}/montar/#/admin`);
+    await p.waitForSelector('#lista-prof .prova-linha');
+    conferir(await p.isVisible('#prof-gerar') && await p.isVisible('#busca-prof'), 'gerar senha e a busca continuam na tela');
+    const idAna = falso.db.montador_perfis.find((x) => x.email === 'ana@escola.test').id;
+    conferir(await p.$(`[data-prof-editar="${idAna}"]`) !== null && await p.$(`[data-prof-ativo="${idAna}"]`) !== null,
+        'editar e desativar continuam em cada linha');
+    conferir(await p.$(`[data-prof-excluir="${idAna}"]`) === null, 'a própria conta segue sem o botão excluir');
+    conferir(!(await p.$eval(`[data-prof-ativo="${idAna}"]`, (b) => b.textContent)).includes('Reativar'), 'a gestão ativa continua com Desativar, não Reativar');
+
+    await p.fill('#prof-nome', 'Ivo Convite');
+    await p.fill('#prof-email', 'ivo@escola.test');
+    await p.selectOption('#prof-papel', 'professor');
+    await p.selectOption('#prof-area', 'MAT');
+    await p.fill('#prof-disciplinas', 'Matemática');
+    await p.fill('#prof-senha', '');
+    await p.click('#prof-salvar');
+    await p.waitForFunction(() => document.getElementById('prof-ok').textContent.includes('Ivo Convite'));
+    conferir(!(await p.textContent('#prof-ok')).includes('senha:'), 'cadastro sem senha provisória não mostra senha nenhuma');
+    await p.waitForSelector('#convite-painel:not([hidden])');
+    const link1 = await p.inputValue('#convite-link');
+    const msg1 = await p.inputValue('#convite-mensagem');
+    conferir(link1.includes('#/convite/') && msg1.includes(link1) && msg1.includes('ivo@escola.test') && msg1.includes('7 dias'),
+        'ao cadastrar, aparece o link e a mensagem pronta para o WhatsApp');
+    conferir(!msg1.includes('tmp-') && !falso.db.montador_convites.some((c) => msg1.includes(c.token_hash)),
+        'a mensagem não leva senha nem o hash do token');
+    await p.waitForFunction(() => /nunca entrou/.test(document.getElementById('lista-prof').textContent));
+    conferir((await p.textContent('#prof-resumo')).includes('não entrou'), 'a lista conta quem ainda não entrou');
+    const idIvo = falso.db.montador_perfis.find((x) => x.email === 'ivo@escola.test').id;
+    conferir(await p.$eval(`[data-prof-editar="${idIvo}"]`, (b) => b.textContent === 'Editar')
+        && await p.$eval(`[data-prof-convite="${idIvo}"]`, (b) => b.textContent === 'Copiar convite')
+        && await p.$eval(`[data-prof-ativo="${idIvo}"]`, (b) => b.textContent === 'Desativar')
+        && await p.$(`[data-prof-excluir="${idIvo}"]`) !== null,
+        'a linha nova tem Editar, Copiar convite, Desativar e Excluir');
+    await p.click(`[data-prof-editar="${idIvo}"]`);
+    await p.waitForFunction(() => document.getElementById('form-professor-titulo').textContent.startsWith('Editar'));
+    conferir(await p.isVisible('#prof-cancelar'), 'editar mostra cancelar');
+    await p.click('#prof-cancelar');
+    await p.waitForFunction(() => document.getElementById('form-professor-titulo').textContent === 'Cadastrar professor');
+    conferir(await p.inputValue('#prof-id') === '', 'cancelar a edição limpa o formulário');
+
+    await p.check('#prof-so-nunca');
+    await p.waitForFunction(() => [...document.querySelectorAll('#lista-prof .info strong')].every((n) => !n.textContent.startsWith('Ana')));
+    conferir((await p.textContent('#lista-prof')).includes('Ivo Convite'), 'o filtro "nunca entrou" esconde quem já entrou e mantém o Ivo');
+    await p.uncheck('#prof-so-nunca');
+    await p.waitForFunction(() => document.querySelectorAll('#lista-prof .prova-linha').length > 1);
+    await p.fill('#busca-prof', 'Ivo');
+    await p.waitForFunction(() => document.querySelectorAll('#lista-prof .prova-linha').length === 1);
+    await p.fill('#busca-prof', '');
+    conferir(true, 'a busca por nome continua filtrando a lista');
+
+    const ivo = await pessoa('ivo');
+    await ivo.pagina.goto(link1);
+    await ivo.pagina.waitForSelector('#form-convite:not([hidden])');
+    conferir((await ivo.pagina.textContent('#convite-nome')) === 'Ivo Convite', 'o convite mostra o nome de quem foi convidado');
+    conferir((await ivo.pagina.textContent('#convite-email')).includes('ivo@escola.test'), 'e o e-mail de acesso');
+    await ivo.pagina.fill('#convite-senha', 'senha-do-ivo');
+    await ivo.pagina.fill('#convite-senha2', 'senha-diferente');
+    await ivo.pagina.click('#convite-botao');
+    await ivo.pagina.waitForSelector('#convite-form-erro:not([hidden])');
+    conferir((await ivo.pagina.textContent('#convite-form-erro')).includes('não são iguais'), 'senhas diferentes não entram');
+    await ivo.pagina.fill('#convite-senha2', 'senha-do-ivo');
+    await ivo.pagina.click('#convite-botao');
+    await ivo.pagina.waitForSelector('#tela-inicio:not([hidden]) #conta');
+    conferir((await ivo.pagina.textContent('#conta')).includes('Ivo Convite'), 'criar a senha no convite já deixa a pessoa logada');
+    conferir(falso.db.usuarios.find((u) => u.email === 'ivo@escola.test').entrou === true, 'depois do convite, a conta conta como quem já entrou');
+
+    await ivo.pagina.goto(link1);
+    await ivo.pagina.waitForSelector('#convite-erro:not([hidden])');
+    conferir((await ivo.pagina.textContent('#convite-erro')).includes('já foi usado'), 'o mesmo link não serve de novo');
+
+    await p.click(`[data-prof-convite="${idIvo}"]`);
+    await p.waitForFunction((anterior) => document.getElementById('convite-link').value && document.getElementById('convite-link').value !== anterior, link1);
+    const link2 = await p.inputValue('#convite-link');
+    const outro = await pessoa('ivo-link-velho');
+    await outro.pagina.goto(link2);
+    await outro.pagina.waitForSelector('#form-convite:not([hidden])');
+    await p.click(`[data-prof-convite="${idIvo}"]`);
+    await p.waitForFunction((anterior) => document.getElementById('convite-link').value !== anterior, link2);
+    await outro.pagina.reload();
+    await outro.pagina.waitForSelector('#convite-erro:not([hidden])');
+    conferir((await outro.pagina.textContent('#convite-erro')).includes('substituído'), 'gerar outro convite cancela o link anterior');
+
+    const link3 = await p.inputValue('#convite-link');
+    await p.click(`[data-prof-ativo="${idIvo}"]`);
+    await p.waitForFunction((id) => /desativado/.test(document.querySelector(`[data-prof-ativo="${id}"]`).closest('.prova-linha').textContent), idIvo);
+    conferir(await p.$eval(`[data-prof-convite="${idIvo}"]`, (b) => b.disabled), 'conta desativada não oferece convite novo');
+    await outro.pagina.goto(link3);
+    await outro.pagina.waitForSelector('#convite-erro:not([hidden])');
+    conferir((await outro.pagina.textContent('#convite-erro')).includes('desativada'), 'conta desativada não usa o convite que já existia');
+    await p.click(`[data-prof-ativo="${idIvo}"]`);
+    await p.waitForFunction((id) => document.querySelector(`[data-prof-ativo="${id}"]`).textContent === 'Desativar', idIvo);
+    await outro.pagina.goto(`http://127.0.0.1:${PORTA}/montar/#/`);
+    await outro.pagina.goto(link3);
+    await outro.pagina.waitForSelector('#form-convite:not([hidden])');
+    conferir(true, 'reativar a conta devolve o convite que ainda não foi usado');
+
+    await p.setViewportSize({ width: 390, height: 844 });
+    await p.waitForSelector('#lista-prof .prova-linha');
+    conferir(await p.isVisible(`[data-prof-convite="${idIvo}"]`) && await p.isVisible('#convite-copiar-msg'),
+        'no celular, o convite e os botões da lista continuam alcançáveis');
+    await p.setViewportSize({ width: 1400, height: 1000 });
 
     conferir(erros.length === 0, 'nenhum erro no console: ' + erros.join(' | '));
     console.log(feitos.map((f) => '✓ ' + f).join('\n'));

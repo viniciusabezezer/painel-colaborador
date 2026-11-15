@@ -106,7 +106,7 @@
         <p class="aviso aviso--erro" id="entrar-erro" hidden></p>
         <div class="acoes-lista">
             <button type="submit" class="btn btn--primary" id="entrar-botao">Entrar</button>
-            <span class="dica dica--pequena">Esqueceu a senha? Peça uma nova à gestão.</span>
+            <span class="dica dica--pequena">Esqueceu a senha? Peça um convite novo à gestão.</span>
         </div>
     </form>
     <form class="passo" id="form-primeiro" hidden autocomplete="off">
@@ -134,7 +134,7 @@
         <img src="logo.png" alt="">
         <div>
             <h1>Professores</h1>
-            <p>Quem pode entrar no Montador e o que pode fazer. O <strong>PCA</strong> coordena as provas da sua área; o <strong>professor</strong> escreve as questões da sua disciplina; a <strong>gestão</strong> cadastra e vê tudo.</p>
+            <p>Quem pode entrar no Montador e o que pode fazer. O <strong>PCA</strong> coordena as provas da sua área; o <strong>professor</strong> escreve as questões da sua disciplina; a <strong>gestão</strong> cadastra e vê tudo. O <strong>convite</strong> é um link para a pessoa criar a própria senha — copie e mande no WhatsApp.</p>
         </div>
     </div>
     <form class="passo" id="form-professor" autocomplete="off">
@@ -169,7 +169,7 @@
             <label class="campo-largo"><span id="prof-senha-rotulo">Senha provisória (mín. 8)</span>
                 <span class="com-botao"><input type="text" id="prof-senha" autocomplete="off" minlength="8">
                 <button type="button" class="btn btn--pequeno" id="prof-gerar">Gerar</button></span>
-                <small>Passe a senha ao professor; ele pode trocá-la depois de entrar.</small>
+                <small id="prof-senha-ajuda">Opcional. Em branco, a pessoa cria a própria senha pelo convite. Se preencher, anote e passe ao professor.</small>
             </label>
         </div>
         <p class="aviso aviso--erro" id="prof-erro" hidden></p>
@@ -179,13 +179,56 @@
             <button type="button" class="btn" id="prof-cancelar" hidden>Cancelar a edição</button>
         </div>
     </form>
+    <section class="passo" id="convite-painel" hidden>
+        <h2 id="convite-titulo">Convite</h2>
+        <p class="dica">Válido por 7 dias, um uso só. Gerar outro cancela este, se a pessoa ainda não entrou por ele. Conta desativada não abre o link. Se você também passou uma senha provisória, ela deixa de valer quando a pessoa criar a senha aqui.</p>
+        <label class="campo-largo">Link
+            <input type="text" id="convite-link" readonly></label>
+        <label class="campo-largo">Mensagem para o WhatsApp
+            <textarea id="convite-mensagem" rows="6" readonly></textarea></label>
+        <p class="aviso aviso--ok" id="convite-copiado" hidden></p>
+        <div class="acoes-lista">
+            <button type="button" class="btn btn--primary" id="convite-copiar-msg">Copiar mensagem</button>
+            <button type="button" class="btn" id="convite-copiar-link">Copiar só o link</button>
+        </div>
+    </section>
     <section class="bloco">
         <div class="bloco-cab">
-            <h2>Cadastrados</h2>
-            <input type="search" id="busca-prof" class="busca" placeholder="Procurar por nome, e-mail ou área…">
+            <h2>Cadastrados <span class="contagem" id="prof-resumo" hidden></span></h2>
+            <div class="filtros-prof">
+                <label id="prof-filtro-nunca" hidden><input type="checkbox" id="prof-so-nunca"> Só quem nunca entrou</label>
+                <input type="search" id="busca-prof" class="busca" placeholder="Procurar por nome, e-mail ou área…">
+            </div>
         </div>
         <div id="lista-prof" class="provas-lista"></div>
     </section>
+</div>
+
+<!-- ===================== CONVITE ===================== -->
+<div class="wrap wrap--estreito" id="tela-convite" hidden>
+    <a class="back-link" href="#/entrar">Já tenho senha</a>
+    <div class="masthead">
+        <img src="logo.png" alt="">
+        <div>
+            <h1>Convite</h1>
+            <p>Crie a sua senha para entrar no Montador de Provas. O link vale uma vez só.</p>
+        </div>
+    </div>
+    <p class="dica" id="convite-carregando" hidden>Conferindo o convite…</p>
+    <p class="aviso aviso--erro" id="convite-erro" hidden></p>
+    <form class="passo" id="form-convite" hidden autocomplete="off">
+        <p class="dica">Você foi convidado(a) para montar as provas da área com os colegas. Crie a sua senha para entrar.</p>
+        <p class="convite-nome" id="convite-nome"></p>
+        <p class="dica dica--pequena" id="convite-email"></p>
+        <div class="linha-campos">
+            <label class="campo-largo">Senha (mín. 8 caracteres)
+                <input type="password" id="convite-senha" autocomplete="new-password" minlength="8" required></label>
+            <label class="campo-largo">Repita a senha
+                <input type="password" id="convite-senha2" autocomplete="new-password" minlength="8" required></label>
+        </div>
+        <p class="aviso aviso--erro" id="convite-form-erro" hidden></p>
+        <button type="submit" class="btn btn--primary" id="convite-botao">Criar senha e entrar</button>
+    </form>
 </div>
 
 <!-- ===================== EDITOR DA PROVA ===================== -->
@@ -558,6 +601,7 @@
 <script src="vendor/supabase.js"></script>
 <script src="js/config.js"></script>
 <script src="js/nuvem.js"></script>
+<script src="js/convite.js"></script>
 <script src="js/app.js"></script>
 <script>
     /* Em endereço próprio (montador-provas-malu.vercel.app) a pasta do app é a

@@ -44,7 +44,7 @@ function conferir(certo, mensagem) {
 }
 
 const servidor = await servir(RAIZ, PORTA);
-const navegador = await chromium.launch();
+const navegador = await chromium.launch(process.env.CHROME_PATH ? { executablePath: process.env.CHROME_PATH } : {});
 const contexto = await navegador.newContext({ viewport: { width: 1400, height: 1000 } });
 const pagina = await contexto.newPage();
 const erros = [];
