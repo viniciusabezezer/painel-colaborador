@@ -3,6 +3,16 @@
   "framework": null,
   "buildCommand": null,
   "outputDirectory": ".",
+  "rewrites": [
+    {
+      "source": "/montar/:path*",
+      "destination": "https://montador-provas-malu.vercel.app/:path*"
+    },
+    {
+      "source": "/provas/:path*",
+      "destination": "https://painel-colaborador.vercel.app/:path*"
+    }
+  ],
   "headers": [
     {
       "source": "/(.*)",

@@ -3,6 +3,23 @@
   "framework": null,
   "buildCommand": null,
   "outputDirectory": ".",
+  "redirects": [
+    {
+      "source": "/gabaritos",
+      "destination": "https://malu-gabaritos.vercel.app/",
+      "permanent": false
+    },
+    {
+      "source": "/gabaritos/",
+      "destination": "https://malu-gabaritos.vercel.app/",
+      "permanent": false
+    },
+    {
+      "source": "/gabaritos/:path*",
+      "destination": "https://malu-gabaritos.vercel.app/:path*",
+      "permanent": false
+    }
+  ],
   "headers": [
     {
       "source": "/(.*)",
