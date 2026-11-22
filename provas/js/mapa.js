@@ -263,11 +263,70 @@
         };
     }
 
+    /* A linha vem de public.mapas_salas (id, avaliacao, periodo, mapa, criado_por, criado_em).
+       O jsonb `mapa` é o mesmo contrato do arquivo. */
+    function deLinha(linha) {
+        if (!linha || typeof linha !== 'object') {
+            return { ok: false, motivo: 'linha', mensagem: 'O mapa salvo veio vazio.' };
+        }
+        const bruto = linha.mapa;
+        const lido = ler(typeof bruto === 'string' ? bruto : bruto);
+        if (!lido.ok) return lido;
+        if (linha.avaliacao) lido.avaliacao = String(linha.avaliacao).replace(/\s+/g, ' ').trim();
+        if (!lido.periodo && linha.periodo && typeof linha.periodo === 'object') {
+            lido.periodo = {
+                inicio: String(linha.periodo.inicio || ''),
+                fim: String(linha.periodo.fim || '')
+            };
+        }
+        lido.id = linha.id;
+        lido.criadoEm = linha.criado_em || '';
+        lido.criadoPor = linha.criado_por == null ? '' : String(linha.criado_por);
+        return lido;
+    }
+
+    function ehUuid(valor) {
+        return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(String(valor || '').trim());
+    }
+
+    function dataSalvo(iso) {
+        const casamento = String(iso || '').match(/^(\d{4})-(\d{2})-(\d{2})/);
+        return casamento ? casamento[3] + '/' + casamento[2] + '/' + casamento[1] : '';
+    }
+
+    /* "Mapa de <avaliacao>, salvo em <data> por <nome>". O nome pode vir pronto
+       ou ser o próprio criado_por, quando ele não é um id de conta. */
+    function rotuloSalvo(mapa, nome) {
+        const avaliacao = (mapa && mapa.avaliacao) || 'sem nome';
+        const data = dataSalvo(mapa && mapa.criadoEm);
+        const quem = nome || (mapa && mapa.criadoPorNome) ||
+            (mapa && mapa.criadoPor && !ehUuid(mapa.criadoPor) ? mapa.criadoPor : '');
+        let texto = 'Mapa de ' + avaliacao;
+        if (data) texto += ', salvo em ' + data;
+        if (quem) texto += ' por ' + quem;
+        return texto;
+    }
+
+    /* A tabela ainda não existe (a migração do Randomizador não foi aplicada)
+       ou o PostgREST não a enxerga. Nesses casos o app segue com o arquivo. */
+    function tabelaAusente(erro) {
+        if (!erro) return false;
+        const codigo = String(erro.code || '');
+        const texto = String(erro.message || erro.details || erro);
+        if (codigo === '42P01' || codigo === 'PGRST205') return true;
+        return /does not exist|schema cache|could not find the table|relation .*mapas_salas|não existe|nao existe/i.test(texto);
+    }
+
     const api = {
         ler: ler,
         casar: casar,
         plano: plano,
-        turmaCurta: turmaCurta
+        turmaCurta: turmaCurta,
+        deLinha: deLinha,
+        ehUuid: ehUuid,
+        dataSalvo: dataSalvo,
+        rotuloSalvo: rotuloSalvo,
+        tabelaAusente: tabelaAusente
     };
 
     global.ProvasMapa = api;

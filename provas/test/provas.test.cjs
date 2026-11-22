@@ -850,3 +850,30 @@ test('gabarito por sala, quatro por folha, não junta duas salas na mesma folha'
     assert.ok(!gerado.getPage(1).node.Contents());
     assert.ok(!gerado.getPage(3).node.Contents());
 });
+
+test('a linha salva no Supabase vira o mapa, com o rótulo de quem gravou', () => {
+    const linha = {
+        id: 'aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee',
+        avaliacao: 'Avaliação fictícia de fim de ano',
+        periodo: { inicio: '2026-12-01', fim: '2026-12-04' },
+        mapa: MAPA_FICTICIO,
+        criado_por: 'Coordenadora Fictícia',
+        criado_em: '2026-11-22T15:04:00.000Z'
+    };
+    const lido = mapa.deLinha(linha);
+    assert.equal(lido.ok, true);
+    assert.equal(lido.salas[0].sala, 'Sala 12');
+    assert.equal(mapa.rotuloSalvo(lido), 'Mapa de Avaliação fictícia de fim de ano, salvo em 22/11/2026 por Coordenadora Fictícia');
+    const comId = mapa.deLinha(Object.assign({}, linha, { criado_por: '11111111-2222-4333-8444-555555555555' }));
+    comId.criadoPorNome = 'Gestão Fictícia';
+    assert.equal(mapa.rotuloSalvo(comId), 'Mapa de Avaliação fictícia de fim de ano, salvo em 22/11/2026 por Gestão Fictícia');
+    assert.equal(mapa.ehUuid(comId.criadoPor), true);
+    assert.equal(mapa.ehUuid('Coordenadora Fictícia'), false);
+});
+
+test('tabela de mapas ausente é reconhecida e não é um erro de leitura qualquer', () => {
+    assert.equal(mapa.tabelaAusente({ code: 'PGRST205', message: "Could not find the table 'public.mapas_salas' in the schema cache" }), true);
+    assert.equal(mapa.tabelaAusente({ code: '42P01', message: 'relation "public.mapas_salas" does not exist' }), true);
+    assert.equal(mapa.tabelaAusente({ code: '42501', message: 'permission denied for table mapas_salas' }), false);
+    assert.equal(mapa.tabelaAusente(null), false);
+});

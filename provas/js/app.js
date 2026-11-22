@@ -29,9 +29,11 @@
         previaGabarito: { chave: null, medidas: null, medidasTocadas: false },
         previa: { chave: null, medidas: null },
         resultados: [],
-        /* Mapa de salas lido do JSON. Fica só na memória desta aba. */
+        /* Mapa de salas lido do JSON ou da tabela mapas_salas. Fica só na memória desta aba. */
         mapa: null,
-        casamento: null
+        casamento: null,
+        origem: null,
+        mapasSalvos: []
     };
 
     function $(id) { return document.getElementById(id); }
@@ -189,6 +191,116 @@
 
     function mapaAtivo() {
         return !!(estado.casamento && estado.casamento.casados);
+    }
+
+    function modoImpressao() {
+        const marcado = document.querySelector('input[name="modo-impressao"]:checked');
+        return marcado ? marcado.value : 'turma';
+    }
+
+    let pedidoMapas = 0;
+
+    function mostrarAvisoMapas(texto, ok) {
+        const aviso = $('aviso-mapas');
+        if (!aviso) return;
+        aviso.hidden = !texto;
+        aviso.textContent = texto || '';
+        aviso.className = ok ? 'aviso aviso--ok' : 'aviso';
+    }
+
+    function preencherMapasSalvos() {
+        const escolha = $('mapas-salvos');
+        if (!escolha) return;
+        const atual = escolha.value;
+        limpar(escolha);
+        const vazio = criar('option', null, estado.mapasSalvos.length ? 'Escolha um mapa salvo' : 'Carrega ao escolher Imprimir por sala');
+        vazio.value = '';
+        escolha.appendChild(vazio);
+        estado.mapasSalvos.forEach(function (mapa) {
+            const opcao = criar('option', null, Mapa.rotuloSalvo(mapa));
+            opcao.value = String(mapa.id);
+            escolha.appendChild(opcao);
+        });
+        if (atual && Array.prototype.some.call(escolha.options, function (opcao) { return opcao.value === atual; })) {
+            escolha.value = atual;
+        }
+    }
+
+    function aplicarMapaSalvo(mapa) {
+        estado.origem = 'salvo';
+        estado.mapa = mapa;
+        if ($('mapas-salvos')) $('mapas-salvos').value = String(mapa.id);
+        if ($('mapa-salas')) $('mapa-salas').value = '';
+        mostrarAvisoMapas(Mapa.rotuloSalvo(mapa), true);
+        atualizarMapa();
+    }
+
+    /* Lê public.mapas_salas com a sessão do Montador. Se a tabela não existir,
+       ou a leitura falhar, o passo continua e o arquivo .json segue valendo. */
+    async function carregarMapasSalvos() {
+        if (estado.origem === 'arquivo') return;
+        const acesso = window.IdentificadorAcesso;
+        const cliente = acesso && acesso.cliente && acesso.cliente();
+        if (!cliente) {
+            mostrarAvisoMapas('Entre com a conta da gestão para ler o mapa salvo. Dá para subir o arquivo.', false);
+            return;
+        }
+        const meu = ++pedidoMapas;
+        mostrarAvisoMapas('lendo o último mapa salvo…', false);
+        try {
+            let resposta;
+            try {
+                resposta = await cliente.from('mapas_salas')
+                    .select('id, avaliacao, periodo, mapa, criado_por, criado_em')
+                    .order('criado_em', { ascending: false })
+                    .limit(15);
+            } catch (erro) {
+                resposta = { error: erro };
+            }
+            if (meu !== pedidoMapas || estado.origem === 'arquivo') return;
+            if (!resposta || resposta.error) {
+                estado.mapasSalvos = [];
+                preencherMapasSalvos();
+                if ($('mapas-salvos') && $('mapas-salvos').options[0]) {
+                    $('mapas-salvos').options[0].textContent = 'Nenhum mapa salvo ainda';
+                }
+                mostrarAvisoMapas(Mapa.tabelaAusente(resposta && resposta.error)
+                    ? 'O Randomizador ainda não gravou mapas neste banco. Suba o arquivo .json.'
+                    : 'Não consegui ler os mapas salvos. Suba o arquivo .json.', false);
+                return;
+            }
+            const linhas = resposta.data || [];
+            const ids = [];
+            linhas.forEach(function (linha) {
+                if (Mapa.ehUuid(linha.criado_por) && ids.indexOf(linha.criado_por) === -1) ids.push(linha.criado_por);
+            });
+            const nomes = Object.create(null);
+            if (ids.length) {
+                try {
+                    const perfis = await cliente.from('montador_perfis').select('id, nome').in('id', ids);
+                    if (perfis && !perfis.error && perfis.data) {
+                        perfis.data.forEach(function (perfil) { nomes[perfil.id] = perfil.nome; });
+                    }
+                } catch (erro) { /* sem o nome, o mapa entra do mesmo jeito */ }
+            }
+            if (meu !== pedidoMapas || estado.origem === 'arquivo') return;
+            estado.mapasSalvos = linhas.map(function (linha) {
+                const mapa = Mapa.deLinha(linha);
+                if (mapa.ok && nomes[linha.criado_por]) mapa.criadoPorNome = nomes[linha.criado_por];
+                return mapa;
+            }).filter(function (mapa) { return mapa.ok; });
+            preencherMapasSalvos();
+            if (!estado.mapasSalvos.length) {
+                mostrarAvisoMapas('Ainda não há mapa salvo. Suba o arquivo .json.', false);
+                const escolha = $('mapas-salvos');
+                if (escolha && escolha.options[0]) escolha.options[0].textContent = 'Nenhum mapa salvo ainda';
+                return;
+            }
+            aplicarMapaSalvo(estado.mapasSalvos[0]);
+        } catch (erro) {
+            if (meu !== pedidoMapas || estado.origem === 'arquivo') return;
+            mostrarAvisoMapas('Não consegui ler os mapas salvos. Suba o arquivo .json.', false);
+        }
     }
 
     function doisDigitos(numero) {
@@ -436,7 +548,11 @@
         if (!arquivo) return;
         const leitor = new FileReader();
         leitor.onload = function () {
+            pedidoMapas++;
+            estado.origem = 'arquivo';
             estado.mapa = Mapa.ler(String(leitor.result || ''));
+            if ($('mapas-salvos')) $('mapas-salvos').value = '';
+            mostrarAvisoMapas(estado.mapa.ok ? 'Usando o arquivo enviado.' : '', !!estado.mapa.ok);
             atualizarMapa();
         };
         leitor.onerror = function () {
@@ -448,11 +564,26 @@
     });
 
     $('limpar-mapa').addEventListener('click', function () {
+        pedidoMapas++;
         $('mapa-salas').value = '';
+        if ($('mapas-salvos')) $('mapas-salvos').value = '';
+        estado.origem = null;
         estado.mapa = null;
         estado.casamento = null;
+        mostrarAvisoMapas('', false);
         mostrarResumoMapa();
     });
+
+    $('mapas-salvos').addEventListener('change', function () {
+        const escolhido = estado.mapasSalvos.filter(function (mapa) { return String(mapa.id) === $('mapas-salvos').value; })[0];
+        if (!escolhido) return;
+        aplicarMapaSalvo(escolhido);
+    });
+
+    document.getElementById('modo-impressao').addEventListener('change', function () {
+        if (modoImpressao() === 'sala' && estado.origem !== 'arquivo') carregarMapasSalvos();
+    });
+    preencherMapasSalvos();
 
     $('ver-rosto').addEventListener('click', abrirFolhaDeRosto);
     $('avaliacao').addEventListener('input', function () {
@@ -761,20 +892,27 @@
             return;
         }
 
-        if (mapaAtivo()) {
-            $('gerar-gabaritos').disabled = true;
-            try {
-                const fez = await gerarGabaritosPorSala(alvo, estadoTexto);
-                if (!fez) {
-                    estadoTexto.textContent = chavesDe('gabaritos').length
-                        ? 'O mapa está carregado, mas nenhum gabarito enviado cobre as séries das salas. Envie esses gabaritos, ou tire o mapa para voltar à saída por turma.'
-                        : 'Carregue o arquivo de pelo menos um gabarito aqui em cima.';
-                }
-            } catch (erro) {
-                estadoTexto.textContent = 'Parou no meio: ' + (erro.message || erro);
-            } finally {
-                $('gerar-gabaritos').disabled = false;
+        if (modoImpressao() === 'sala') {
+            if (!estado.mapa && estado.origem !== 'arquivo') {
+                try { await carregarMapasSalvos(); } catch (erro) { /* o aviso já explica; segue por turma */ }
             }
+            if (mapaAtivo()) {
+                $('gerar-gabaritos').disabled = true;
+                try {
+                    const fez = await gerarGabaritosPorSala(alvo, estadoTexto);
+                    if (!fez) {
+                        estadoTexto.textContent = chavesDe('gabaritos').length
+                            ? 'O mapa está carregado, mas nenhum gabarito enviado cobre as séries das salas. Envie esses gabaritos, ou marque Imprimir por turma.'
+                            : 'Carregue o arquivo de pelo menos um gabarito aqui em cima.';
+                    }
+                } catch (erro) {
+                    estadoTexto.textContent = 'Parou no meio: ' + (erro.message || erro);
+                } finally {
+                    $('gerar-gabaritos').disabled = false;
+                }
+                return;
+            }
+            estadoTexto.textContent = 'Para os gabaritos por sala, falta o mapa. Escolha um mapa salvo ou suba o arquivo. Imprimir por turma continua disponível.';
             return;
         }
 
@@ -1499,10 +1637,15 @@
         const configuracao = montarConfiguracao();
 
         try {
-            if (atual !== 'etiquetas' && mapaAtivo()) {
+            if (atual !== 'etiquetas' && modoImpressao() === 'sala') {
+                if (!estado.mapa && estado.origem !== 'arquivo') await carregarMapasSalvos();
+                if (!mapaAtivo()) {
+                    estadoTexto.textContent = 'Para imprimir por sala, escolha um mapa salvo ou suba o arquivo .json. Imprimir por turma continua disponível.';
+                    return;
+                }
                 const fez = await gerarPorSalas(alvo, estadoTexto, configuracao);
                 if (!fez) {
-                    estadoTexto.textContent = 'O mapa está carregado, mas nenhuma prova enviada cobre as séries das salas. Envie essas provas no passo 3, ou tire o mapa para voltar à saída por turma.';
+                    estadoTexto.textContent = 'O mapa está carregado, mas nenhuma prova enviada cobre as séries das salas. Envie essas provas no passo 3, ou marque Imprimir por turma.';
                 }
                 return;
             }

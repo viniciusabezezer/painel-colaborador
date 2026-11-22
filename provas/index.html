@@ -109,8 +109,12 @@
 
         <fieldset class="passo" id="passo-salas">
             <legend>Organizar por sala <small>opcional</small></legend>
-            <p class="dica">Se o Randomizador de Salas exportou o mapa (<code>.json</code>), suba o arquivo aqui. Cada aluno é casado pela turma e pelo número da lista; se o nome divergir, o app avisa e segue com o nome da lista. Com o mapa, as provas saem na ordem das salas e dos lugares, com uma folha de rosto antes de cada sala e a prova reserva daquela sala no fim. Sem o mapa, a saída continua um PDF por turma, como sempre. O arquivo é lido só neste navegador.</p>
-            <label class="campo-arquivo">Mapa de salas (.json)
+            <p class="dica">Na hora de gerar dá para escolher <strong>Imprimir por turma</strong> (o padrão, como sempre) ou <strong>Imprimir por sala</strong>. Por sala usa o último mapa que o Randomizador gravou na conta da escola. Dá para escolher outro mapa recente ou, se a tabela ainda não existir, subir o arquivo <code>.json</code>. Cada aluno é casado pela turma e pelo número da lista; nome diferente vira aviso e a prova segue com o nome da lista. O arquivo enviado não sai deste navegador.</p>
+            <label>Mapas salvos no Randomizador
+                <select id="mapas-salvos"></select>
+            </label>
+            <p class="aviso" id="aviso-mapas" hidden></p>
+            <label class="campo-arquivo">Ou suba um arquivo (.json)
                 <input type="file" id="mapa-salas" accept=".json,application/json">
             </label>
             <div class="acoes-lista">
@@ -213,6 +217,18 @@
 
         <fieldset class="passo">
             <legend><span class="num">5</span> Gerar</legend>
+            <div class="modelos" id="modo-impressao">
+                <label class="modelo">
+                    <input type="radio" name="modo-impressao" value="turma" checked>
+                    <span class="modelo-titulo">Imprimir por turma</span>
+                    <span class="modelo-texto">Um PDF por turma e componente, como sempre. É o padrão.</span>
+                </label>
+                <label class="modelo">
+                    <input type="radio" name="modo-impressao" value="sala">
+                    <span class="modelo-titulo">Imprimir por sala</span>
+                    <span class="modelo-texto">Na ordem do último mapa salvo pelo Randomizador, com folha de rosto e prova reserva em cada sala.</span>
+                </label>
+            </div>
             <div class="acoes-lista">
                 <button type="button" class="btn btn--primary" id="gerar">Gerar as provas identificadas</button>
                 <span class="contagem" id="estado-geracao"></span>
@@ -226,7 +242,7 @@
         <fieldset class="passo">
             <legend>Gabaritos identificados</legend>
             <p class="dica"><strong>Opcional.</strong> Serve para quando a folha de respostas vem separada da prova. O gabarito recebe a <strong>mesma identificação</strong> da prova daquele aluno — mesmo nome, mesma turma, mesmo número e o mesmo código com QR —, de modo que a folha e a prova se cruzem e nenhuma das duas sirva para outro aluno.</p>
-            <p class="dica">Esta aba <strong>anda sozinha</strong>: dá para gerar gabaritos sem enviar prova nenhuma, e provas sem gabarito nenhum. A única coisa que ela pede da aba <em>Gerar as provas</em> é a <strong>lista de alunos do passo 2</strong> — é dela que sai a identificação. Se houver um mapa de salas carregado, os gabaritos saem na mesma ordem das salas, e a caixa “um PDF separado por sala” marcada lá também vale aqui. As medidas do cabeçalho aqui são próprias, porque o gabarito costuma ser bem menor que a prova: um quarto de uma folha A4, por exemplo.</p>
+            <p class="dica">Esta aba <strong>anda sozinha</strong>: dá para gerar gabaritos sem enviar prova nenhuma, e provas sem gabarito nenhum. A única coisa que ela pede da aba <em>Gerar as provas</em> é a <strong>lista de alunos do passo 2</strong> — é dela que sai a identificação. Se lá estiver marcado <strong>Imprimir por sala</strong> e houver um mapa, os gabaritos seguem essa ordem, e a caixa “um PDF separado por sala” também vale aqui. As medidas do cabeçalho aqui são próprias, porque o gabarito costuma ser bem menor que a prova: um quarto de uma folha A4, por exemplo.</p>
             <p class="dica">Do gabarito saem <strong>todas as páginas</strong> do arquivo enviado, com o cabeçalho na primeira — uma via por aluno.</p>
 
             <div class="envio-gabarito">
@@ -341,7 +357,7 @@
                 <li><strong>A prova reserva</strong>: uma prova por turma e componente, com as mesmas páginas das identificadas, sem nome, sem QR e sem código, com espaço para escrever à mão o nome e o número. Serve para substituir a prova de alguém na hora da aplicação.</li>
                 <li><strong>A folha de conferência</strong>: a lista que liga cada código ao aluno, em PDF para imprimir e em CSV para abrir no Excel. Guarde: é o que permite saber de quem é uma prova pelo código.</li>
                 <li><strong>As etiquetas</strong>: a mesma identificação em grade, para recortar e colar quando a prova for impressa direto do Word. As etiquetas continuam um PDF por turma, mesmo quando há mapa de salas.</li>
-                <li><strong>Por sala</strong>, se você subiu o mapa: um PDF único com as salas na ordem do Randomizador. Antes de cada sala, a folha de rosto com a lista dos alunos na ordem dos lugares; cada aluno recebe a prova da série dele, então uma sala com turmas misturadas sai com as provas certas intercaladas. A prova reserva das séries presentes na sala vem no fim daquele pacote. Dá para pedir também um PDF por sala. Os gabaritos identificados, se forem gerados, seguem a mesma ordem. A página em branco de frente e verso continua valendo, inclusive depois da folha de rosto.</li>
+                <li><strong>Imprimir por sala</strong>, no passo 5: usa o último mapa salvo pelo Randomizador (dá para escolher outro recente ou subir o <code>.json</code>). Sai um PDF único com as salas na ordem do mapa. Antes de cada sala, a folha de rosto com a lista dos alunos na ordem dos lugares; cada aluno recebe a prova da série dele, então uma sala com turmas misturadas sai com as provas certas intercaladas. A prova reserva das séries presentes na sala vem no fim daquele pacote. Dá para pedir também um PDF por sala. Os gabaritos identificados, se forem gerados com essa opção, seguem a mesma ordem. A página em branco de frente e verso continua valendo, inclusive depois da folha de rosto. Se a tabela de mapas ainda não existir, o app não quebra: vale o arquivo.</li>
             </ul>
 
             <h3>O código</h3>
@@ -382,6 +398,6 @@
 <script src="js/saida.js"></script>
 <script src="js/historico.js"></script>
 <script src="js/previa.js"></script>
-<script src="js/app.js?v=3"></script>
+<script src="js/app.js?v=4"></script>
 </body>
 </html>
