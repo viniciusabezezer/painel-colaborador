@@ -96,6 +96,8 @@
             (turma.alunos || []).forEach(function (aluno) {
                 const numero = parseInt(aluno.numero, 10);
                 if (!numero || numero < 1) return;
+                /* A lista do Malu Presente marca quem saiu. Sem o campo, entra. */
+                if (aluno.ativo === false) return;
                 const chave = curta + '|' + numero;
                 if (!grupos[chave]) grupos[chave] = [];
                 grupos[chave].push({
@@ -104,6 +106,7 @@
                     serie: String(turma.serie || curta.charAt(0)),
                     numero: numero,
                     nome: aluno.nome,
+                    matricula: aluno.matricula == null ? '' : aluno.matricula,
                     usado: false
                 });
             });
@@ -157,6 +160,7 @@
                     numero: aluno.numero,
                     nome: daLista ? daLista.nome : aluno.nome,
                     nomeMapa: aluno.nome,
+                    matricula: daLista ? (daLista.matricula || '') : '',
                     casado: !!daLista,
                     avisoNome: avisoNome
                 };
@@ -235,6 +239,7 @@
                         serie: aluno.serie,
                         numero: aluno.numero,
                         nome: aluno.nome,
+                        matricula: aluno.matricula || '',
                         componente: codigo,
                         chave: aluno.serie + '|' + codigo
                     });

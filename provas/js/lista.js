@@ -82,12 +82,14 @@
         return reconhecerTurma(limpo) !== null && !temLetras(limpo, 4);
     }
 
-    /* Puxa da linha o número da chamada (quando houver) e o nome do aluno.
-       Números de até três casas são chamada; de quatro para cima são matrícula
-       e vão ignorados. */
+    /* Puxa da linha o número da chamada (quando houver), o nome do aluno e,
+       se a lista trouxer, a matrícula. Números de até três casas são chamada;
+       de quatro a doze, só dígitos, são matrícula. Um token ou a credencial
+       do cartão não entra aqui: matrícula é só dígito. */
     function extrairNumeroENome(linha) {
         const campos = separarCampos(linha);
         let numero = null;
+        let matricula = null;
         let nome = '';
 
         for (let i = 0; i < campos.length && !nome; i++) {
@@ -97,7 +99,10 @@
                 if (numero === null) numero = parseInt(campo, 10);
                 continue;
             }
-            if (/^\d{4,}$/.test(campo)) continue; /* matrícula */
+            if (/^\d{4,12}$/.test(campo)) {
+                if (matricula === null) matricula = campo;
+                continue;
+            }
             if (ehCabecalho(campo)) continue;
 
             /* Numeração colada no nome: "1 - João", "07. João". */
@@ -112,12 +117,35 @@
                junta o sobrenome. Só quando a coluna seguinte é texto puro, para
                não colar turma nem matrícula no nome. */
             const seguinte = (campos[i + 1] || '').trim();
-            if (nome.indexOf(' ') === -1 && temLetras(seguinte) && !/\d/.test(seguinte) && !ehCabecalho(seguinte)) {
+            if (nome.indexOf(' ') === -1 && temLetras(seguinte) && !/\d/.test(seguinte) && !ehCabecalho(seguinte) && !/^\d{4,12}$/.test(seguinte)) {
                 nome = (nome + ' ' + seguinte.replace(/\s+/g, ' ').trim()).trim();
             }
         }
 
-        return { numero: numero, nome: nome };
+        /* A matrícula pode vir numa coluna depois do nome: "7;ANA LIMA;20260007". */
+        if (matricula === null) {
+            for (let j = 0; j < campos.length; j++) {
+                if (/^\d{4,12}$/.test(campos[j])) {
+                    matricula = campos[j];
+                    break;
+                }
+            }
+        }
+
+        /* "07 - Ana Lima - 20260007": a matrícula vem no fim da própria linha. */
+        const noFim = nome.match(/^(.*?)[\s]*[-–—:;][\s]*(\d{4,12})$/);
+        if (noFim && temLetras(noFim[1], 3)) {
+            nome = noFim[1].replace(/\s+/g, ' ').trim();
+            if (matricula === null) matricula = noFim[2];
+        }
+
+        return { numero: numero, nome: nome, matricula: matricula };
+    }
+
+    function registroDeAluno(achado) {
+        const item = { nome: achado.nome, numero: achado.numero };
+        if (achado.matricula) item.matricula = achado.matricula;
+        return item;
     }
 
     function extrairNome(linha) {
@@ -142,7 +170,7 @@
             const chave = identificacao.normalizarNome(achado.nome);
             if (vistos[chave]) repetidos.push(achado.nome);
             vistos[chave] = true;
-            alunos.push({ nome: achado.nome, numero: achado.numero });
+            alunos.push(registroDeAluno(achado));
         });
 
         return { alunos: alunos, ignoradas: ignoradas, repetidos: repetidos };
@@ -201,7 +229,7 @@
 
             const turma = turmaDaLinha || turmaAtual;
             if (!turma) {
-                semTurma.push({ nome: achado.nome, numero: achado.numero });
+                semTurma.push(registroDeAluno(achado));
                 return;
             }
 
@@ -210,7 +238,7 @@
             if (lista.some(function (a) { return identificacao.normalizarNome(a.nome) === chave; })) {
                 repetidos.push(turma + ' · ' + achado.nome);
             }
-            lista.push({ nome: achado.nome, numero: achado.numero });
+            lista.push(registroDeAluno(achado));
         });
 
         const turmas = ordem.slice().sort().map(function (turma) {
