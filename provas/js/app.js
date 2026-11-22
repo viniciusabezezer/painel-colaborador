@@ -8,6 +8,7 @@
 
     const Identificacao = window.ProvasIdentificacao;
     const Lista = window.ProvasLista;
+    const Mapa = window.ProvasMapa;
     const Pdf = window.ProvasPdf;
     const Saida = window.ProvasSaida;
     const Previa = window.ProvasPrevia;
@@ -27,7 +28,10 @@
         gabaritos: Object.create(null),
         previaGabarito: { chave: null, medidas: null, medidasTocadas: false },
         previa: { chave: null, medidas: null },
-        resultados: []
+        resultados: [],
+        /* Mapa de salas lido do JSON. Fica só na memória desta aba. */
+        mapa: null,
+        casamento: null
     };
 
     function $(id) { return document.getElementById(id); }
@@ -90,6 +94,7 @@
         montarSlots();
         montarSlotsDeGabarito();
         atualizarPrevia();
+        atualizarMapa();
     }
 
     function mostrarTurmas() {
@@ -179,6 +184,280 @@
             alvo.appendChild(aviso);
         }
     }
+
+    /* ===================== organizar por sala ===================== */
+
+    function mapaAtivo() {
+        return !!(estado.casamento && estado.casamento.casados);
+    }
+
+    function doisDigitos(numero) {
+        const texto = String(numero);
+        return /^\d$/.test(texto) ? '0' + texto : texto;
+    }
+
+    function dataCurta(iso) {
+        const casamento = String(iso || '').match(/^(\d{4})-(\d{2})-(\d{2})/);
+        return casamento ? casamento[3] + '/' + casamento[2] + '/' + casamento[1] : '';
+    }
+
+    function atualizarMapa() {
+        if (!estado.mapa || !estado.mapa.ok) {
+            estado.casamento = null;
+            mostrarResumoMapa();
+            return;
+        }
+        estado.casamento = Mapa.casar(estado.lote, estado.mapa);
+        mostrarResumoMapa();
+    }
+
+    function chavesDe(origem) {
+        const guardados = origem === 'gabaritos' ? estado.gabaritos : estado.arquivos;
+        return Object.keys(guardados).map(function (chave) {
+            const partes = chave.split('|');
+            const componente = Identificacao.COMPONENTES.filter(function (item) { return item.codigo === partes[1]; })[0];
+            if (!componente) return null;
+            return { chave: chave, serie: partes[0], componente: componente, arquivo: guardados[chave] };
+        }).filter(Boolean);
+    }
+
+    /* Monta as salas já com a identificação de cada via, pronta para o PDF. */
+    function salasParaImprimir(origem) {
+        const chaves = chavesDe(origem);
+        const plano = Mapa.plano(estado.casamento, chaves.map(function (item) {
+            return item.serie + '|' + item.componente.codigo;
+        }));
+        const porChave = Object.create(null);
+        chaves.forEach(function (item) { porChave[item.serie + '|' + item.componente.codigo] = item; });
+
+        const salas = plano.salas.map(function (sala) {
+            const vias = sala.vias.map(function (via) {
+                const tarefa = porChave[via.chave];
+                const serieNome = (Identificacao.serie(via.serie) || {}).nome || '';
+                const identificacao = Identificacao.identificar({
+                    ano: $('ano').value,
+                    bimestre: $('bimestre').value,
+                    turma: via.turmaCurta,
+                    numero: via.numero,
+                    componente: via.componente,
+                    nome: via.nome,
+                    chave: $('chave').value
+                });
+                identificacao.sala = sala.sala;
+                identificacao.posicao = via.posicao;
+                identificacao.serieNome = serieNome;
+                return {
+                    chave: via.chave,
+                    arquivo: tarefa.arquivo,
+                    serieNome: serieNome,
+                    identificacao: identificacao,
+                    posicao: via.posicao,
+                    turma: via.turma,
+                    numero: via.numero,
+                    nome: via.nome,
+                    componente: tarefa.componente.codigo,
+                    componenteNome: tarefa.componente.nome
+                };
+            });
+            const reservas = sala.reservas.map(function (reserva) {
+                const tarefa = porChave[reserva.chave];
+                return {
+                    chave: reserva.chave,
+                    arquivo: tarefa.arquivo,
+                    serie: reserva.serie,
+                    serieNome: (Identificacao.serie(reserva.serie) || {}).nome || '',
+                    componente: tarefa.componente.codigo,
+                    componenteNome: tarefa.componente.nome
+                };
+            });
+            const alunos = [];
+            const vistos = Object.create(null);
+            vias.forEach(function (via) {
+                const marca = via.posicao + '|' + via.turma + '|' + via.numero;
+                if (vistos[marca]) return;
+                vistos[marca] = true;
+                alunos.push({ posicao: via.posicao, turma: via.turma, numero: via.numero, nome: via.nome });
+            });
+            return {
+                sala: sala.sala,
+                ordem: sala.ordem,
+                provas: sala.provas,
+                alunos: alunos,
+                vias: vias,
+                reservas: reservas,
+                reservasTexto: reservas.map(function (reserva) {
+                    return reserva.serieNome + ' · ' + reserva.componenteNome;
+                }).join('; ')
+            };
+        });
+        return { salas: salas, semArquivo: plano.semArquivo, provas: plano.provas };
+    }
+
+    function subtituloDasSalas() {
+        const partes = [];
+        const nome = $('avaliacao').value.trim();
+        if (nome) partes.push(nome);
+        partes.push($('bimestre').value.replace('B', '') + 'º bimestre de ' + $('ano').value);
+        const periodo = estado.mapa && estado.mapa.periodo;
+        if (periodo && (periodo.inicio || periodo.fim)) {
+            const inicio = dataCurta(periodo.inicio);
+            const fim = dataCurta(periodo.fim);
+            if (inicio && fim) partes.push(inicio + ' a ' + fim);
+            else if (inicio || fim) partes.push(inicio || fim);
+        }
+        return partes.join(' · ');
+    }
+
+    function listaDe(itens, texto) {
+        const aviso = criar('div', 'aviso');
+        aviso.appendChild(criar('strong', null, texto));
+        const ul = criar('ul');
+        itens.slice(0, 12).forEach(function (item) { ul.appendChild(criar('li', null, item)); });
+        if (itens.length > 12) ul.appendChild(criar('li', null, '… e mais ' + (itens.length - 12)));
+        aviso.appendChild(ul);
+        return aviso;
+    }
+
+    function mostrarResumoMapa() {
+        const alvo = $('resumo-mapa');
+        const ver = $('ver-rosto');
+        if (!alvo) return;
+        limpar(alvo);
+        if (ver) ver.disabled = true;
+        if (!estado.mapa) return;
+
+        if (!estado.mapa.ok) {
+            const erro = criar('div', 'aviso aviso--erro');
+            erro.textContent = estado.mapa.mensagem;
+            alvo.appendChild(erro);
+            return;
+        }
+
+        const casamento = estado.casamento;
+        const intro = criar('div', casamento.casados ? 'aviso aviso--ok' : 'aviso');
+        const salasComGente = casamento.salas.filter(function (sala) { return sala.alunos.length; }).length;
+        intro.textContent = casamento.casados + (casamento.casados === 1 ? ' aluno casado com a lista' : ' alunos casados com a lista') +
+            ' em ' + salasComGente + (salasComGente === 1 ? ' sala.' : ' salas.');
+        if (estado.mapa.avaliacao) intro.textContent += ' Mapa: ' + estado.mapa.avaliacao + '.';
+        alvo.appendChild(intro);
+
+        const nomePasso = $('avaliacao').value.trim();
+        if (nomePasso && estado.mapa.avaliacao && Identificacao.normalizarNome(nomePasso) !== Identificacao.normalizarNome(estado.mapa.avaliacao)) {
+            const nota = criar('div', 'aviso');
+            nota.textContent = 'O passo 1 diz «' + nomePasso + '» e o mapa diz «' + estado.mapa.avaliacao + '». A prova sai com o nome do passo 1.';
+            alvo.appendChild(nota);
+        }
+
+        const tabela = criar('table', 'mapa-tabela');
+        const cabeca = criar('tr');
+        ['Sala', 'Ordem', 'Com prova', 'Lugares no mapa'].forEach(function (titulo) {
+            cabeca.appendChild(criar('th', null, titulo));
+        });
+        const thead = criar('thead');
+        thead.appendChild(cabeca);
+        tabela.appendChild(thead);
+        const corpo = criar('tbody');
+        casamento.salas.forEach(function (sala) {
+            const comProva = sala.alunos.filter(function (aluno) { return aluno.casado; }).length;
+            const linha = criar('tr');
+            [sala.sala, String(sala.ordem), String(comProva), String(sala.alunos.length)].forEach(function (celula) {
+                linha.appendChild(criar('td', null, celula));
+            });
+            corpo.appendChild(linha);
+        });
+        tabela.appendChild(corpo);
+        alvo.appendChild(tabela);
+
+        if (casamento.avisosNome.length) {
+            alvo.appendChild(listaDe(casamento.avisosNome.map(function (aviso) {
+                return aviso.sala + ', posição ' + aviso.posicao + ', ' + aviso.turma + ' nº ' + doisDigitos(aviso.numero) +
+                    ': no mapa «' + (aviso.nomeMapa || 'sem nome') + '», na lista «' + aviso.nomeLista + '». A prova sai com o nome da lista.';
+            }), 'Nome diferente no mapa e na lista. Isto não impede a impressão.'));
+        }
+        if (casamento.semSala.length) {
+            alvo.appendChild(listaDe(casamento.semSala.map(function (aluno) {
+                return aluno.turma + ' nº ' + doisDigitos(aluno.numero) + ' · ' + aluno.nome;
+            }), 'Da lista, sem sala no mapa (' + casamento.semSala.length + ').'));
+        }
+        if (casamento.semProva.length) {
+            alvo.appendChild(listaDe(casamento.semProva.map(function (aluno) {
+                return aluno.sala + ', posição ' + aluno.posicao + ', ' + aluno.turma + ' nº ' + doisDigitos(aluno.numero) +
+                    (aluno.nome ? ' · ' + aluno.nome : '');
+            }), 'Do mapa, sem aluno correspondente na lista (' + casamento.semProva.length + ').'));
+        }
+        if (estado.mapa.ignorados && estado.mapa.ignorados.length) {
+            alvo.appendChild(listaDe(estado.mapa.ignorados, 'Lugares do mapa sem turma ou número, deixados de fora.'));
+        }
+
+        const chaves = chavesDe('arquivos');
+        if (chaves.length && casamento.casados) {
+            const plano = Mapa.plano(casamento, chaves.map(function (item) { return item.serie + '|' + item.componente.codigo; }));
+            if (plano.semArquivo.length) {
+                alvo.appendChild(listaDe(plano.semArquivo.map(function (aluno) {
+                    return aluno.sala + ', posição ' + aluno.posicao + ', ' + aluno.turma + ' nº ' + doisDigitos(aluno.numero) + ' · ' + aluno.nome;
+                }), 'Com sala, mas sem arquivo de prova da série no passo 3.'));
+            }
+        }
+
+        if (ver) ver.disabled = !casamento.casados;
+    }
+
+    async function abrirFolhaDeRosto() {
+        if (!mapaAtivo()) return;
+        const aviso = $('resumo-mapa');
+        const comArquivo = salasParaImprimir('arquivos');
+        const salas = comArquivo.salas.length ? comArquivo.salas : estado.casamento.salas.map(function (sala) {
+            const alunos = sala.alunos.filter(function (aluno) { return aluno.casado; }).map(function (aluno) {
+                return { posicao: aluno.posicao, turma: aluno.turmaMapa || aluno.turma, numero: aluno.numero, nome: aluno.nome };
+            });
+            return { sala: sala.sala, provas: alunos.length, alunos: alunos, reservasTexto: '' };
+        }).filter(function (sala) { return sala.alunos.length; });
+        try {
+            const bytes = await Pdf.montarFolhasRosto({
+                salas: salas,
+                subtitulo: subtituloDasSalas(),
+                logo: await bytesDoLogo(),
+                tituloArquivo: 'Folhas de rosto · ' + subtituloDasSalas()
+            });
+            const url = URL.createObjectURL(new Blob([bytes], { type: 'application/pdf' }));
+            window.open(url, '_blank');
+            setTimeout(function () { URL.revokeObjectURL(url); }, 20000);
+        } catch (erro) {
+            if (aviso) {
+                const falha = criar('div', 'aviso aviso--erro');
+                falha.textContent = 'Não deu para abrir a folha de rosto: ' + (erro.message || erro);
+                aviso.appendChild(falha);
+            }
+        }
+    }
+
+    $('mapa-salas').addEventListener('change', function () {
+        const arquivo = this.files && this.files[0];
+        if (!arquivo) return;
+        const leitor = new FileReader();
+        leitor.onload = function () {
+            estado.mapa = Mapa.ler(String(leitor.result || ''));
+            atualizarMapa();
+        };
+        leitor.onerror = function () {
+            estado.mapa = { ok: false, mensagem: 'Não consegui ler o arquivo do mapa.' };
+            estado.casamento = null;
+            mostrarResumoMapa();
+        };
+        leitor.readAsText(arquivo);
+    });
+
+    $('limpar-mapa').addEventListener('click', function () {
+        $('mapa-salas').value = '';
+        estado.mapa = null;
+        estado.casamento = null;
+        mostrarResumoMapa();
+    });
+
+    $('ver-rosto').addEventListener('click', abrirFolhaDeRosto);
+    $('avaliacao').addEventListener('input', function () {
+        if (estado.mapa) mostrarResumoMapa();
+    });
 
     /* ===================== passo 3: os arquivos ===================== */
 
@@ -273,6 +552,7 @@
             slot.classList.remove('cheio');
             estadoTexto.textContent = 'nenhum arquivo';
             atualizarListaDePrevia();
+            mostrarResumoMapa();
             return;
         }
 
@@ -283,6 +563,7 @@
             estadoTexto.textContent = 'Word não dá: abra no Word e use Arquivo → Salvar como → PDF, ou escolha o modelo de etiquetas.';
             delete estado.arquivos[chave];
             atualizarListaDePrevia();
+            mostrarResumoMapa();
             return;
         }
 
@@ -307,6 +588,7 @@
                 $('previa-arquivo').value = chave;
                 atualizarPrevia();
             }
+            mostrarResumoMapa();
         };
         leitor.onerror = function () {
             estadoTexto.textContent = 'Não consegui ler o arquivo.';
@@ -476,6 +758,23 @@
 
         if (!estado.lote.turmas.length) {
             estadoTexto.textContent = 'Falta colar a lista dos alunos no passo 2, na aba Gerar as provas.';
+            return;
+        }
+
+        if (mapaAtivo()) {
+            $('gerar-gabaritos').disabled = true;
+            try {
+                const fez = await gerarGabaritosPorSala(alvo, estadoTexto);
+                if (!fez) {
+                    estadoTexto.textContent = chavesDe('gabaritos').length
+                        ? 'O mapa está carregado, mas nenhum gabarito enviado cobre as séries das salas. Envie esses gabaritos, ou tire o mapa para voltar à saída por turma.'
+                        : 'Carregue o arquivo de pelo menos um gabarito aqui em cima.';
+                }
+            } catch (erro) {
+                estadoTexto.textContent = 'Parou no meio: ' + (erro.message || erro);
+            } finally {
+                $('gerar-gabaritos').disabled = false;
+            }
             return;
         }
 
@@ -1024,6 +1323,145 @@
 
     /* ===================== passo 5: gerar ===================== */
 
+    async function gerarPorSalas(alvo, estadoTexto, configuracao) {
+        const montado = salasParaImprimir('arquivos');
+        if (!montado.salas.length) return false;
+
+        estadoTexto.textContent = 'gerando o PDF das salas…';
+        await new Promise(function (resolve) { setTimeout(resolve, 0); });
+        const subtitulo = subtituloDasSalas();
+        const base = {
+            cabecalho: configuracao.cabecalho,
+            espacoTopoCm: configuracao.espacoTopoCm,
+            provaInteira: configuracao.provaInteira,
+            avaliacao: $('avaliacao').value,
+            logo: await bytesDoLogo(),
+            subtitulo: subtitulo,
+            rotulo: 'provas',
+            rotuloUma: 'prova'
+        };
+        const dados = { ano: $('ano').value, bimestre: $('bimestre').value };
+        const provas = [];
+        montado.salas.forEach(function (sala) {
+            sala.vias.forEach(function (via) { provas.push(via.identificacao); });
+        });
+
+        const pacote = { titulo: 'Provas na ordem das salas', provas: provas, arquivos: [] };
+        pacote.arquivos.push({
+            rotulo: 'PDF único, salas em sequência (' + (configuracao.provaInteira ? 'prova inteira' : 'capa e verso') + ')',
+            nome: Saida.nomeArquivo('PROVAS-SALAS', dados, 'pdf'),
+            tipo: 'application/pdf',
+            bytes: await Pdf.montarPacotePorSala(Object.assign({}, base, {
+                salas: montado.salas,
+                tituloArquivo: 'Provas por sala · ' + subtitulo
+            }))
+        });
+
+        if ($('pdf-por-sala').checked) {
+            for (let i = 0; i < montado.salas.length; i++) {
+                const sala = montado.salas[i];
+                estadoTexto.textContent = 'gerando o PDF da ' + sala.sala + '…';
+                await new Promise(function (resolve) { setTimeout(resolve, 0); });
+                pacote.arquivos.push({
+                    rotulo: 'PDF só da ' + sala.sala,
+                    nome: Saida.nomeArquivo('PROVA', { ano: dados.ano, bimestre: dados.bimestre, turma: sala.sala }, 'pdf'),
+                    tipo: 'application/pdf',
+                    bytes: await Pdf.montarPacotePorSala(Object.assign({}, base, {
+                        salas: [sala],
+                        tituloArquivo: sala.sala + ' · ' + subtitulo
+                    }))
+                });
+            }
+        }
+
+        pacote.arquivos.push({
+            rotulo: 'Folha de conferência (PDF)',
+            nome: Saida.nomeArquivo('CONFERENCIA-SALAS', dados, 'pdf'),
+            tipo: 'application/pdf',
+            bytes: await Pdf.montarFolhaConferencia({ identificacoes: provas, subtitulo: subtitulo })
+        });
+        pacote.arquivos.push({
+            rotulo: 'Conferência (CSV)',
+            nome: Saida.nomeArquivo('CONFERENCIA-SALAS', dados, 'csv'),
+            tipo: 'text/csv;charset=utf-8',
+            bytes: Saida.montarCsv(provas, dados)
+        });
+
+        estado.resultados.push(pacote);
+        alvo.appendChild(cartaoDeResultado(pacote));
+        estadoTexto.textContent = 'guardando nos arquivos recentes…';
+        const guardou = await guardarNoHistorico(estado.resultados);
+        estadoTexto.textContent = 'pronto: provas na ordem das salas.' +
+            (guardou ? '' : ' (Não consegui guardar nos arquivos recentes: baixe agora.)');
+        alvo.appendChild(barraDeTudo());
+        return true;
+    }
+
+    async function gerarGabaritosPorSala(alvo, estadoTexto) {
+        const montado = salasParaImprimir('gabaritos');
+        if (!montado.salas.length) return false;
+
+        const configuracao = montarConfiguracaoGabarito();
+        const subtitulo = 'Gabaritos · ' + subtituloDasSalas();
+        const base = {
+            cabecalho: configuracao.cabecalho,
+            avaliacao: $('avaliacao').value,
+            logo: await bytesDoLogo(),
+            subtitulo: subtitulo,
+            quatroPorFolha: configuracao.quatroPorFolha,
+            espacoTopoCm: configuracao.espacoTopoCm
+        };
+        const dados = { ano: $('ano').value, bimestre: $('bimestre').value };
+        const provas = [];
+        montado.salas.forEach(function (sala) {
+            sala.vias.forEach(function (via) { provas.push(via.identificacao); });
+        });
+
+        estadoTexto.textContent = 'gerando os gabaritos na ordem das salas…';
+        const bytes = await Pdf.montarGabaritosPorSala(Object.assign({}, base, {
+            salas: montado.salas,
+            tituloArquivo: subtitulo
+        }));
+        const encolheu = configuracao.quatroPorFolha && bytes.escalaUsada && bytes.escalaUsada < 0.99;
+        const pacote = {
+            titulo: 'Gabaritos na ordem das salas',
+            provas: provas,
+            arquivos: [{
+                rotulo: (configuracao.quatroPorFolha
+                    ? 'Gabaritos identificados, quatro por folha A4, na ordem das salas (PDF)'
+                    : 'Gabaritos identificados, na ordem das salas (PDF)') +
+                    (encolheu ? ' — reduzido a ' + Math.round(bytes.escalaUsada * 100) + '%' : ''),
+                nome: Saida.nomeArquivo('GABARITOS-SALAS', dados, 'pdf'),
+                tipo: 'application/pdf',
+                bytes: bytes
+            }]
+        };
+
+        if ($('pdf-por-sala').checked) {
+            for (let i = 0; i < montado.salas.length; i++) {
+                const sala = montado.salas[i];
+                pacote.arquivos.push({
+                    rotulo: 'Gabaritos só da ' + sala.sala,
+                    nome: Saida.nomeArquivo('GABARITO', { ano: dados.ano, bimestre: dados.bimestre, turma: sala.sala }, 'pdf'),
+                    tipo: 'application/pdf',
+                    bytes: await Pdf.montarGabaritosPorSala(Object.assign({}, base, {
+                        salas: [sala],
+                        tituloArquivo: sala.sala + ' · ' + subtitulo
+                    }))
+                });
+            }
+        }
+
+        const resultados = [pacote];
+        alvo.appendChild(cartaoDeResultado(pacote));
+        estadoTexto.textContent = 'guardando nos arquivos recentes…';
+        const guardou = await guardarNoHistorico(resultados);
+        estadoTexto.textContent = 'pronto: gabaritos na ordem das salas.' +
+            (guardou ? '' : ' (Não consegui guardar nos arquivos recentes: baixe agora.)');
+        alvo.appendChild(barraDeTudo(resultados));
+        return true;
+    }
+
     $('gerar').addEventListener('click', gerar);
 
     async function gerar() {
@@ -1061,6 +1499,13 @@
         const configuracao = montarConfiguracao();
 
         try {
+            if (atual !== 'etiquetas' && mapaAtivo()) {
+                const fez = await gerarPorSalas(alvo, estadoTexto, configuracao);
+                if (!fez) {
+                    estadoTexto.textContent = 'O mapa está carregado, mas nenhuma prova enviada cobre as séries das salas. Envie essas provas no passo 3, ou tire o mapa para voltar à saída por turma.';
+                }
+                return;
+            }
             for (let i = 0; i < tarefas.length; i++) {
                 const tarefa = tarefas[i];
                 estadoTexto.textContent = 'gerando ' + (i + 1) + ' de ' + tarefas.length +

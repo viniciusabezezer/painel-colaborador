@@ -21,18 +21,24 @@
     /* Ponto e vírgula como separador e BOM na frente: é assim que o Excel em
        português abre o arquivo com as colunas já separadas e os acentos certos. */
     function montarCsv(provas, dados) {
-        const linhas = [['NUMERO', 'ALUNO', 'TURMA', 'SERIE', 'COMPONENTE', 'BIMESTRE', 'ANO', 'IDENTIFICACAO']];
+        const info = dados || {};
+        const comSala = (provas || []).some(function (prova) { return prova && prova.sala; });
+        const linhas = [comSala
+            ? ['SALA', 'POSICAO', 'NUMERO', 'ALUNO', 'TURMA', 'SERIE', 'COMPONENTE', 'BIMESTRE', 'ANO', 'IDENTIFICACAO']
+            : ['NUMERO', 'ALUNO', 'TURMA', 'SERIE', 'COMPONENTE', 'BIMESTRE', 'ANO', 'IDENTIFICACAO']];
         provas.forEach(function (prova) {
-            linhas.push([
+            const linha = [
                 prova.numeroCurto,
                 prova.nome,
                 prova.turma,
-                dados.serieNome || '',
+                prova.serieNome || info.serieNome || '',
                 prova.componenteNome,
-                dados.bimestre || '',
-                dados.ano || '',
+                info.bimestre || '',
+                info.ano || '',
                 prova.id
-            ]);
+            ];
+            if (comSala) linha.unshift(prova.sala || '', prova.posicao == null ? '' : prova.posicao);
+            linhas.push(linha);
         });
         const texto = linhas.map(function (linha) {
             return linha.map(function (celula) {

@@ -640,17 +640,12 @@
         return bytes;
     }
 
-    /* Uma via por aluno: a capa com o cabeçalho de identificação e, logo
-       atrás, sem cabeçalho, o verso ou (com `provaInteira`) o resto da prova. */
-    async function montarPrimeirasPaginas(opcoes) {
-        const provas = opcoes.identificacoes || [];
-        if (!provas.length) throw new Error('Nenhum aluno para identificar.');
-
+    /* Uma via (capa, páginas seguintes e, se o total for ímpar, o verso em
+       branco) dentro de um PDF que pode reunir provas de arquivos diferentes.
+       O branco no fim é o mesmo de sempre: impresso frente e verso, a capa do
+       aluno seguinte não cai no verso da última folha deste. */
+    function acrescentarVia(destino, fonte, fontes, identificacao, opcoes) {
         const cabecalho = opcoes.cabecalho || {};
-        const destino = await PDFDocument.create();
-        const fontes = await carregarFontes(destino, opcoes.logo);
-        const fonte = await prepararFonte(destino, opcoes.arquivo, opcoes.provaInteira);
-
         /* Espaço aberto no topo: a prova desce e encolhe o necessário. Em zero
            — o caso normal, quando o professor já deixou a faixa em branco na
            prova —, a cópia sai em tamanho original e nada é redimensionado. */
@@ -658,51 +653,311 @@
         const area = espacoTopo > 0
             ? { x: 0, y: 0, largura: fonte.largura, altura: fonte.altura - espacoTopo, alinhar: 'topo' }
             : { x: 0, y: 0, largura: fonte.largura, altura: fonte.altura, alinhar: 'centro' };
-
         const escala = Math.min(area.largura / fonte.largura, area.altura / fonte.altura);
         const transformacao = {
             escala: escala,
             dx: area.x + (area.largura - fonte.largura * escala) / 2,
             dy: posicaoVertical(area, fonte.altura * escala)
         };
-
         const marca = {
             xCm: cabecalho.xCm, yCm: cabecalho.yCm,
             larguraCm: cabecalho.larguraCm, alturaCm: cabecalho.alturaCm,
             noEspacoAberto: espacoTopo > 0
         };
 
+        const folha = destino.addPage([fonte.largura, fonte.altura]);
+        fonte.desenhar(folha, area);
+        desenharCabecalho(folha, fontes, identificacao, resolverCaixa(marca, fonte.largura, fonte.altura, transformacao),
+            opcoesDoCabecalho(cabecalho, opcoes));
+
+        fonte.seguintes.forEach(function (seguinte) {
+            const folhaSeguinte = destino.addPage([seguinte.largura, seguinte.altura]);
+            seguinte.desenhar(folhaSeguinte, {
+                x: 0, y: 0, largura: seguinte.largura, altura: seguinte.altura, alinhar: 'centro'
+            });
+        });
+
+        if ((1 + fonte.seguintes.length) % 2 === 1) {
+            const ultima = fonte.seguintes.length ? fonte.seguintes[fonte.seguintes.length - 1] : fonte;
+            destino.addPage([ultima.largura, ultima.altura]);
+        }
+    }
+
+    /* Uma via por aluno: a capa com o cabeçalho de identificação e, logo
+       atrás, sem cabeçalho, o verso ou (com `provaInteira`) o resto da prova. */
+    async function montarPrimeirasPaginas(opcoes) {
+        const provas = opcoes.identificacoes || [];
+        if (!provas.length) throw new Error('Nenhum aluno para identificar.');
+
+        const destino = await PDFDocument.create();
+        const fontes = await carregarFontes(destino, opcoes.logo);
+        const fonte = await prepararFonte(destino, opcoes.arquivo, opcoes.provaInteira);
+
         destino.setTitle(textoSeguro(opcoes.tituloArquivo || 'Provas identificadas'));
         destino.setCreator('Identificador de Provas da Malu — Painel do Colaborador');
         destino.setProducer('Identificador de Provas da Malu — Painel do Colaborador');
 
         for (let i = 0; i < provas.length; i++) {
-            const folha = destino.addPage([fonte.largura, fonte.altura]);
-            fonte.desenhar(folha, area);
-            desenharCabecalho(folha, fontes, provas[i], resolverCaixa(marca, fonte.largura, fonte.altura, transformacao),
-                opcoesDoCabecalho(cabecalho, opcoes));
-
-            /* As páginas seguintes vêm logo atrás da capa, do jeito que foram
-               enviadas e sem cabeçalho. */
-            fonte.seguintes.forEach(function (seguinte) {
-                const folhaSeguinte = destino.addPage([seguinte.largura, seguinte.altura]);
-                seguinte.desenhar(folhaSeguinte, {
-                    x: 0, y: 0, largura: seguinte.largura, altura: seguinte.altura, alinhar: 'centro'
-                });
-            });
-
-            /* Número ímpar de páginas por aluno (a capa mais as seguintes),
-               em qualquer modo, inclusive prova de uma página só: uma página em
-               branco no fim, para que, impresso frente e verso, a capa do aluno
-               seguinte não saia no verso da última folha deste. */
-            if ((1 + fonte.seguintes.length) % 2 === 1) {
-                const ultima = fonte.seguintes.length ? fonte.seguintes[fonte.seguintes.length - 1] : fonte;
-                destino.addPage([ultima.largura, ultima.altura]);
-            }
+            acrescentarVia(destino, fonte, fontes, provas[i], opcoes);
             if (opcoes.aoProgresso) opcoes.aoProgresso(i + 1, provas.length);
         }
 
         return destino.save();
+    }
+
+    function palavraContada(quantidade, uma, varias) {
+        return quantidade + ' ' + (Number(quantidade) === 1 ? uma : varias);
+    }
+
+    /* Folha de rosto da sala. Se sair com número ímpar de páginas, ganha um
+       verso em branco para a primeira prova da sala começar na frente. */
+    function acrescentarFolhaRosto(destino, fontes, opcoes) {
+        const alunos = opcoes.alunos || [];
+        const margem = 40;
+        const alturaLinha = 18;
+        const largura = A4[0];
+        const altura = A4[1];
+        const colunas = { posicao: margem, turma: margem + 52, numero: margem + 130, nome: margem + 175 };
+        let paginas = 0;
+        let folha = null;
+        let cursor = 0;
+
+        function novaFolha() {
+            folha = destino.addPage(A4);
+            paginas++;
+            cursor = altura - margem;
+            const titulo = (opcoes.sala || 'Sala') + ' · ' +
+                palavraContada(opcoes.provas != null ? opcoes.provas : alunos.length, opcoes.rotuloUma || 'prova', opcoes.rotulo || 'provas') +
+                ' · lista dos alunos na ordem';
+            const seguro = textoSeguro(titulo);
+            const tamanhoTitulo = tamanhoQueCabe(fontes.negrito, seguro, 13, largura - margem * 2, 8);
+            folha.drawText(seguro, {
+                x: margem, y: cursor - tamanhoTitulo, size: tamanhoTitulo, font: fontes.negrito, color: PRETO
+            });
+            cursor -= tamanhoTitulo + 16;
+            if (opcoes.subtitulo) {
+                quebrarEmLinhas(fontes.normal, textoSeguro(opcoes.subtitulo), 9, largura - margem * 2).forEach(function (linha) {
+                    folha.drawText(linha, { x: margem, y: cursor, size: 9, font: fontes.normal, color: CINZA });
+                    cursor -= 13;
+                });
+                cursor -= 4;
+            }
+            [['Pos.', colunas.posicao], ['Turma', colunas.turma], ['Nº', colunas.numero], ['Aluno(a)', colunas.nome]].forEach(function (par) {
+                folha.drawText(textoSeguro(par[0]), { x: par[1], y: cursor, size: 8, font: fontes.negrito, color: CINZA });
+            });
+            cursor -= 6;
+            folha.drawLine({ start: { x: margem, y: cursor }, end: { x: largura - margem, y: cursor }, thickness: 0.8, color: PRETO });
+            cursor -= alturaLinha;
+        }
+
+        novaFolha();
+        alunos.forEach(function (aluno) {
+            if (cursor < margem + alturaLinha) novaFolha();
+            const nome = quebrarTexto(fontes.normal, textoSeguro(aluno.nome), 10, largura - margem - colunas.nome, 1)[0] || '';
+            const numero = String(aluno.numero == null ? '' : aluno.numero);
+            const numeroCurto = /^\d$/.test(numero) ? '0' + numero : numero;
+            folha.drawText(textoSeguro(String(aluno.posicao)), { x: colunas.posicao, y: cursor + 4, size: 10, font: fontes.normal, color: PRETO });
+            folha.drawText(textoSeguro(aluno.turma || ''), { x: colunas.turma, y: cursor + 4, size: 10, font: fontes.normal, color: PRETO });
+            folha.drawText(textoSeguro(numeroCurto), { x: colunas.numero, y: cursor + 4, size: 10, font: fontes.normal, color: PRETO });
+            folha.drawText(nome, { x: colunas.nome, y: cursor + 4, size: 10, font: fontes.normal, color: PRETO });
+            folha.drawLine({
+                start: { x: margem, y: cursor }, end: { x: largura - margem, y: cursor },
+                thickness: 0.3, color: rgb(0.75, 0.75, 0.75)
+            });
+            cursor -= alturaLinha;
+        });
+
+        if (opcoes.reservasTexto) {
+            const prefixo = opcoes.reservasPrefixo || 'Prova reserva no fim deste pacote: ';
+            const linhas = quebrarEmLinhas(fontes.normal, textoSeguro(prefixo + opcoes.reservasTexto), 9, largura - margem * 2);
+            if (cursor < margem + 14 * linhas.length) novaFolha();
+            cursor -= 4;
+            linhas.forEach(function (linha) {
+                if (cursor < margem + 12) novaFolha();
+                folha.drawText(linha, { x: margem, y: cursor, size: 9, font: fontes.normal, color: PRETO });
+                cursor -= 13;
+            });
+        }
+
+        if (paginas % 2 === 1) destino.addPage(A4);
+    }
+
+    async function montarFolhasRosto(opcoes) {
+        const destino = await PDFDocument.create();
+        const fontes = await carregarFontes(destino, opcoes.logo);
+        (opcoes.salas || []).forEach(function (sala) {
+            acrescentarFolhaRosto(destino, fontes, {
+                sala: sala.sala,
+                provas: sala.provas,
+                alunos: sala.alunos,
+                reservasTexto: sala.reservasTexto,
+                subtitulo: opcoes.subtitulo,
+                rotulo: opcoes.rotulo,
+                rotuloUma: opcoes.rotuloUma,
+                reservasPrefixo: opcoes.reservasPrefixo
+            });
+        });
+        destino.setTitle(textoSeguro(opcoes.tituloArquivo || 'Folhas de rosto'));
+        destino.setCreator('Identificador de Provas da Malu — Painel do Colaborador');
+        return destino.save();
+    }
+
+    /* PDF único (ou de uma sala): folha de rosto, provas na ordem dos lugares
+       — cada aluno com o arquivo da série dele — e a reserva da sala no fim. */
+    async function montarPacotePorSala(opcoes) {
+        const salas = opcoes.salas || [];
+        if (!salas.length) throw new Error('Nenhuma sala com prova para imprimir.');
+
+        const destino = await PDFDocument.create();
+        const fontes = await carregarFontes(destino, opcoes.logo);
+        const cache = Object.create(null);
+
+        async function fonteDe(chave, arquivo) {
+            const id = String(chave) + (opcoes.provaInteira ? '|inteira' : '|capa');
+            if (!cache[id]) cache[id] = await prepararFonte(destino, arquivo, !!opcoes.provaInteira);
+            return cache[id];
+        }
+
+        destino.setTitle(textoSeguro(opcoes.tituloArquivo || 'Provas por sala'));
+        destino.setCreator('Identificador de Provas da Malu — Painel do Colaborador');
+        destino.setProducer('Identificador de Provas da Malu — Painel do Colaborador');
+
+        for (let s = 0; s < salas.length; s++) {
+            const sala = salas[s];
+            acrescentarFolhaRosto(destino, fontes, {
+                sala: sala.sala,
+                provas: sala.provas,
+                alunos: sala.alunos,
+                reservasTexto: sala.reservasTexto,
+                subtitulo: opcoes.subtitulo,
+                rotulo: opcoes.rotulo || 'provas',
+                rotuloUma: opcoes.rotuloUma || 'prova',
+                reservasPrefixo: opcoes.reservasPrefixo
+            });
+            for (let i = 0; i < sala.vias.length; i++) {
+                const via = sala.vias[i];
+                const fonte = await fonteDe(via.chave, via.arquivo);
+                acrescentarVia(destino, fonte, fontes, via.identificacao, Object.assign({}, opcoes, { serieNome: via.serieNome }));
+            }
+            for (let r = 0; r < (sala.reservas || []).length; r++) {
+                const reserva = sala.reservas[r];
+                const fonte = await fonteDe(reserva.chave, reserva.arquivo);
+                const generica = {
+                    generica: true, nome: '', turma: '________', numeroCurto: '______', id: '',
+                    componente: reserva.componente
+                };
+                const cabecalho = Object.assign({}, opcoes.cabecalho || {}, { incluirQr: false, incluirCodigo: false });
+                acrescentarVia(destino, fonte, fontes, generica, Object.assign({}, opcoes, {
+                    cabecalho: cabecalho,
+                    serieNome: reserva.serieNome
+                }));
+            }
+        }
+
+        return destino.save();
+    }
+
+    /* Gabaritos na mesma ordem das salas. Com quatro por folha, cada sala
+       começa numa folha nova, para o corte de uma sala não misturar a outra.
+       Folha de rosto e, se o miolo sair ímpar, o verso em branco continuam valendo. */
+    async function montarGabaritosPorSala(opcoes) {
+        if (!opcoes.quatroPorFolha) {
+            return montarPacotePorSala(Object.assign({}, opcoes, {
+                provaInteira: true,
+                rotulo: 'gabaritos',
+                rotuloUma: 'gabarito',
+                reservasPrefixo: 'Gabarito reserva no fim deste pacote: '
+            }));
+        }
+
+        const salas = opcoes.salas || [];
+        if (!salas.length) throw new Error('Nenhuma sala com gabarito para imprimir.');
+
+        const destino = await PDFDocument.create();
+        const fontes = await carregarFontes(destino, opcoes.logo);
+        const cache = Object.create(null);
+        const cabecalho = opcoes.cabecalho || {};
+        const larguraQuadrante = A4[0] / 2;
+        const alturaQuadrante = A4[1] / 2;
+        let escalaMin = 1;
+
+        async function fonteDe(chave, arquivo) {
+            if (!cache[chave]) cache[chave] = await prepararFonte(destino, arquivo, false);
+            return cache[chave];
+        }
+
+        function desenharNoQuadrante(folha, indice, fonte, identificacao, serieNome, cabecalhoDaVia) {
+            const escala = Math.min(1, larguraQuadrante / fonte.largura, alturaQuadrante / fonte.altura);
+            if (escala < escalaMin) escalaMin = escala;
+            const posicao = indice % 4;
+            const coluna = posicao % 2;
+            const linha = Math.floor(posicao / 2);
+            const dx = coluna * larguraQuadrante + (larguraQuadrante - fonte.largura * escala) / 2;
+            const dy = A4[1] - (linha + 1) * alturaQuadrante + (alturaQuadrante - fonte.altura * escala) / 2;
+            fonte.desenhar(folha, {
+                x: dx, y: dy,
+                largura: fonte.largura * escala,
+                altura: fonte.altura * escala,
+                alinhar: 'centro'
+            });
+            const larguraCaixa = Math.min(fonte.largura - 4, (cabecalhoDaVia.larguraCm || PADRAO.larguraCm) * CM);
+            const alturaCaixa = Math.min(fonte.altura - 4, (cabecalhoDaVia.alturaCm || PADRAO.alturaCm) * CM);
+            desenharCabecalho(folha, fontes, identificacao, {
+                x: dx + (cabecalhoDaVia.xCm || 0) * CM * escala,
+                y: dy + (fonte.altura - (cabecalhoDaVia.yCm || 0) * CM - alturaCaixa) * escala,
+                largura: larguraCaixa * escala,
+                altura: alturaCaixa * escala,
+                escala: escala
+            }, opcoesDoCabecalho(cabecalhoDaVia, { serieNome: serieNome, avaliacao: opcoes.avaliacao }));
+        }
+
+        destino.setTitle(textoSeguro(opcoes.tituloArquivo || 'Gabaritos por sala'));
+        destino.setCreator('Identificador de Provas da Malu — Painel do Colaborador');
+        destino.setProducer('Identificador de Provas da Malu — Painel do Colaborador');
+
+        for (let s = 0; s < salas.length; s++) {
+            const sala = salas[s];
+            acrescentarFolhaRosto(destino, fontes, {
+                sala: sala.sala,
+                provas: sala.provas,
+                alunos: sala.alunos,
+                reservasTexto: sala.reservasTexto,
+                subtitulo: opcoes.subtitulo,
+                rotulo: 'gabaritos',
+                rotuloUma: 'gabarito',
+                reservasPrefixo: 'Gabarito reserva no fim deste pacote: '
+            });
+            const pecas = sala.vias.map(function (via) {
+                return { via: via, reserva: false };
+            }).concat((sala.reservas || []).map(function (reserva) {
+                return { reserva: true, item: reserva };
+            }));
+            let folha = null;
+            for (let i = 0; i < pecas.length; i++) {
+                if (i % 4 === 0) {
+                    folha = destino.addPage(A4);
+                    desenharGuiasDeCorte(folha);
+                }
+                const peca = pecas[i];
+                if (peca.reserva) {
+                    const fonte = await fonteDe(peca.item.chave, peca.item.arquivo);
+                    const generica = {
+                        generica: true, nome: '', turma: '________', numeroCurto: '______', id: '',
+                        componente: peca.item.componente
+                    };
+                    const cabecalhoReserva = Object.assign({}, cabecalho, { incluirQr: false, incluirCodigo: false });
+                    desenharNoQuadrante(folha, i, fonte, generica, peca.item.serieNome, cabecalhoReserva);
+                } else {
+                    const fonte = await fonteDe(peca.via.chave, peca.via.arquivo);
+                    desenharNoQuadrante(folha, i, fonte, peca.via.identificacao, peca.via.serieNome, cabecalho);
+                }
+            }
+            if (Math.ceil(pecas.length / 4) % 2 === 1) destino.addPage(A4);
+        }
+
+        const bytes = await destino.save();
+        bytes.escalaUsada = escalaMin;
+        return bytes;
     }
 
     /* Prova reserva, sem identificação: capa e verso iguais aos das provas
@@ -775,7 +1030,10 @@
         const altura = A4[1];
         const margem = 34;
         const alturaLinha = 19;
-        const colunas = { numero: margem, nome: margem + 34, id: margem + 250, assinatura: margem + 400 };
+        const comSala = provas.some(function (prova) { return prova && prova.sala; });
+        const colunas = comSala
+            ? { sala: margem, posicao: margem + 72, numero: margem + 108, nome: margem + 142, id: margem + 300, assinatura: margem + 438 }
+            : { numero: margem, nome: margem + 34, id: margem + 250, assinatura: margem + 400 };
 
         let folha = null;
         let cursor = 0;
@@ -798,9 +1056,11 @@
                 x: largura - margem - 50, y: altura - margem - 12, size: 8, font: fontes.normal, color: CINZA
             });
 
-            ['Nº', 'ALUNO(A)', 'IDENTIFICAÇÃO DA PROVA', 'ASSINATURA'].forEach(function (titulo, i) {
-                const x = [colunas.numero, colunas.nome, colunas.id, colunas.assinatura][i];
-                folha.drawText(textoSeguro(titulo), { x: x, y: cursor, size: 7.5, font: fontes.negrito, color: CINZA });
+            const titulos = comSala
+                ? [['SALA', colunas.sala], ['POS.', colunas.posicao], ['Nº', colunas.numero], ['ALUNO(A)', colunas.nome], ['IDENTIFICAÇÃO DA PROVA', colunas.id], ['ASSINATURA', colunas.assinatura]]
+                : [['Nº', colunas.numero], ['ALUNO(A)', colunas.nome], ['IDENTIFICAÇÃO DA PROVA', colunas.id], ['ASSINATURA', colunas.assinatura]];
+            titulos.forEach(function (par) {
+                folha.drawText(textoSeguro(par[0]), { x: par[1], y: cursor, size: 7.5, font: fontes.negrito, color: CINZA });
             });
             cursor -= 6;
             folha.drawLine({ start: { x: margem, y: cursor }, end: { x: largura - margem, y: cursor }, thickness: 0.8, color: PRETO });
@@ -812,6 +1072,11 @@
         provas.forEach(function (prova) {
             if (cursor < margem + alturaLinha) novaFolha();
             const nome = quebrarTexto(fontes.normal, textoSeguro(prova.nome), 9, colunas.id - colunas.nome - 10, 1)[0] || '';
+            if (comSala) {
+                const sala = quebrarTexto(fontes.normal, textoSeguro(prova.sala || ''), 8, 68, 1)[0] || '';
+                folha.drawText(sala, { x: colunas.sala, y: cursor + 5, size: 8, font: fontes.normal, color: PRETO });
+                folha.drawText(textoSeguro(prova.posicao == null ? '' : String(prova.posicao)), { x: colunas.posicao, y: cursor + 5, size: 9, font: fontes.normal, color: PRETO });
+            }
             folha.drawText(textoSeguro(prova.numeroCurto), { x: colunas.numero, y: cursor + 5, size: 9, font: fontes.normal, color: PRETO });
             folha.drawText(nome, { x: colunas.nome, y: cursor + 5, size: 9, font: fontes.normal, color: PRETO });
             folha.drawText(textoSeguro(prova.id), { x: colunas.id, y: cursor + 5, size: 7.6, font: fontes.mono, color: PRETO });
@@ -840,7 +1105,10 @@
         montarGabaritosEmQuartos: montarGabaritosEmQuartos,
         montarProvaGenerica: montarProvaGenerica,
         montarEtiquetas: montarEtiquetas,
-        montarFolhaConferencia: montarFolhaConferencia
+        montarFolhaConferencia: montarFolhaConferencia,
+        montarFolhasRosto: montarFolhasRosto,
+        montarPacotePorSala: montarPacotePorSala,
+        montarGabaritosPorSala: montarGabaritosPorSala
     };
 
     global.ProvasPdf = api;

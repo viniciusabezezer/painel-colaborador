@@ -1,0 +1,10 @@
+TURMA 1A
+07 - Estudante Fictício 07
+08 - Estudante Fictício 08
+09 - Estudante Fictício 09
+
+TURMA 2A
+03 - Estudante Fictício 03
+
+TURMA 1B
+01 - Estudante Fictício 01

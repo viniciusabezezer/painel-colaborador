@@ -642,3 +642,211 @@ test('o brasão embutido é o mesmo logo.png, para sair mesmo sem o arquivo', as
     const img = await doc.embedPng(brasao.bytes());
     assert.ok(img.width > 0 && img.height > 0);
 });
+
+/* ===== mapa de salas ===== */
+
+const mapa = require(path.join(app, 'mapa.js'));
+const fsMapa = require('node:fs');
+
+const LISTA_FICTICIA = fsMapa.readFileSync(path.join(__dirname, '..', 'exemplo', 'lista-ficticia.txt'), 'utf8');
+const MAPA_FICTICIO = JSON.parse(fsMapa.readFileSync(path.join(__dirname, '..', 'exemplo', 'mapa-salas-ficticio.json'), 'utf8'));
+
+test('o mapa de exemplo é o contrato do Randomizador e não sai do navegador', () => {
+    const fonte = fsMapa.readFileSync(path.join(app, 'mapa.js'), 'utf8');
+    assert.equal(fonte.includes('fetch('), false);
+    assert.equal(fonte.includes('XMLHttpRequest'), false);
+    const lido = mapa.ler(MAPA_FICTICIO);
+    assert.equal(lido.ok, true);
+    assert.equal(lido.avaliacao, 'Avaliação fictícia de fim de ano');
+    assert.equal(lido.salas[0].sala, 'Sala 12', 'a ordem do mapa manda, não a ordem do arquivo');
+    assert.equal(lido.salas[0].alunos[0].posicao, 1);
+    assert.equal(lido.salas[0].alunos[0].turmaCurta, '1A');
+    assert.equal(mapa.ler({ formato: 'outro', versao: 1, salas: [] }).ok, false);
+    assert.equal(mapa.ler('não é json').ok, false);
+});
+
+test('casa por turma e número; nome diferente avisa e não bloqueia', () => {
+    const lote = lista.lerLote(LISTA_FICTICIA);
+    const casamento = mapa.casar(lote, mapa.ler(MAPA_FICTICIO));
+    assert.equal(casamento.casados, 4);
+    assert.equal(casamento.avisosNome.length, 1);
+    assert.equal(casamento.avisosNome[0].numero, 8);
+    assert.equal(casamento.avisosNome[0].nomeLista, 'Estudante Fictício 08');
+    assert.equal(casamento.semSala.length, 1);
+    assert.equal(casamento.semSala[0].turma, '1A');
+    assert.equal(casamento.semSala[0].numero, 9);
+    assert.equal(casamento.semProva.length, 1);
+    assert.equal(casamento.semProva[0].numero, 15);
+    assert.equal(casamento.semProva[0].sala, 'Sala 12');
+
+    const sala12 = casamento.salas[0];
+    assert.equal(sala12.alunos[2].casado, true, 'o nº 8 entra mesmo com o nome divergente');
+    assert.equal(sala12.alunos[2].nome, 'Estudante Fictício 08', 'a prova usa o nome da lista');
+
+    const plano = mapa.plano(casamento, ['1|NAT', '2|NAT']);
+    assert.deepEqual(plano.salas.map((sala) => sala.sala), ['Sala 12', 'Sala 14']);
+    assert.deepEqual(plano.salas[0].vias.map((via) => via.turmaCurta + '-' + via.numero), ['1A-7', '2A-3', '1A-8']);
+    assert.deepEqual(plano.salas[0].reservas.map((reserva) => reserva.chave), ['1|NAT', '2|NAT']);
+    assert.deepEqual(plano.salas[1].reservas.map((reserva) => reserva.chave), ['1|NAT']);
+    assert.equal(plano.provas, 4);
+
+    const soPrimeira = mapa.plano(casamento, ['1|NAT']);
+    assert.equal(soPrimeira.semArquivo.length, 1, 'a 2ª série ficou sem arquivo');
+    assert.equal(soPrimeira.semArquivo[0].numero, 3);
+});
+
+test('acento e caixa no nome não viram aviso', () => {
+    const lote = lista.lerLote('TURMA 1A\n07 - Estudante Fictício 07\n');
+    const casamento = mapa.casar(lote, mapa.ler({
+        formato: 'malu-mapa-salas', versao: 1, salas: [{
+            sala: 'Sala 12', ordem: 1,
+            alunos: [{ posicao: 1, turma: '1º A', numero: '07', nome: 'ESTUDANTE FICTICIO 07' }]
+        }]
+    }));
+    assert.equal(casamento.casados, 1);
+    assert.equal(casamento.avisosNome.length, 0);
+    assert.equal(casamento.salas[0].alunos[0].turmaCurta, '1A');
+});
+
+test('sem sala no objeto, o CSV de conferência continua o de sempre', () => {
+    const prova = identificacao.identificar({
+        ano: '2026', bimestre: 'B4', turma: '1A', numero: 7, componente: 'NAT',
+        nome: 'Estudante Fictício 07', chave: CHAVE
+    });
+    const csv = saida.montarCsv([prova], { serieNome: '1ª SÉRIE', bimestre: 'B4', ano: '2026' });
+    assert.equal(csv.split('\r\n')[0].replace('﻿', ''), 'NUMERO;ALUNO;TURMA;SERIE;COMPONENTE;BIMESTRE;ANO;IDENTIFICACAO');
+});
+
+test('com sala, o CSV ganha sala e posição e cada linha traz a série daquela prova', () => {
+    const prova = identificacao.identificar({
+        ano: '2026', bimestre: 'B4', turma: '2A', numero: 3, componente: 'NAT',
+        nome: 'Estudante Fictício 03', chave: CHAVE
+    });
+    prova.sala = 'Sala 12';
+    prova.posicao = 2;
+    prova.serieNome = '2ª SÉRIE';
+    const csv = saida.montarCsv([prova], { bimestre: 'B4', ano: '2026' });
+    const linhas = csv.replace('﻿', '').split('\r\n');
+    assert.equal(linhas[0], 'SALA;POSICAO;NUMERO;ALUNO;TURMA;SERIE;COMPONENTE;BIMESTRE;ANO;IDENTIFICACAO');
+    assert.match(linhas[1], /^Sala 12;2;03;ESTUDANTE FICTÍCIO 03;2A;2ª SÉRIE;Ciências da Natureza;B4;2026;MLS-/);
+});
+
+test('o PDF por sala abre com a folha de rosto, intercala as séries e reserva no fim, com verso em branco', async () => {
+    async function provaMarcada() {
+        const doc = await global.PDFLib.PDFDocument.create();
+        doc.addPage([595.28, 841.89]);
+        return { bytes: await doc.save(), tipo: 'pdf' };
+    }
+    const arquivo1 = await provaMarcada();
+    const arquivo2 = await provaMarcada();
+    const lote = lista.lerLote(LISTA_FICTICIA);
+    const plano = mapa.plano(mapa.casar(lote, mapa.ler(MAPA_FICTICIO)), ['1|NAT', '2|NAT']);
+    const arquivos = { '1|NAT': arquivo1, '2|NAT': arquivo2 };
+
+    function montarSala(sala) {
+        const vias = sala.vias.map((via) => {
+            const identificada = identificacao.identificar({
+                ano: '2026', bimestre: 'B4', turma: via.turmaCurta, numero: via.numero,
+                componente: 'NAT', nome: via.nome, chave: CHAVE
+            });
+            identificada.sala = sala.sala;
+            identificada.posicao = via.posicao;
+            return {
+                chave: via.chave,
+                arquivo: arquivos[via.chave],
+                serieNome: via.serie === '2' ? '2ª SÉRIE' : '1ª SÉRIE',
+                identificacao: identificada
+            };
+        });
+        return {
+            sala: sala.sala,
+            provas: sala.provas,
+            alunos: sala.vias.map((via) => ({ posicao: via.posicao, turma: via.turma, numero: via.numero, nome: via.nome })),
+            vias: vias,
+            reservas: sala.reservas.map((reserva) => ({
+                chave: reserva.chave,
+                arquivo: arquivos[reserva.chave],
+                componente: 'NAT',
+                serieNome: reserva.serie === '2' ? '2ª SÉRIE' : '1ª SÉRIE'
+            })),
+            reservasTexto: '1ª SÉRIE · Ciências da Natureza; 2ª SÉRIE · Ciências da Natureza'
+        };
+    }
+
+    const salas = plano.salas.map(montarSala);
+    const bytes = await pdf.montarPacotePorSala({
+        salas: salas,
+        cabecalho: { xCm: 1, yCm: 0.6, larguraCm: 19, alturaCm: 2.5, incluirQr: false },
+        subtitulo: 'Avaliação fictícia',
+        tituloArquivo: 'Provas por sala'
+    });
+    const doc = await global.PDFLib.PDFDocument.load(bytes);
+    /* Sala 12: rosto + branco, 3 alunos (capa + branco), 2 reservas (capa + branco) = 12.
+       Sala 14: rosto + branco, 1 aluno, 1 reserva = 6. Total 18. */
+    assert.equal(doc.getPageCount(), 18);
+    [1, 3, 5, 7, 9, 11, 13, 15, 17].forEach((indice) => {
+        assert.ok(!doc.getPage(indice).node.Contents(), 'a página ' + (indice + 1) + ' é o verso em branco');
+    });
+    assert.ok(doc.getPage(0).node.Contents(), 'a primeira página é a folha de rosto');
+    assert.equal(doc.getTitle(), 'Provas por sala');
+
+    const soRosto = await pdf.montarFolhasRosto({
+        salas: [{ sala: 'Sala 12', provas: 35, alunos: salas[0].alunos, reservasTexto: salas[0].reservasTexto }],
+        subtitulo: 'Avaliação fictícia'
+    });
+    const rosto = await global.PDFLib.PDFDocument.load(soRosto);
+    assert.equal(rosto.getPageCount(), 2, 'folha de rosto e o verso em branco');
+    const cru = Buffer.from(soRosto);
+    const zlib = require('node:zlib');
+    let texto = '';
+    let cursor = 0;
+    while (cursor < cru.length) {
+        const inicio = cru.indexOf('stream', cursor);
+        if (inicio < 0) break;
+        let dados = inicio + 6;
+        if (cru[dados] === 13) dados++;
+        if (cru[dados] === 10) dados++;
+        const fim = cru.indexOf('endstream', dados);
+        if (fim < 0) break;
+        const trecho = cru.subarray(dados, fim);
+        try { texto += zlib.inflateSync(trecho).toString('latin1'); }
+        catch (erro) { texto += trecho.toString('latin1'); }
+        cursor = fim + 9;
+    }
+    texto = texto.replace(/<([0-9A-Fa-f]+)>/g, function (_, hex) { return Buffer.from(hex, 'hex').toString('latin1'); });
+    assert.ok(texto.includes('Sala 12 · 35 provas · lista dos alunos na ordem'));
+    assert.ok(texto.includes('Estudante Fictício 07'));
+    assert.ok(texto.includes('Estudante Fictício 03'));
+    assert.ok(texto.indexOf('Estudante Fictício 07') < texto.indexOf('Estudante Fictício 03'));
+});
+
+test('gabarito por sala, quatro por folha, não junta duas salas na mesma folha', async () => {
+    const doc = await global.PDFLib.PDFDocument.create();
+    doc.addPage([297.64, 420.94]);
+    const arquivo = { bytes: await doc.save(), tipo: 'pdf' };
+    const identificada = identificacao.identificar({
+        ano: '2026', bimestre: 'B4', turma: '1A', numero: 7, componente: 'NAT',
+        nome: 'Estudante Fictício 07', chave: CHAVE
+    });
+    identificada.sala = 'Sala 12';
+    identificada.posicao = 1;
+    const sala = {
+        sala: 'Sala 12',
+        provas: 1,
+        alunos: [{ posicao: 1, turma: '1ºA', numero: 7, nome: 'Estudante Fictício 07' }],
+        vias: [{ chave: '1|NAT', arquivo: arquivo, serieNome: '1ª SÉRIE', identificacao: identificada }],
+        reservas: [{ chave: '1|NAT', arquivo: arquivo, componente: 'NAT', serieNome: '1ª SÉRIE' }],
+        reservasTexto: '1ª SÉRIE · Ciências da Natureza'
+    };
+    const bytes = await pdf.montarGabaritosPorSala({
+        salas: [sala],
+        quatroPorFolha: true,
+        cabecalho: { xCm: 0.4, yCm: 0.2, larguraCm: 9, alturaCm: 1.6, incluirQr: false, incluirCodigo: true, incluirCorrecao: false },
+        tituloArquivo: 'Gabaritos por sala'
+    });
+    const gerado = await global.PDFLib.PDFDocument.load(bytes);
+    /* Rosto + branco, uma folha com aluno e reserva, e o verso em branco dessa folha. */
+    assert.equal(gerado.getPageCount(), 4);
+    assert.ok(!gerado.getPage(1).node.Contents());
+    assert.ok(!gerado.getPage(3).node.Contents());
+});
