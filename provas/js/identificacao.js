@@ -5,6 +5,7 @@
     'use strict';
 
     const sha256 = global.ProvasSha256 || (typeof require === 'function' ? require('./sha256.js') : null);
+    const qrProva = global.ProvasQrProva || (typeof require === 'function' ? require('./qrprova.js') : null);
 
     const ESCOLA = 'MLS'; /* EEMTI Prof. Maria Luiza Saboia Ribeiro */
 
@@ -114,6 +115,8 @@
         const numero = formatarNumero(dados.numero);
         const id = [ESCOLA, dados.ano, dados.bimestre, dados.turma, numero, dados.componente, verificador].join('-');
         const componente = COMPONENTES.find(function (c) { return c.codigo === dados.componente; });
+        const nome = nomeParaImpressao(dados.nome);
+        const matricula = qrProva.matriculaLimpa(dados.matricula);
         return {
             id: id,
             canonico: canonico,
@@ -123,28 +126,45 @@
             turma: dados.turma,
             componente: dados.componente,
             componenteNome: componente ? componente.nome : dados.componente,
-            nome: nomeParaImpressao(dados.nome),
-            conteudoQr: id + '\n' + nomeParaImpressao(dados.nome)
+            nome: nome,
+            matricula: matricula,
+            conteudoQr: qrProva.montar({
+                codigo: id,
+                turma: dados.turma,
+                numero: numero,
+                nome: nome,
+                titulo: dados.titulo || dados.avaliacao || '',
+                matricula: matricula
+            })
         };
     }
 
-    /* Aceita a lista como nomes soltos ou como { nome, numero }. Quando a lista
-       colada já vem numerada, é esse número que vale: é o "Núm. da lista" que o
-       aluno preenche na folha de respostas. Sem numeração, a ordem alfabética
-       manda — e aí a mesma turma gera sempre os mesmos códigos. */
+    /* Aceita a lista como nomes soltos ou como { nome, numero, matricula, ativo }.
+       Quando a lista colada já vem numerada, é esse número que vale: é o
+       "Núm. da lista" que o aluno preenche na folha de respostas. Sem numeração,
+       a ordem alfabética manda — e aí a mesma turma gera sempre os mesmos códigos.
+       Quem veio com ativo === false (a lista do Malu Presente marca isso) fica
+       de fora: não recebe código nem QR. */
     function prepararAlunos(alunos) {
         const entradas = (alunos || []).map(function (item) {
-            if (typeof item === 'string') return { nome: item, numero: null };
+            if (typeof item === 'string') return { nome: item, numero: null, matricula: '' };
+            if (item && item.ativo === false) return null;
             const numero = parseInt(item.numero, 10);
-            return { nome: item.nome, numero: isNaN(numero) ? null : numero };
-        }).filter(function (item) { return item.nome; });
+            return {
+                nome: item.nome,
+                numero: isNaN(numero) ? null : numero,
+                matricula: item.matricula || ''
+            };
+        }).filter(function (item) { return item && item.nome; });
 
         const algumNumerado = entradas.some(function (item) { return item.numero !== null; });
 
         if (!algumNumerado) {
             return entradas
                 .sort(function (a, b) { return compararNomes(a.nome, b.nome); })
-                .map(function (item, indice) { return { nome: item.nome, numero: indice + 1 }; });
+                .map(function (item, indice) {
+                    return { nome: item.nome, numero: indice + 1, matricula: item.matricula };
+                });
         }
 
         /* Lista numerada: respeita o número e completa quem veio sem ele com o
@@ -161,7 +181,11 @@
             usados[proximo] = true;
         });
 
-        return entradas.sort(function (a, b) { return a.numero - b.numero; });
+        return entradas
+            .sort(function (a, b) { return a.numero - b.numero; })
+            .map(function (item) {
+                return { nome: item.nome, numero: item.numero, matricula: item.matricula };
+            });
     }
 
     /* Identifica a turma inteira de um componente. */
@@ -174,7 +198,9 @@
                 numero: aluno.numero,
                 componente: opcoes.componente,
                 nome: aluno.nome,
-                chave: opcoes.chave
+                chave: opcoes.chave,
+                titulo: opcoes.titulo || opcoes.avaliacao || '',
+                matricula: aluno.matricula || ''
             });
         });
     }
@@ -194,12 +220,12 @@
         };
     }
 
-    /* Conferência: o código bate com este nome? Aceita tanto o texto completo
-       do QR (código + nome em duas linhas) quanto código e nome separados. */
+    /* Conferência: o código bate com este nome? Aceita o QR novo (MLSPROVA1),
+       o QR antigo (código e nome em duas linhas) e o código digitado à mão. */
     function conferir(entrada, nomeInformado, chave) {
-        const linhas = String(entrada || '').split(/[\r\n]+/).map(function (l) { return l.trim(); }).filter(Boolean);
-        const id = linhas[0] || '';
-        const nome = nomeInformado || linhas[1] || '';
+        const lido = qrProva.ler(entrada);
+        const id = lido ? lido.codigo : '';
+        const nome = nomeInformado || (lido && lido.nome) || '';
         const partes = separarId(id);
         if (!partes) {
             return { valido: false, motivo: 'formato', id: id, nome: nome };

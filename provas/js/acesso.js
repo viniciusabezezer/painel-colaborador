@@ -146,7 +146,8 @@
     global.IdentificadorAcesso = {
         autorizado: autorizado,
         perfil: function () { return perfilLiberado; },
-        chamarPresente: chamarPresente
+        chamarPresente: chamarPresente,
+        cliente: obterCliente
     };
     if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', iniciar);
     else iniciar();

@@ -155,6 +155,12 @@ label small { font-weight: 400; font-size: 12px; color: var(--ink-soft); line-he
 .aviso .atribuir { display: flex; align-items: center; gap: 8px; margin-top: 8px; flex-wrap: wrap; }
 .aviso select { width: auto; min-width: 120px; }
 
+.mapa-resumo { margin-top: 12px; display: flex; flex-direction: column; gap: 8px; }
+.mapa-tabela { width: 100%; border-collapse: collapse; font-size: 13.5px; }
+.mapa-tabela th { font-size: 11px; letter-spacing: .04em; text-transform: uppercase; color: var(--ink-soft); font-weight: 700; }
+.mapa-tabela th, .mapa-tabela td { text-align: left; padding: 6px 8px; border-bottom: 1px solid var(--line); }
+#passo-salas legend small { font-weight: 500; color: var(--ink-soft); letter-spacing: 0; text-transform: none; }
+
 /* ===== Slots das provas ===== */
 
 /* O envio do gabarito não depende da lista de alunos: fica sempre à mão. */
