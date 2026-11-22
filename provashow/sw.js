@@ -6,7 +6,7 @@
    Responde do que está guardado (rápido) e, havendo internet, busca a
    versão nova por trás para a próxima abertura. Mudou um arquivo? Suba
    VERSAO para limpar os guardados antigos. */
-const VERSAO = 'provashow-v3';
+const VERSAO = 'provashow-v4';
 const ARQUIVOS = [
     './', './index.html', './estilo.css', './site.css', './manifest.webmanifest', './icone.svg', './icone-192.png', './icone-512.png', './logo.png', './escola.png',
     './app/', './app/index.html', './app/app.css',
