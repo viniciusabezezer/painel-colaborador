@@ -65,7 +65,11 @@
     /* Uma linha vira uma lista de palavras; cada palavra é uma lista de
        trechos com estilo (H~2~O é uma palavra só, com três trechos). */
     function palavras(linha) {
-        const protegido = String(linha || '').replace(/\\\*/g, ESCAPE);
+        /* {{u:X}}resto sublinha só a letra X. O montador põe isso na cópia
+           impressa do código de verificação; o professor não digita a marca. */
+        const protegido = String(linha || '').replace(/\\\*/g, ESCAPE).replace(/\{\{u:(.)\}\}/g, function (_, ch) {
+            return '\uE000' + ch;
+        });
         const lista = [];
         let atual = [];
         trechos(protegido, [], []).forEach(function (trecho) {
@@ -84,7 +88,13 @@
     }
 
     function trechoHtml(trecho) {
-        let html = escapar(trecho.t);
+        let bruto = trecho.t;
+        let sublinhada = '';
+        if (bruto.charCodeAt(0) === 0xE000) {
+            sublinhada = '<span class="cod-letra">' + escapar(bruto.charAt(1)) + '</span>';
+            bruto = bruto.slice(2);
+        }
+        let html = sublinhada + escapar(bruto);
         trecho.s.forEach(function (estilo) {
             const tag = { b: 'strong', i: 'em', sub: 'sub', sup: 'sup' }[estilo];
             html = '<' + tag + '>' + html + '</' + tag + '>';

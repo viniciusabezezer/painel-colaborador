@@ -482,6 +482,10 @@ fieldset.passo[disabled] { opacity: .75; }
     .previa-gabaritos { display: none !important; }
     body.imprimindo-gabaritos #tela-editor { display: none !important; }
     body.imprimindo-gabaritos #gabaritos-impressao { display: block !important; }
+    body.imprimindo-codigos #tela-editor { display: none !important; }
+    body.imprimindo-codigos #folha-codigos { display: block !important; }
+    body.imprimindo-copias #tela-editor { display: none !important; }
+    body.imprimindo-copias #copias-impressao { display: block !important; }
 }
 
 /* ===== Editor mais claro: letras e botões maiores, cor por função =====
@@ -504,6 +508,9 @@ fieldset.passo[disabled] { opacity: .75; }
 .btn--azul:hover { background: var(--azul); color: #fff; }
 .btn--laranja { background: var(--laranja-fundo); border-color: var(--laranja); color: var(--laranja); }
 .btn--laranja:hover { background: var(--laranja); color: #fff; }
+.codigo-painel { margin-top: 16px; padding-top: 12px; border-top: 1px solid #d5ddd8; }
+.codigo-painel h3 { margin: 0 0 8px; font-size: 16px; }
+.codigo-painel .dica { margin: 6px 0 10px; }
 .btn--verde { font-size: 14px; min-height: 36px; }
 .btn--perigo { background: var(--perigo-fundo); border-color: #e0a9a3; color: var(--danger); }
 .btn--perigo:hover { background: var(--danger); border-color: var(--danger); color: #fff; }

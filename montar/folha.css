@@ -113,6 +113,18 @@
 .folha .instrucoes ul { list-style: none; margin: 0; padding: 0; }
 .folha .instrucoes li { padding-left: 1.25em; text-indent: -1.25em; }
 .folha .instrucoes li::before { content: '➢'; display: inline-block; width: 1.25em; text-indent: 0; }
+.folha .instrucoes-codigo { margin-top: .12cm; border-top: .4pt solid #000; padding-top: .08cm; }
+.folha .instrucoes-codigo p { margin: 0 0 .06cm; }
+.folha .cod-letra { text-decoration: underline; text-decoration-thickness: .06em; text-underline-offset: .06em; color: inherit; }
+.folha .chave-codigo { margin-top: .4cm; font-size: .95em; }
+.folha .folha-codigos-turma { margin-top: .45cm; break-inside: avoid; }
+.folha .folha-codigos-turma h2 { font-size: 1.15em; margin: 0 0 .15cm; }
+.folha .tabela-codigos { width: 100%; border-collapse: collapse; }
+.folha .tabela-codigos th, .folha .tabela-codigos td { border: .6pt solid #000; padding: .08cm .15cm; text-align: left; }
+.folha .tabela-codigos .mono { font-family: "Courier New", Courier, monospace; letter-spacing: .08em; font-weight: 700; }
+.folha .caixa-marca { width: 2.2cm; }
+.folha .caixa-marca::before { content: ''; display: inline-block; width: .42cm; height: .42cm; border: .7pt solid #000; }
+.folha .assinatura-codigo { margin: .2cm 0 0; font-size: .9em; }
 
 /* ----- colunas ----- */
 

@@ -460,6 +460,15 @@
         preencherInstrucoes();
         desenharFormato();
         desenharSecoes();
+        desenharCodigo();
+    }
+
+    /* A prévia mostra as pistas da cópia escolhida. A prova guardada fica limpa. */
+    function provaDaPrevia() {
+        if (!prova || !prova.codigoVerificacao || !prova.copiaPrevia || !global.MontarCodigo) return prova;
+        const c = (prova.codigos || []).filter(function (x) { return x.copiaId === prova.copiaPrevia; })[0];
+        if (!c) return prova;
+        try { return MontarCodigo.aplicar(prova, c); } catch (e) { return prova; }
     }
 
     function preencherDados() {
@@ -1234,7 +1243,7 @@
 
     function repaginar() {
         if (!prova || $('tela-editor').hidden) return;
-        const r = Paginar.montar(prova, $('paginas'), {});
+        const r = Paginar.montar(provaDaPrevia(), $('paginas'), {});
         ultimoResultado = r;
         const total = Modelos.questoesNumeradas(prova).length;
         const folhas = folhasPorAluno(r.paginas);
@@ -1384,6 +1393,157 @@
         if (document.body.dataset.tela === 'modelo') aplicarZoomModelo();
     }, 150));
 
+    /* ----- código de verificação ----- */
+
+    function lerTurmasDoPainel() {
+        return Array.from(document.querySelectorAll('#codigo-turmas .codigo-turma')).map(function (linha) {
+            return {
+                turma: linha.querySelector('[data-ct="turma"]').value.trim(),
+                sala: linha.querySelector('[data-ct="sala"]').value.trim(),
+                quantidade: Math.max(0, parseInt(linha.querySelector('[data-ct="quantidade"]').value, 10) || 0)
+            };
+        }).filter(function (t) { return t.turma && t.quantidade > 0; });
+    }
+
+    function htmlTurma(t) {
+        t = t || { turma: '', sala: '', quantidade: 30 };
+        return '<div class="linha-campos codigo-turma">' +
+            '<label>Turma<input data-ct="turma" value="' + esc(t.turma || '') + '" placeholder="1º A"></label>' +
+            '<label>Sala<input data-ct="sala" value="' + esc(t.sala || '') + '" placeholder="12"></label>' +
+            '<label>Alunos<input data-ct="quantidade" type="number" min="1" max="80" value="' + (t.quantidade || 30) + '"></label>' +
+            '<button type="button" class="icone icone--perigo" data-ct-tirar title="Tirar a turma">✕</button></div>';
+    }
+
+    function desenharCodigo() {
+        const painel = $('codigo-painel');
+        if (!painel || !prova) return;
+        painel.hidden = false;
+        const ligado = !!prova.codigoVerificacao;
+        $('codigo-ligado').checked = ligado;
+        $('codigo-corpo').hidden = !ligado;
+        $('codigo-prazo').value = prova.prazoNotas || '';
+        const caixa = $('codigo-turmas');
+        const turmas = (prova.turmasCodigo && prova.turmasCodigo.length) ? prova.turmasCodigo : [{ turma: '', sala: '', quantidade: 30 }];
+        caixa.innerHTML = turmas.map(htmlTurma).join('');
+        const sel = $('codigo-copia');
+        const atual = prova.copiaPrevia || '';
+        sel.innerHTML = '<option value="">Prova sem as pistas (modelo)</option>' +
+            (prova.codigos || []).map(function (c) {
+                const rot = (c.turma || 'Turma') + ' · sala ' + (c.sala || '—') + ' · lista ' + String(c.lista).padStart(2, '0') + ' · ' + c.codigo;
+                return '<option value="' + esc(c.copiaId) + '"' + (c.copiaId === atual ? ' selected' : '') + '>' + esc(rot) + '</option>';
+            }).join('');
+        const pode = !prova.nuvem || Nuvem.podeFormatar(prova);
+        $('codigo-ligado').disabled = !pode;
+        $('codigo-prazo').disabled = !pode;
+        $('codigo-gerar').disabled = !pode;
+        $('codigo-mais-turma').disabled = !pode;
+        caixa.querySelectorAll('input, button').forEach(function (el) { el.disabled = !pode; });
+        const erro = $('codigo-erro');
+        erro.className = 'aviso aviso--erro';
+        erro.hidden = true;
+        if (ligado && !(prova.codigos || []).length) {
+            erro.hidden = false;
+            erro.textContent = 'Ainda não há códigos. Cadastre sala, turma e a quantidade de alunos e clique em Gerar os códigos.';
+        }
+    }
+
+    $('codigo-ligado').addEventListener('change', function () {
+        if (!prova) return;
+        prova.codigoVerificacao = this.checked;
+        if (!this.checked) prova.copiaPrevia = '';
+        mudou();
+        desenharCodigo();
+        repaginar();
+    });
+    $('codigo-prazo').addEventListener('change', function () {
+        if (!prova) return;
+        prova.prazoNotas = this.value;
+        mudou();
+    });
+    $('codigo-mais-turma').onclick = function () {
+        $('codigo-turmas').insertAdjacentHTML('beforeend', htmlTurma({ turma: '', sala: '', quantidade: 30 }));
+    };
+    $('codigo-turmas').addEventListener('click', function (e) {
+        const b = e.target.closest('[data-ct-tirar]');
+        if (!b) return;
+        const linha = b.closest('.codigo-turma');
+        if ($('codigo-turmas').children.length === 1) {
+            linha.querySelectorAll('input').forEach(function (i) { i.value = i.type === 'number' ? '30' : ''; });
+            return;
+        }
+        linha.remove();
+    });
+    $('codigo-copia').addEventListener('change', function () {
+        if (!prova) return;
+        prova.copiaPrevia = this.value;
+        mudou();
+        repaginar();
+    });
+    $('codigo-gerar').onclick = async function () {
+        if (!prova) return;
+        prova.turmasCodigo = lerTurmasDoPainel();
+        prova.codigoVerificacao = true;
+        if (!prova.turmasCodigo.length) {
+            $('codigo-erro').hidden = false;
+            $('codigo-erro').textContent = 'Informe a turma e quantos alunos têm número de lista.';
+            return;
+        }
+        const pacote = MontarCodigo.gerarPacote(prova, Modelos.questoesNumeradas(prova));
+        const erro = $('codigo-erro');
+        if (pacote.erros.length && !pacote.copias.length) {
+            erro.hidden = false;
+            erro.textContent = pacote.erros[0] + ' Os enunciados precisam de palavras começando com A, C, E, F, P, R, T ou V, em pelo menos 6 questões.';
+            return;
+        }
+        prova.codigos = pacote.copias;
+        if (!prova.copiaPrevia || !pacote.copias.some(function (c) { return c.copiaId === prova.copiaPrevia; })) {
+            prova.copiaPrevia = pacote.copias.length ? pacote.copias[0].copiaId : '';
+        }
+        mudou();
+        desenharCodigo();
+        repaginar();
+        erro.hidden = !pacote.erros.length;
+        if (pacote.erros.length) erro.textContent = pacote.erros.slice(0, 3).join(' ');
+        let avisoNuvem = '';
+        if (prova.nuvem) {
+            const r = await Nuvem.salvarCodigos(prova).catch(function (e) { return { ok: false, motivo: e.message }; });
+            if (!r.ok && r.motivo && !/local/.test(r.motivo)) {
+                avisoNuvem = ' Os códigos ficaram salvos na prova. A tabela de cópias do Malu Gabaritos ainda não existe neste servidor: aplique a migração 005 antes de corrigir online.';
+            }
+        }
+        if (!pacote.erros.length) {
+            erro.hidden = false;
+            erro.className = 'aviso';
+            erro.textContent = pacote.copias.length + ' códigos gerados.' + avisoNuvem;
+        }
+    };
+    $('codigo-folha').onclick = function () {
+        if (!prova) return;
+        depoisDeImprimir();
+        salvar.agora();
+        Paginar.montarFolhaCodigos(prova, $('folha-codigos'));
+        tituloAntesDeImprimir = document.title;
+        document.title = Modelos.nomeArquivo(prova) + '-CODIGOS';
+        document.body.classList.add('imprimindo-codigos');
+        window.print();
+    };
+    $('codigo-todas').onclick = function () {
+        if (!prova || !(prova.codigos || []).length) { alert('Gere os códigos antes de imprimir as cópias.'); return; }
+        depoisDeImprimir();
+        salvar.agora();
+        const dest = $('copias-impressao');
+        dest.innerHTML = '';
+        prova.codigos.forEach(function (c) {
+            const holder = document.createElement('div');
+            Paginar.montar(MontarCodigo.aplicar(prova, c), holder, {});
+            while (holder.firstChild) dest.appendChild(holder.firstChild);
+        });
+        tituloAntesDeImprimir = document.title;
+        document.title = Modelos.nomeArquivo(prova) + '-COPIAS';
+        document.body.classList.add('imprimindo-copias');
+        window.print();
+    };
+
     /* ----- impressão ----- */
 
     let tituloAntesDeImprimir = null;
@@ -1431,6 +1591,8 @@
     function depoisDeImprimir() {
         document.body.classList.remove('imprimindo-chave');
         document.body.classList.remove('imprimindo-gabaritos');
+        document.body.classList.remove('imprimindo-codigos');
+        document.body.classList.remove('imprimindo-copias');
         const pagina = $('pagina-quarto');
         if (pagina) pagina.remove();
         if (tituloAntesDeImprimir) document.title = tituloAntesDeImprimir;
@@ -2094,6 +2256,7 @@
         $('area-bimestre').value = 'B' + Math.min(4, Math.max(1, Math.ceil((new Date().getMonth() + 1 - 1) / 3)));
         $('area-ano').value = String(new Date().getFullYear());
         $('area-prazo').value = '';
+        $('area-codigo').checked = false;
         $('area-erro').hidden = true;
         preencherSecoesArea();
         $('dialogo-area').showModal();
@@ -2115,7 +2278,8 @@
         try {
             const id = await Nuvem.criarProva({
                 modeloId: $('area-modelo').value, componente: $('area-componente').value, serie: $('area-serie').value,
-                bimestre: $('area-bimestre').value, ano: $('area-ano').value, prazo: $('area-prazo').value || null, secoes: secoes
+                bimestre: $('area-bimestre').value, ano: $('area-ano').value, prazo: $('area-prazo').value || null, secoes: secoes,
+                codigoVerificacao: $('area-codigo').checked
             });
             $('dialogo-area').close();
             location.hash = '#/area/' + encodeURIComponent(id);

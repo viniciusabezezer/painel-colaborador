@@ -20,7 +20,8 @@
 
     /* campos do "casco" da prova: tudo menos as seções e as questões */
     const CASCO = ['titulo', 'serie', 'componente', 'bimestre', 'ano', 'turma', 'professor', 'data', 'valor', 'disciplina',
-        'layout', 'ajustes', 'fixo', 'modeloId', 'modeloNome', 'gabaritoImagem'];
+        'layout', 'ajustes', 'fixo', 'modeloId', 'modeloNome', 'gabaritoImagem',
+        'codigoVerificacao', 'turmasCodigo', 'codigos', 'prazoNotas', 'copiaPrevia'];
 
     let cliente = null;
     let perfilAtual = null;
@@ -225,6 +226,10 @@
     async function criarProva(opcoes) {
         const modelo = Modelos.obter(opcoes.modeloId) || Modelos.obter(Modelos.FIXO_ID);
         const local = Modelos.criarProva(modelo, { serie: opcoes.serie, componente: opcoes.componente, bimestre: opcoes.bimestre, ano: opcoes.ano });
+        local.codigoVerificacao = !!opcoes.codigoVerificacao;
+        local.turmasCodigo = [];
+        local.codigos = [];
+        local.prazoNotas = '';
         const c = obterCliente();
         const linha = await exigir(c.from('montador_provas').insert({
             titulo: local.titulo, componente: opcoes.componente, serie: local.serie, bimestre: local.bimestre, ano: local.ano,
@@ -675,6 +680,30 @@
         await exigir(obterCliente().from('montador_provas').update({ situacao: travada ? 'travada' : 'aberta' }).eq('id', provaId));
     }
 
+    /* Grava os códigos na tabela nova, se ela já existir. Sem a migração,
+       os códigos continuam no casco da prova (dados.codigos). */
+    async function salvarCodigos(prova) {
+        if (!prova || !prova.nuvem || !obterCliente()) return { ok: false, motivo: 'local' };
+        const linhas = (prova.codigos || []).map(function (k) {
+            return {
+                prova_id: prova.nuvem.id,
+                turma: k.turma || '',
+                sala: k.sala || '',
+                lista: k.lista || null,
+                copia_id: k.copiaId,
+                codigo: k.codigo,
+                semente: String(k.seed),
+                letras: k.letras,
+                contas: k.contas,
+                professor_id: k.professorId || null
+            };
+        });
+        if (!linhas.length) return { ok: true, gravados: 0 };
+        const { error } = await obterCliente().from('corretor_copias').upsert(linhas, { onConflict: 'prova_id,copia_id' });
+        if (error) return { ok: false, motivo: error.message || String(error) };
+        return { ok: true, gravados: linhas.length };
+    }
+
     async function mudarPrazo(provaId, prazo) {
         await exigir(obterCliente().from('montador_provas').update({ prazo: prazo || null }).eq('id', provaId));
     }
@@ -714,6 +743,7 @@
         comentarios: comentarios,
         travar: travar,
         mudarPrazo: mudarPrazo,
+        salvarCodigos: salvarCodigos,
         uuid: uuid,
         mensagem: mensagem,
         semRede: semRede
