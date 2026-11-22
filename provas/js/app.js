@@ -520,7 +520,8 @@
                     turma: tarefa.turma.turma,
                     componente: tarefa.componente.codigo,
                     alunos: tarefa.turma.alunos,
-                    chave: $('chave').value
+                    chave: $('chave').value,
+                    titulo: $('avaliacao').value
                 });
 
                 const dados = {
@@ -761,7 +762,8 @@
                 turma: turma.turma,
                 componente: chave.split('|')[1],
                 alunos: turma.alunos.slice(0, 1),
-                chave: $('chave').value
+                chave: $('chave').value,
+                titulo: $('avaliacao').value
             });
             const configuracao = montarConfiguracaoGabarito();
             const comum = {
@@ -1000,7 +1002,8 @@
                 turma: turma.turma,
                 componente: componente,
                 alunos: turma.alunos.slice(0, 1),
-                chave: $('chave').value
+                chave: $('chave').value,
+                titulo: $('avaliacao').value
             });
             const configuracao = montarConfiguracao();
             const bytes = await Pdf.montarPrimeirasPaginas({
@@ -1076,7 +1079,8 @@
                     turma: tarefa.turma.turma,
                     componente: tarefa.componente.codigo,
                     alunos: tarefa.turma.alunos,
-                    chave: $('chave').value
+                    chave: $('chave').value,
+                    titulo: $('avaliacao').value
                 });
 
                 const dados = {

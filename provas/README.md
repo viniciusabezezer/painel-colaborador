@@ -111,7 +111,49 @@ MLS-2026-B3-1A-007-LIN-DRYT
 O verificador sai de um SHA-256 do próprio conteúdo somado à **chave da
 escola**, então trocar o nome ou a turma na caneta derruba a conferência. A aba
 **Conferir um código** recalcula e diz se aquele código pertence mesmo àquele
-aluno. O QR Code leva o código e o nome, em duas linhas.
+aluno. O código continua impresso em letra legível, do mesmo jeito de antes.
+
+## Contrato do QR da prova
+
+O QR impresso na prova e no gabarito identificado é um texto só, para o leitor
+do Malu Presente e para o Malu Gabaritos. **Não é o QR do cartão de entrada**
+do Malu Presente: não leva credencial, token, segredo nem qualquer campo
+daquele cartão.
+
+Versão `MLSPROVA1`, campos separados por `|`:
+
+```
+MLSPROVA1|<codigo>|<turma>|<numero>|<nome>|<titulo>
+MLSPROVA1|<codigo>|<turma>|<numero>|<nome>|<titulo>|<matricula>
+```
+
+| Campo | O que é |
+| --- | --- |
+| `codigo` | O mesmo código impresso em letra legível, `MLS-2026-B3-1A-007-LIN-DRYT` |
+| `turma` | Série e turma juntas, no formato curto `1A` (1ª série, turma A) |
+| `numero` | Número da lista com 3 dígitos, o mesmo do código (`007`) |
+| `nome` | Nome sem acento, em maiúsculas. Espaço vira `+`. No máximo 28 caracteres, cortado no fim de uma palavra |
+| `titulo` | Nome da avaliação, com as mesmas regras, no máximo 19 caracteres. O campo fica presente mesmo vazio |
+| `matricula` | Só dígitos, de 4 a 12, e só quando a lista traz matrícula. Sem matrícula, este campo não aparece |
+
+Exemplo com dados fictícios. Os quatro caracteres finais ilustram o verificador; na prova gerada eles saem do cálculo com o nome e a chave da escola:
+
+```
+MLSPROVA1|MLS-2026-B3-1A-007-LIN-DRYT|1A|007|ESTUDANTE+FICTICIO+07|AVALIACAO+BIMESTRAL|20260007
+```
+
+Quem lê troca cada `+` por espaço. Fora o `|`, o texto só tem letras, dígitos, `+` e `-`. Para colocar num endereço, troque cada `|` por `%7C`.
+
+A matrícula entra quando a lista tem o campo `matricula` — é o caso de **Puxar do Malu Presente**, que traz `numero`, `nome`, `matricula` e `ativo`. Aluno com `ativo: false` não recebe prova. Coluna de 4 a 12 dígitos na lista colada também vale como matrícula. Um valor que não seja só dígitos nesse tamanho é ignorado, para a credencial do cartão não caber nesse campo.
+
+Provas já impressas usam o formato antigo, em duas linhas, e continuam válidas:
+
+```
+MLS-2026-B3-1A-007-LIN-DRYT
+NOME DO ALUNO
+```
+
+A aba Conferir e o Malu Gabaritos leem os dois. O verificador do código usa o nome inteiro da lista; se o nome no QR tiver sido cortado no limite de 28 caracteres, a conferência pede o nome completo no campo ao lado. O texto todo fica em até 106 caracteres, que é um QR versão 6: no quadrado de 2 cm da prova ele continua legível.
 
 Guarde a chave: sem ela nem a conferência funciona, nem os mesmos alunos geram
 os mesmos códigos numa segunda rodada.
@@ -221,7 +263,8 @@ leve. O SHA-256 é implementação própria em `js/sha256.js`, porque o
 ## Testes
 
 ```bash
-node --test provas/test/provas.test.cjs   # 41 verificações: código, lista, QR, posição e PDF
+node --test provas/test/provas.test.cjs   # código, lista, QR MLSPROVA1, posição e PDF
+node --test gabaritos/test/qrprova.test.cjs  # o Gabaritos lê o QR novo e o antigo
 node provas/test/provas-browser.mjs       # 38 verificações na tela, com Chromium
 ```
 

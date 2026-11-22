@@ -169,7 +169,7 @@
                         <option value="sem">sem QR, só o código</option>
                     </select>
                 </label>
-                <label class="caixa-check"><input type="checkbox" id="cab-codigo" checked> Escrever o código também em letra legível <small>(o QR já o leva; o código escrito serve para digitar na conferência)</small></label>
+                <label class="caixa-check"><input type="checkbox" id="cab-codigo" checked> Escrever o código também em letra legível <small>(o código escrito continua na prova; o QR leva o formato MLSPROVA1, com nome, turma, título e o mesmo código)</small></label>
                 <label class="caixa-check"><input type="checkbox" id="cab-moldura" checked> Desenhar a moldura em volta do cabeçalho</label>
             </div>
 
@@ -330,7 +330,7 @@
             </ul>
 
             <h3>O código</h3>
-            <p><code>MLS-2026-B3-1A-007-LIN-DRYT</code> quer dizer: escola, ano, bimestre, turma, número da lista, componente e um verificador de quatro caracteres. O verificador sai de um cálculo com o nome do aluno e a chave da escola, então trocar o nome ou a turma na caneta derruba a conferência. O QR Code leva o mesmo código e o nome.</p>
+            <p><code>MLS-2026-B3-1A-007-LIN-DRYT</code> quer dizer: escola, ano, bimestre, turma, número da lista, componente e um verificador de quatro caracteres. O verificador sai de um cálculo com o nome do aluno e a chave da escola, então trocar o nome ou a turma na caneta derruba a conferência. Esse código continua impresso em letra legível. O QR leva o mesmo código dentro do formato <code>MLSPROVA1</code>, junto com a turma, o número, o nome e o título da avaliação. Prova já impressa, com o QR antigo em duas linhas, continua valendo na conferência.</p>
             <p>Os componentes entram no código como <code>RED</code> (Redação), <code>LIN</code> (Linguagens e Códigos), <code>NAT</code> (Ciências da Natureza), <code>HUM</code> (Ciências Humanas) e <code>MAT</code> (Matemática).</p>
 
             <h3>Prova no Word</h3>
@@ -359,13 +359,14 @@
 <script src="vendor/qrcode.js"></script>
 <script src="js/brasao.js"></script>
 <script src="js/sha256.js"></script>
-<script src="js/identificacao.js"></script>
+<script src="js/qrprova.js?v=1"></script>
+<script src="js/identificacao.js?v=3"></script>
 <script src="js/lista.js"></script>
 <script src="js/qr.js"></script>
 <script src="js/pdf.js"></script>
 <script src="js/saida.js"></script>
 <script src="js/historico.js"></script>
 <script src="js/previa.js"></script>
-<script src="js/app.js?v=2"></script>
+<script src="js/app.js?v=3"></script>
 </body>
 </html>

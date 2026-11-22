@@ -39,7 +39,8 @@ test('o código traz escola, ano, bimestre, turma, número, componente e verific
     assert.match(prova.id, /^MLS-2026-B3-1A-007-LIN-[0-9A-HJKMNP-TV-Z]{4}$/);
     assert.equal(prova.numeroCurto, '07');
     assert.equal(prova.nome, 'JOSÉ ÍTALO GONÇALVES');
-    assert.equal(prova.conteudoQr, prova.id + '\nJOSÉ ÍTALO GONÇALVES');
+    assert.equal(prova.conteudoQr, 'MLSPROVA1|' + prova.id + '|1A|007|JOSE+ITALO+GONCALVES|');
+    assert.equal(prova.matricula, '');
 });
 
 test('sem numeração, a ordem alfabética manda e o código não depende da ordem colada', () => {
@@ -75,12 +76,82 @@ test('conferência aceita o código certo e recusa nome, turma e chave trocados'
     const prova = identificacao.identificar({ ano: '2026', bimestre: 'B3', turma: '1A', numero: 7, componente: 'LIN', nome: 'Ana Beatriz', chave: CHAVE });
 
     assert.equal(identificacao.conferir(prova.conteudoQr, null, CHAVE).valido, true);
+    assert.equal(identificacao.conferir(prova.id + '\n' + prova.nome, null, CHAVE).valido, true, 'o QR antigo, de duas linhas, continua valendo');
     assert.equal(identificacao.conferir(prova.id, 'ana  beatriz', CHAVE).valido, true, 'espaço sobrando não muda o resultado');
     assert.equal(identificacao.conferir(prova.id, 'Bruno Dias', CHAVE).valido, false);
     assert.equal(identificacao.conferir(prova.id.replace('-1A-', '-1B-'), 'Ana Beatriz', CHAVE).valido, false);
     assert.equal(identificacao.conferir(prova.conteudoQr, null, 'outra-chave').valido, false);
     assert.equal(identificacao.conferir('qualquer coisa', 'Ana', CHAVE).motivo, 'formato');
     assert.equal(identificacao.conferir(prova.id, '', CHAVE).motivo, 'sem-nome');
+});
+
+test('o QR novo leva nome, turma, título, código e a matrícula, e deixa a credencial do cartão de fora', () => {
+    const qrProva = require(path.join(app, 'qrprova.js'));
+    const prova = identificacao.identificar({
+        ano: '2026', bimestre: 'B3', turma: '1A', numero: 7, componente: 'LIN',
+        nome: "José d'Ávila", chave: CHAVE,
+        titulo: 'Avaliação Bimestral de Linguagens e Códigos',
+        matricula: '20260007',
+        credencial: 'TOKEN-DO-CARTAO-QUE-NAO-PODE',
+        token: 'segredo-do-cartao'
+    });
+    const lido = qrProva.ler(prova.conteudoQr);
+
+    assert.equal(prova.conteudoQr.split('|')[0], 'MLSPROVA1');
+    assert.equal(lido.formato, 'MLSPROVA1');
+    assert.equal(lido.codigo, prova.id);
+    assert.equal(lido.turma, '1A');
+    assert.equal(lido.numero, '007');
+    assert.equal(lido.nome, 'JOSE D AVILA');
+    assert.equal(lido.titulo, 'AVALIACAO BIMESTRAL');
+    assert.equal(lido.matricula, '20260007');
+    assert.equal(identificacao.conferir(prova.conteudoQr, null, CHAVE).valido, true);
+    assert.ok(!/TOKEN|CARTAO|segredo|credencial/i.test(prova.conteudoQr));
+    assert.equal(qrProva.ler('MLSPRESENTE|credencial|abc'), null);
+    assert.equal(qrProva.matriculaLimpa('TOKEN-DO-CARTAO'), '');
+
+    const semMatricula = identificacao.identificar({
+        ano: '2026', bimestre: 'B3', turma: '1A', numero: 7, componente: 'LIN',
+        nome: 'Ana', chave: CHAVE, titulo: 'Avaliação'
+    });
+    assert.equal(semMatricula.conteudoQr.endsWith('|AVALIACAO'), true);
+    assert.equal(qrProva.ler(semMatricula.conteudoQr).matricula, '');
+});
+
+test('aluno inativo não recebe código, e a matrícula da lista entra no QR', () => {
+    const lote = lista.lerLote([
+        'TURMA 1A',
+        '07 - Estudante Fictício 07 - 20260007',
+        '08;Estudante Fictício 08;20260008'
+    ].join('\n'));
+    assert.equal(lote.turmas[0].alunos[0].matricula, '20260007');
+    assert.equal(lote.turmas[0].alunos[0].nome, 'Estudante Fictício 07');
+    assert.equal(lote.turmas[0].alunos[1].matricula, '20260008');
+
+    const provas = identificacao.identificarTurma({
+        ano: '2026', bimestre: 'B3', turma: '1A', componente: 'LIN', chave: CHAVE,
+        titulo: 'Avaliação Bimestral',
+        alunos: lote.turmas[0].alunos.concat([
+            { nome: 'Estudante Fictício 09', numero: 9, matricula: '20260009', ativo: false }
+        ])
+    });
+    assert.deepEqual(provas.map((p) => p.numeroCurto), ['07', '08']);
+    assert.equal(provas[0].matricula, '20260007');
+    assert.match(provas[0].conteudoQr, /\|20260007$/);
+    assert.ok(provas[0].conteudoQr.includes('|ESTUDANTE+FICTICIO+07|'));
+});
+
+test('o QR novo cabe na versão 6, para continuar legível no tamanho impresso', () => {
+    const prova = identificacao.identificar({
+        ano: '2026', bimestre: 'B3', turma: '1A', numero: 7, componente: 'LIN',
+        nome: 'Maria Aparecida dos Santos de Oliveira Souza',
+        titulo: 'Avaliação Bimestral de Linguagens e Códigos',
+        matricula: '202600123456',
+        chave: CHAVE
+    });
+    const matriz = qr.matriz(prova.conteudoQr);
+    assert.ok(matriz.tamanho <= 41, 'versão do QR ficou em ' + matriz.tamanho + ' módulos: ' + prova.conteudoQr);
+    assert.match(prova.conteudoQr, /^[A-Z0-9|+-]+$/);
 });
 
 /* ===== leitura da lista ===== */
@@ -104,6 +175,8 @@ test('lote com título de turma, planilha e turma na linha', () => {
         { nome: 'Bruno Dias', numero: 2 }
     ]);
     assert.deepEqual(resultado.turmas[1].alunos, [{ nome: 'CARLA MENDES', numero: 7 }]);
+    assert.equal(resultado.turmas[2].alunos[0].matricula, '20250012');
+    assert.equal(resultado.turmas[2].alunos[0].nome, 'MARIA DE FÁTIMA');
     assert.equal(resultado.total, 6);
     assert.deepEqual(resultado.ignoradas, ['Nº;NOME;TURMA']);
 });
@@ -298,6 +371,7 @@ test('o cabeçalho escreve nome, série, turma, número e código — e nada do 
     assert.match(escrito, /JOSÉ ÍTALO GONÇALVES/);
     assert.match(escrito, /1ª SÉRIE {3}· {3}TURMA 1A {3}· {3}Nº 03/);
     assert.ok(escrito.includes(prova.id), 'o código sai legível ao lado dos dados');
+    assert.ok(!escrito.includes('MLSPROVA1'), 'o formato do QR não substitui o código escrito');
     assert.ok(!/LINGUAGENS/i.test(escrito), 'não repete o componente, que o cabeçalho da prova já traz');
     assert.ok(!/SABOIA|BIMESTRE/i.test(escrito), 'não repete escola nem bimestre');
 });
