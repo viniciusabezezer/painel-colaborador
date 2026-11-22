@@ -127,7 +127,7 @@
         }
     }
 
-    global.IdentificadorAcesso = { autorizado: autorizado };
+    global.IdentificadorAcesso = { autorizado: autorizado, cliente: obterCliente };
     if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', iniciar);
     else iniciar();
 })(typeof window !== 'undefined' ? window : globalThis);

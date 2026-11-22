@@ -1,0 +1,26 @@
+{
+  "formato": "malu-mapa-salas",
+  "versao": 1,
+  "avaliacao": "Avaliação fictícia de fim de ano",
+  "periodo": { "inicio": "2026-12-01", "fim": "2026-12-04" },
+  "gerado_em": "2026-11-22T12:00:00.000Z",
+  "salas": [
+    {
+      "sala": "Sala 14",
+      "ordem": 2,
+      "alunos": [
+        { "posicao": 1, "turma": "1ºB", "numero": 1, "nome": "Estudante Fictício 01" }
+      ]
+    },
+    {
+      "sala": "Sala 12",
+      "ordem": 1,
+      "alunos": [
+        { "posicao": 2, "turma": "2ºA", "numero": 3, "nome": "Estudante Fictício 03" },
+        { "posicao": 1, "turma": "1ºA", "numero": 7, "nome": "Estudante Fictício 07" },
+        { "posicao": 3, "turma": "1ºA", "numero": 8, "nome": "Estudante Fictício Oito" },
+        { "posicao": 4, "turma": "1ºA", "numero": 15, "nome": "Estudante Fictício 15" }
+      ]
+    }
+  ]
+}
