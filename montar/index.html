@@ -34,7 +34,7 @@
         <img src="logo.png" alt="Brasão da EEMTI Maria Luiza Saboia">
         <div>
             <h1>Montador de Provas da Malu</h1>
-            <p>Escolha um modelo, escreva ou cole as questões e imprima a prova já no formato da escola — enxuta, legível e gastando o mínimo de papel e tinta. As provas pessoais funcionam sem internet e não saem deste navegador; as provas da área, montadas com os colegas, ficam guardadas no servidor da escola.</p>
+            <p>Escolha um modelo, escreva ou cole as questões e imprima a prova já no formato da escola — enxuta, legível e gastando o mínimo de papel e tinta. As provas pessoais funcionam sem internet e não saem deste navegador; as provas da área, montadas com os colegas, ficam guardadas no servidor da escola. Para corrigir os cartões no celular, abra o <a href="../gabaritos/">Malu Gabaritos</a>.</p>
             <p class="selo-offline" id="selo-offline" hidden>✓ Pronto para usar sem internet neste aparelho</p>
         </div>
     </div>
@@ -375,6 +375,27 @@
                             <button type="button" class="btn btn--pequeno" id="gab-tirar" hidden>Tirar</button>
                         </div>
                         <p class="dica dica--pequena" data-se-gabarito-imagem>Foto, print ou digitalização da folha de respostas que você já usa. Para a leitura óptica, prefira o arquivo digital ao celular.</p>
+                        <div id="codigo-painel" class="codigo-painel" hidden>
+                            <h3>Código de verificação</h3>
+                            <label class="opcao"><input type="checkbox" id="codigo-ligado"> Esta prova tem código de verificação</label>
+                            <div id="codigo-corpo" hidden>
+                                <p class="dica dica--pequena">Cada aluno recebe um código diferente, escondido no enunciado. O cartão traz um bloco de bolhas para o código. Sem esta opção, a prova sai como antes.</p>
+                                <label>Prazo de lançamento das notas no sistema oficial
+                                    <input type="date" id="codigo-prazo">
+                                </label>
+                                <div id="codigo-turmas"></div>
+                                <button type="button" class="btn btn--pequeno" id="codigo-mais-turma">+ Turma</button>
+                                <div class="acoes-lista">
+                                    <button type="button" class="btn btn--laranja btn--pequeno" id="codigo-gerar">Gerar os códigos</button>
+                                    <button type="button" class="btn btn--pequeno" id="codigo-folha">Folha de códigos do professor</button>
+                                    <button type="button" class="btn btn--pequeno" id="codigo-todas">Imprimir todas as cópias</button>
+                                </div>
+                                <p class="aviso aviso--erro" id="codigo-erro" hidden></p>
+                                <label>Prévia desta cópia
+                                    <select id="codigo-copia"><option value="">Prova sem as pistas (modelo)</option></select>
+                                </label>
+                            </div>
+                        </div>
                         <div class="acoes-lista" data-se-gabarito-separado>
                             <button type="button" class="btn btn--laranja" id="gab-imprimir4">Imprimir gabaritos (4 por folha)</button>
                             <button type="button" class="btn btn--laranja" id="gab-imprimir1" title="Uma folha de respostas por página de 10,5 × 14,85 cm: o formato que a aba Gabaritos do Identificador recebe">Salvar 1 por página (para o Identificador)</button>
@@ -503,6 +524,8 @@
 <!-- a folha de correção, montada só na hora de imprimir -->
 <div id="chave" hidden></div>
 <div id="gabaritos-impressao" hidden></div>
+<div id="folha-codigos" hidden></div>
+<div id="copias-impressao" hidden></div>
 
 <dialog id="dialogo-colar" class="dialogo">
     <form method="dialog">
@@ -561,6 +584,7 @@
             <label>Ano<input type="number" id="area-ano" min="2020" max="2100"></label>
             <label>Prazo para os professores<input type="date" id="area-prazo"></label>
         </div>
+        <label class="opcao"><input type="checkbox" id="area-codigo"> Incluir código de verificação nesta prova <small>(desligado por padrão; cada cópia impressa ganha um código de 6 caracteres)</small></label>
         <h3>Seções e responsáveis</h3>
         <div id="area-secoes" class="area-secoes"></div>
         <button type="button" class="btn btn--pequeno" id="area-mais">+ Seção</button>
@@ -590,10 +614,12 @@
 <input type="file" id="arquivo-imagem" accept="image/*" multiple hidden>
 <input type="file" id="arquivo-gabarito" accept="image/*" hidden>
 
+<script src="js/sha256.js"></script>
 <script src="js/texto.js"></script>
 <script src="js/modelos.js"></script>
 <script src="js/icones.js"></script>
 <script src="js/gabarito.js"></script>
+<script src="js/codigo.js"></script>
 <script src="js/importar.js"></script>
 <script src="js/colar.js"></script>
 <script src="js/paginar.js"></script>

@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#0B6E3A">
+<meta name="description" content="Malu Gabaritos lê os cartões-resposta gerados pelo Montador de Provas da EEMTI Professora Maria Luíza Sabóia Ribeiro.">
+<title>Malu Gabaritos · EEMTI Professora Maria Luíza Sabóia Ribeiro</title>
+<link rel="icon" href="assets/logo.png">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="stylesheet" href="app.css">
+</head>
+<body>
+<a class="pular" href="#principal">Pular para o conteúdo</a>
+<header class="topo">
+  <a class="topo-marca" href="#/inicio" aria-label="Malu Gabaritos, ir para o início">
+    <span class="logo"><img src="assets/logo.png" alt=""></span>
+    <span class="topo-textos">
+      <span class="escola">EEMTI Professora Maria Luíza Sabóia Ribeiro</span>
+      <span class="app">Malu Gabaritos</span>
+    </span>
+  </a>
+  <a class="topo-ajustes" href="#/ajustes" aria-label="Ajustes" id="btn-ajustes"></a>
+</header>
+<div class="linha-laranja"></div>
+<div class="faixa-proto" id="faixa" hidden></div>
+<nav class="nav" id="nav" aria-label="Navegação principal"></nav>
+<main id="principal" tabindex="-1"><div class="conteudo" id="tela"></div></main>
+<footer class="rodape">Coordenação · as fotos dos cartões duram 3 dias · <a href="../montar/" style="color:#fff">Montador de Provas</a></footer>
+<div id="vivo" class="so-leitor" aria-live="polite" role="status"></div>
+<div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
+<div id="folha-fundo" class="folha-fundo" hidden></div>
+<div id="folha" class="folha" role="dialog" aria-modal="true" aria-labelledby="folha-titulo" hidden></div>
+<script src="../montar/vendor/supabase.js"></script>
+<script src="../montar/js/config.js"></script>
+<script src="../montar/js/sha256.js"></script>
+<script src="../montar/js/texto.js"></script>
+<script src="../montar/js/gabarito.js"></script>
+<script src="../montar/js/codigo.js"></script>
+<script src="../provas/vendor/pdf.min.js"></script>
+<script src="js/omr.js"></script>
+<script src="js/util.js"></script>
+<script src="js/analise.js"></script>
+<script src="js/demo.js"></script>
+<script src="js/nuvem.js"></script>
+<script src="js/app.js"></script>
+</body>
+</html>

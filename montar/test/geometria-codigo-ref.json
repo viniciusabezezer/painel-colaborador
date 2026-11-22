@@ -1,0 +1,484 @@
+{
+  "letras_ok": "ACEFPRTV",
+  "digitos_ok": "3456789",
+  "raio": 1.4,
+  "marca": 2.6,
+  "largura": 86.6,
+  "altura_grade": 108.95,
+  "altura_svg": 147.825,
+  "y0_codigo": 111.75,
+  "titulo_y": 113.45,
+  "cab_y": 117.95,
+  "x_lab_l": 6.2,
+  "x_lab_d": 48.0,
+  "x_b1": 11.2,
+  "x_b4": 53.2,
+  "y_primeira": 120.55,
+  "marcas_grade": [
+    {
+      "cx": 1.3,
+      "cy": 2.725,
+      "linha": 0,
+      "fileira": 0
+    },
+    {
+      "cx": 1.3,
+      "cy": 19.975,
+      "linha": 5,
+      "fileira": 0
+    },
+    {
+      "cx": 1.3,
+      "cy": 37.225,
+      "linha": 10,
+      "fileira": 0
+    },
+    {
+      "cx": 1.3,
+      "cy": 54.475,
+      "linha": 15,
+      "fileira": 0
+    },
+    {
+      "cx": 1.3,
+      "cy": 71.725,
+      "linha": 20,
+      "fileira": 0
+    },
+    {
+      "cx": 1.3,
+      "cy": 88.975,
+      "linha": 25,
+      "fileira": 0
+    },
+    {
+      "cx": 1.3,
+      "cy": 106.225,
+      "linha": 30,
+      "fileira": 0
+    },
+    {
+      "cx": 29.3,
+      "cy": 2.725,
+      "linha": 0,
+      "fileira": 1
+    },
+    {
+      "cx": 29.3,
+      "cy": 19.975,
+      "linha": 5,
+      "fileira": 1
+    },
+    {
+      "cx": 29.3,
+      "cy": 37.225,
+      "linha": 10,
+      "fileira": 1
+    },
+    {
+      "cx": 29.3,
+      "cy": 54.475,
+      "linha": 15,
+      "fileira": 1
+    },
+    {
+      "cx": 29.3,
+      "cy": 71.725,
+      "linha": 20,
+      "fileira": 1
+    },
+    {
+      "cx": 29.3,
+      "cy": 88.975,
+      "linha": 25,
+      "fileira": 1
+    },
+    {
+      "cx": 29.3,
+      "cy": 106.225,
+      "linha": 30,
+      "fileira": 1
+    },
+    {
+      "cx": 57.3,
+      "cy": 2.725,
+      "linha": 0,
+      "fileira": 2
+    },
+    {
+      "cx": 57.3,
+      "cy": 19.975,
+      "linha": 5,
+      "fileira": 2
+    },
+    {
+      "cx": 57.3,
+      "cy": 37.225,
+      "linha": 10,
+      "fileira": 2
+    },
+    {
+      "cx": 57.3,
+      "cy": 54.475,
+      "linha": 15,
+      "fileira": 2
+    },
+    {
+      "cx": 57.3,
+      "cy": 71.725,
+      "linha": 20,
+      "fileira": 2
+    },
+    {
+      "cx": 57.3,
+      "cy": 88.975,
+      "linha": 25,
+      "fileira": 2
+    },
+    {
+      "cx": 57.3,
+      "cy": 106.225,
+      "linha": 30,
+      "fileira": 2
+    },
+    {
+      "cx": 85.3,
+      "cy": 2.725,
+      "linha": 0,
+      "fileira": 3
+    },
+    {
+      "cx": 85.3,
+      "cy": 19.975,
+      "linha": 5,
+      "fileira": 3
+    },
+    {
+      "cx": 85.3,
+      "cy": 37.225,
+      "linha": 10,
+      "fileira": 3
+    },
+    {
+      "cx": 85.3,
+      "cy": 54.475,
+      "linha": 15,
+      "fileira": 3
+    },
+    {
+      "cx": 85.3,
+      "cy": 71.725,
+      "linha": 20,
+      "fileira": 3
+    },
+    {
+      "cx": 85.3,
+      "cy": 88.975,
+      "linha": 25,
+      "fileira": 3
+    },
+    {
+      "cx": 85.3,
+      "cy": 106.225,
+      "linha": 30,
+      "fileira": 3
+    }
+  ],
+  "marcas_codigo": [
+    {
+      "cx": 1.3,
+      "cy": 117.95
+    },
+    {
+      "cx": 85.3,
+      "cy": 117.95
+    },
+    {
+      "cx": 1.3,
+      "cy": 144.7
+    },
+    {
+      "cx": 85.3,
+      "cy": 144.7
+    }
+  ],
+  "bolhas_letras": [
+    {
+      "posicao": 1,
+      "valor": "A",
+      "cx": 11.2,
+      "cy": 120.55
+    },
+    {
+      "posicao": 2,
+      "valor": "A",
+      "cx": 14.8,
+      "cy": 120.55
+    },
+    {
+      "posicao": 3,
+      "valor": "A",
+      "cx": 18.4,
+      "cy": 120.55
+    },
+    {
+      "posicao": 1,
+      "valor": "C",
+      "cx": 11.2,
+      "cy": 124.0
+    },
+    {
+      "posicao": 2,
+      "valor": "C",
+      "cx": 14.8,
+      "cy": 124.0
+    },
+    {
+      "posicao": 3,
+      "valor": "C",
+      "cx": 18.4,
+      "cy": 124.0
+    },
+    {
+      "posicao": 1,
+      "valor": "E",
+      "cx": 11.2,
+      "cy": 127.45
+    },
+    {
+      "posicao": 2,
+      "valor": "E",
+      "cx": 14.8,
+      "cy": 127.45
+    },
+    {
+      "posicao": 3,
+      "valor": "E",
+      "cx": 18.4,
+      "cy": 127.45
+    },
+    {
+      "posicao": 1,
+      "valor": "F",
+      "cx": 11.2,
+      "cy": 130.9
+    },
+    {
+      "posicao": 2,
+      "valor": "F",
+      "cx": 14.8,
+      "cy": 130.9
+    },
+    {
+      "posicao": 3,
+      "valor": "F",
+      "cx": 18.4,
+      "cy": 130.9
+    },
+    {
+      "posicao": 1,
+      "valor": "P",
+      "cx": 11.2,
+      "cy": 134.35
+    },
+    {
+      "posicao": 2,
+      "valor": "P",
+      "cx": 14.8,
+      "cy": 134.35
+    },
+    {
+      "posicao": 3,
+      "valor": "P",
+      "cx": 18.4,
+      "cy": 134.35
+    },
+    {
+      "posicao": 1,
+      "valor": "R",
+      "cx": 11.2,
+      "cy": 137.8
+    },
+    {
+      "posicao": 2,
+      "valor": "R",
+      "cx": 14.8,
+      "cy": 137.8
+    },
+    {
+      "posicao": 3,
+      "valor": "R",
+      "cx": 18.4,
+      "cy": 137.8
+    },
+    {
+      "posicao": 1,
+      "valor": "T",
+      "cx": 11.2,
+      "cy": 141.25
+    },
+    {
+      "posicao": 2,
+      "valor": "T",
+      "cx": 14.8,
+      "cy": 141.25
+    },
+    {
+      "posicao": 3,
+      "valor": "T",
+      "cx": 18.4,
+      "cy": 141.25
+    },
+    {
+      "posicao": 1,
+      "valor": "V",
+      "cx": 11.2,
+      "cy": 144.7
+    },
+    {
+      "posicao": 2,
+      "valor": "V",
+      "cx": 14.8,
+      "cy": 144.7
+    },
+    {
+      "posicao": 3,
+      "valor": "V",
+      "cx": 18.4,
+      "cy": 144.7
+    }
+  ],
+  "bolhas_digitos": [
+    {
+      "posicao": 4,
+      "valor": "3",
+      "cx": 53.2,
+      "cy": 120.55
+    },
+    {
+      "posicao": 5,
+      "valor": "3",
+      "cx": 56.8,
+      "cy": 120.55
+    },
+    {
+      "posicao": 6,
+      "valor": "3",
+      "cx": 60.4,
+      "cy": 120.55
+    },
+    {
+      "posicao": 4,
+      "valor": "4",
+      "cx": 53.2,
+      "cy": 124.0
+    },
+    {
+      "posicao": 5,
+      "valor": "4",
+      "cx": 56.8,
+      "cy": 124.0
+    },
+    {
+      "posicao": 6,
+      "valor": "4",
+      "cx": 60.4,
+      "cy": 124.0
+    },
+    {
+      "posicao": 4,
+      "valor": "5",
+      "cx": 53.2,
+      "cy": 127.45
+    },
+    {
+      "posicao": 5,
+      "valor": "5",
+      "cx": 56.8,
+      "cy": 127.45
+    },
+    {
+      "posicao": 6,
+      "valor": "5",
+      "cx": 60.4,
+      "cy": 127.45
+    },
+    {
+      "posicao": 4,
+      "valor": "6",
+      "cx": 53.2,
+      "cy": 130.9
+    },
+    {
+      "posicao": 5,
+      "valor": "6",
+      "cx": 56.8,
+      "cy": 130.9
+    },
+    {
+      "posicao": 6,
+      "valor": "6",
+      "cx": 60.4,
+      "cy": 130.9
+    },
+    {
+      "posicao": 4,
+      "valor": "7",
+      "cx": 53.2,
+      "cy": 134.35
+    },
+    {
+      "posicao": 5,
+      "valor": "7",
+      "cx": 56.8,
+      "cy": 134.35
+    },
+    {
+      "posicao": 6,
+      "valor": "7",
+      "cx": 60.4,
+      "cy": 134.35
+    },
+    {
+      "posicao": 4,
+      "valor": "8",
+      "cx": 53.2,
+      "cy": 137.8
+    },
+    {
+      "posicao": 5,
+      "valor": "8",
+      "cx": 56.8,
+      "cy": 137.8
+    },
+    {
+      "posicao": 6,
+      "valor": "8",
+      "cx": 60.4,
+      "cy": 137.8
+    },
+    {
+      "posicao": 4,
+      "valor": "9",
+      "cx": 53.2,
+      "cy": 141.25
+    },
+    {
+      "posicao": 5,
+      "valor": "9",
+      "cx": 56.8,
+      "cy": 141.25
+    },
+    {
+      "posicao": 6,
+      "valor": "9",
+      "cx": 60.4,
+      "cy": 141.25
+    }
+  ],
+  "origem_teste_mm": [
+    20,
+    20
+  ],
+  "dpi_teste": 200
+}

@@ -1,0 +1,72 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<title>Prévia — código de verificação</title>
+<link rel="stylesheet" href="../../montar/folha.css">
+<style>
+  body { margin: 0; background: #e8eee9; }
+  h1 { font: 600 16px sans-serif; margin: 12px; }
+  .gabarito-solto { background: #fff; width: 86.6mm; margin: 12px; padding: 4mm; }
+</style>
+</head>
+<body>
+<h1 id="titulo"></h1>
+<div id="paginas"></div>
+<div class="gabarito-solto" id="so-gabarito"></div>
+<script src="../../montar/js/sha256.js"></script>
+<script src="../../montar/js/texto.js"></script>
+<script src="../../montar/js/modelos.js"></script>
+<script src="../../montar/js/icones.js"></script>
+<script src="../../montar/js/gabarito.js"></script>
+<script src="../../montar/js/codigo.js"></script>
+<script src="../../montar/js/paginar.js"></script>
+<script>
+window.addEventListener('error', function (e) {
+  var t = document.getElementById('titulo');
+  if (t) t.textContent = 'Erro: ' + (e.message || e.error);
+});
+(function () {
+  try {
+  var enunciados = [
+    ['Todo ser vivo é formado por uma ou mais células. Essa ideia faz parte da', 'B', ['teoria da evolução.', 'teoria celular.', 'lei da gravidade.', 'teoria do Big Bang.', 'lei de Mendel.']],
+    ['Uma bactéria é um ser formado por uma célula sem núcleo organizado. Esse tipo de célula se chama', 'C', ['eucariótica.', 'vegetal.', 'procariótica.', 'muscular.', 'nervosa.']],
+    ['Qual organela é a principal responsável pela respiração celular, processo que libera energia para a célula?', 'D', ['Ribossomo.', 'Lisossomo.', 'Complexo de Golgi.', 'Mitocôndria.', 'Centríolo.']],
+    ['Em uma célula de folha, a fotossíntese acontece principalmente no', 'C', ['vacúolo.', 'núcleo.', 'cloroplasto.', 'lisossomo.', 'ribossomo.']],
+    ['A membrana plasmática envolve a célula e controla o que entra e o que sai. Essa função é chamada de', 'A', ['permeabilidade seletiva.', 'fotossíntese.', 'digestão celular.', 'divisão do citoplasma.', 'síntese de proteínas.']],
+    ['O material genético (DNA) de uma célula eucariótica fica guardado, em especial, no', 'D', ['vacúolo.', 'cloroplasto.', 'lisossomo.', 'núcleo.', 'centríolo.']],
+    ['A parede celular, firme e externa à membrana, é típica das células', 'B', ['animais.', 'vegetais.', 'de todos os vírus.', 'apenas dos protozoários.', 'apenas das hemácias.']],
+    ['O vacúolo é uma estrutura de reserva, grande e cheia de líquido, bem visível na célula', 'B', ['muscular humana.', 'vegetal.', 'óssea.', 'nervosa.', 'do tecido adiposo apenas.']],
+    ['Os lisossomos, vesículas presentes no citoplasma, atuam principalmente na', 'C', ['produção de energia.', 'fotossíntese.', 'digestão de materiais dentro da célula.', 'formação da parede celular.', 'transporte de oxigênio no sangue.']],
+    ['Uma diferença importante entre célula animal e célula vegetal é que somente a vegetal possui', 'C', ['membrana plasmática e mitocôndrias.', 'núcleo e ribossomos.', 'parede celular e cloroplastos.', 'lisossomos e citoplasma.', 'citoplasma e DNA.']]
+  ];
+  var modelo = MontarModelos.obter(MontarModelos.FIXO_ID);
+  var prova = MontarModelos.criarProva(modelo, { serie: '1', componente: 'NAT', bimestre: 'B1', ano: '2026' });
+  prova.titulo = 'Avaliação Bimestral de Ciências da Natureza';
+  prova.codigoVerificacao = true;
+  prova.prazoNotas = '2026-11-25';
+  prova.secoes = [{ id: 's1', titulo: 'BIOLOGIA', icone: 'auto', questoes: enunciados.map(function (item, i) {
+    var q = MontarModelos.novaQuestao('objetiva', 5);
+    q.enunciado = item[0];
+    q.alternativas = item[2];
+    q.correta = item[1];
+    q.id = 'q' + (i + 1);
+    return q;
+  }) }];
+  prova.turmasCodigo = [{ turma: '1º A', sala: '12', quantidade: 1 }];
+  var pacote = MontarCodigo.gerarPacote(prova, MontarModelos.questoesNumeradas(prova));
+  if (!pacote.copias.length) throw new Error((pacote.erros && pacote.erros[0]) || 'sem cópia');
+  prova.codigos = pacote.copias;
+  var copia = pacote.copias[0];
+  document.getElementById('titulo').textContent = 'Cópia ' + copia.copiaId + ' · código ' + copia.codigo + ' (dado fictício)';
+  MontarPaginar.montar(MontarCodigo.aplicar(prova, copia), document.getElementById('paginas'), {});
+  document.getElementById('so-gabarito').innerHTML = MontarGabarito.svg({
+    total: 10, alternativas: 5, rotulo: ['1º Ano', 'C.N.'], codigo: true
+  });
+  } catch (e) {
+    document.getElementById('titulo').textContent = 'Erro: ' + (e && e.stack || e);
+  }
+})();
+</script>
+</body>
+</html>

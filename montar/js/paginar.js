@@ -20,6 +20,7 @@
     const Texto = global.MontarTexto;
     const Modelos = global.MontarModelos;
     const Gabarito = global.MontarGabarito;
+    const Codigo = global.MontarCodigo;
     const Icones = global.MontarIcones;
 
     const PX_POR_PT = 96 / 72;
@@ -98,14 +99,21 @@
         return n ? n + 'º bimestre ' + (prova.ano || '') : '';
     }
 
-    function quadroInstrucoes(layout) {
+    function quadroInstrucoes(layout, prova) {
         const caixa = el('div', 'instrucoes');
         caixa.appendChild(el('div', 'instrucoes-titulo', 'Instruções:'));
         const lista = el('ul');
-        layout.textoInstrucoes.filter(function (l) { return String(l).trim(); }).forEach(function (linha) {
+        (layout.textoInstrucoes || []).filter(function (l) { return String(l).trim(); }).forEach(function (linha) {
             lista.appendChild(el('li', null, Texto.html(linha)));
         });
         caixa.appendChild(lista);
+        if (prova && prova.codigoVerificacao && Codigo) {
+            const extra = el('div', 'instrucoes-codigo');
+            Codigo.TEXTO_INSTRUCOES.forEach(function (linha) {
+                extra.appendChild(el('p', null, Texto.escapar(linha)));
+            });
+            caixa.appendChild(extra);
+        }
         return caixa;
     }
 
@@ -162,7 +170,8 @@
             total: numeradas.length,
             alternativas: layout.alternativas,
             rotulo: rotuloGabarito(prova),
-            discursivas: numeradas.filter(function (i) { return i.questao.tipo === 'discursiva'; }).map(function (i) { return i.numero; })
+            discursivas: numeradas.filter(function (i) { return i.questao.tipo === 'discursiva'; }).map(function (i) { return i.numero; }),
+            codigo: !!(prova && prova.codigoVerificacao)
         });
     }
 
@@ -449,6 +458,9 @@
                 avisos.push('A folha de respostas comporta ' + Gabarito.capacidade() + ' questões; esta prova tem ' + total + '.');
             }
         }
+        if (prova.codigoVerificacao && (!layout.gabarito || imagemDoGabarito(prova, layout))) {
+            avisos.push('O código de verificação precisa da folha de respostas gerada pelo app. Sem ela, o bloco de bolhas do código não sai.');
+        }
 
         const folhas = [];
         let colunas = [];
@@ -461,8 +473,8 @@
                 const topo = el('div', 'topo' + (layout.cabecalho === 'faixa' ? ' com-faixa' : ''));
                 if (layout.cabecalho === 'faixa') topo.appendChild(topoFaixa(prova, layout, base));
                 else if (layout.cabecalho === 'completo') topo.appendChild(topoCompleto(prova, base));
-                if (layout.instrucoes && layout.textoInstrucoes.some(function (l) { return String(l).trim(); })) {
-                    topo.appendChild(quadroInstrucoes(layout));
+                if ((layout.instrucoes && (layout.textoInstrucoes || []).some(function (l) { return String(l).trim(); })) || prova.codigoVerificacao) {
+                    topo.appendChild(quadroInstrucoes(layout, prova));
                 }
                 if (topo.childNodes.length) f.miolo.appendChild(topo);
             }
@@ -559,9 +571,67 @@
                 (item.secao.titulo ? '<span class="chave-s">' + Texto.escapar(item.secao.titulo) + '</span>' : '')));
         });
         f.miolo.appendChild(grade);
+        if (prova.codigoVerificacao && Codigo) {
+            f.miolo.appendChild(el('p', 'chave-codigo',
+                'Código de verificação: certo = +1 ponto na nota registrada (teto 10). Em branco ou errado = −1 (piso 0). O aluno pode recuperar até o prazo de lançamento das notas, de um jeito só (tarefa, medida restaurativa ou mini teste oral). A nota registrada não muda sozinha: se ele recuperar, ajuste a nota no seu registro. A lista dos códigos por sala e turma está na folha de códigos.'));
+        }
         return { paginas: 1 };
     }
 
-    const api = { montar: montar, montarChave: montarChave, montarGabaritos: montarGabaritos, blocos: blocos, ESPACOS: ESPACOS };
+    /* Folha do professor com todos os códigos, agrupados por sala e turma.
+       Não leva nome de aluno. */
+    function montarFolhaCodigos(prova, destino) {
+        const layout = Modelos.layoutDaProva(prova);
+        destino.innerHTML = '';
+        destino.classList.add('paginas');
+        const copias = (prova.codigos || []).slice().sort(function (a, b) {
+            return String(a.sala).localeCompare(String(b.sala), 'pt') ||
+                String(a.turma).localeCompare(String(b.turma), 'pt') || (a.lista || 0) - (b.lista || 0);
+        });
+        const grupos = [];
+        copias.forEach(function (c) {
+            const chave = (c.sala || '—') + '\u0000' + (c.turma || '—');
+            let g = grupos.filter(function (x) { return x.chave === chave; })[0];
+            if (!g) {
+                g = { chave: chave, sala: c.sala || '—', turma: c.turma || '—', linhas: [] };
+                grupos.push(g);
+            }
+            g.linhas.push(c);
+        });
+        if (!grupos.length) grupos.push({ sala: '—', turma: '—', linhas: [] });
+
+        function nova() {
+            const f = novaFolha(destino, Object.assign({}, layout, { corpoPt: 11, cabecalho: 'nenhum', instrucoes: false }), destino.querySelectorAll('.folha').length + 1);
+            f.miolo.appendChild(el('div', 'chave-cab',
+                '<strong>CÓDIGOS DE VERIFICAÇÃO</strong> — só para o professor<br>' +
+                Texto.escapar([prova.titulo, prova.serie ? prova.serie + 'ª série' : '', bimestreTexto(prova)].filter(Boolean).join(' · '))));
+            return f;
+        }
+
+        let folha = nova();
+        grupos.forEach(function (g) {
+            const bloco = el('section', 'folha-codigos-turma');
+            bloco.appendChild(el('h2', null, 'Sala ' + Texto.escapar(g.sala) + ' · Turma ' + Texto.escapar(g.turma)));
+            let html = '<table class="tabela-codigos"><thead><tr><th>Lista</th><th>Código</th><th>Certo</th><th>Errado</th></tr></thead><tbody>';
+            g.linhas.forEach(function (c) {
+                html += '<tr><td>' + String(c.lista).padStart(2, '0') + '</td><td class="mono">' + Texto.escapar(c.codigo) +
+                    '</td><td class="caixa-marca"></td><td class="caixa-marca"></td></tr>';
+            });
+            if (!g.linhas.length) html += '<tr><td colspan="4">Nenhum código gerado. Cadastre as turmas e gere os códigos.</td></tr>';
+            html += '</tbody></table>';
+            bloco.insertAdjacentHTML('beforeend', html);
+            bloco.appendChild(el('p', 'assinatura-codigo',
+                'Conferidos: ______ de ' + g.linhas.length + ' &nbsp;&nbsp; Data: ____/____/________ &nbsp;&nbsp; Assinatura: ______________________________'));
+            folha.miolo.appendChild(bloco);
+        });
+        const total = destino.querySelectorAll('.folha').length || 1;
+        destino.querySelectorAll('.folha .rodape').forEach(function (r, i) { r.textContent = (i + 1) + '/' + total; });
+        return { paginas: total, copias: copias.length };
+    }
+
+    const api = {
+        montar: montar, montarChave: montarChave, montarGabaritos: montarGabaritos,
+        montarFolhaCodigos: montarFolhaCodigos, blocos: blocos, ESPACOS: ESPACOS
+    };
     global.MontarPaginar = api;
 })(typeof globalThis !== 'undefined' ? globalThis : this);
