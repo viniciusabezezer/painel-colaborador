@@ -1437,6 +1437,7 @@
         $('codigo-prazo').disabled = !pode;
         $('codigo-gerar').disabled = !pode;
         $('codigo-mais-turma').disabled = !pode;
+        $('codigo-puxar').disabled = !pode;
         caixa.querySelectorAll('input, button').forEach(function (el) { el.disabled = !pode; });
         const erro = $('codigo-erro');
         erro.className = 'aviso aviso--erro';
@@ -1463,6 +1464,97 @@
     $('codigo-mais-turma').onclick = function () {
         $('codigo-turmas').insertAdjacentHTML('beforeend', htmlTurma({ turma: '', sala: '', quantidade: 30 }));
     };
+
+    let listaPresente = null;
+
+    function avisoLista(texto, erro) {
+        const el = $('codigo-lista-aviso');
+        el.hidden = !texto;
+        el.textContent = texto || '';
+        el.className = erro ? 'aviso aviso--erro' : 'aviso';
+    }
+
+    function atualizarSugestaoMontador() {
+        const botao = $('codigo-sugerir');
+        const texto = $('codigo-lista').value.trim();
+        if (!listaPresente || !texto || !window.MaluListas) { botao.hidden = true; return; }
+        const mudancas = MaluListas.diferencas(listaPresente.oficial, MaluListas.lerTexto(texto));
+        botao.hidden = !mudancas.length;
+    }
+
+    function aplicarListaNoPainel(resposta) {
+        const digitadas = lerTurmasDoPainel();
+        const filtro = digitadas.map(function (t) { return t.turma; }).filter(Boolean);
+        const texto = MaluListas.textoDaLista(resposta, filtro);
+        const lido = MaluListas.lerTexto(texto);
+        if (!lido.turmas.length) {
+            avisoLista('O Malu Presente não devolveu aluno ativo para estas turmas.', true);
+            return;
+        }
+        $('codigo-turmas').innerHTML = lido.turmas.map(function (t) {
+            let sala = '';
+            digitadas.forEach(function (d) {
+                if (MaluListas.turmaCurta(d.turma) === t.turma) sala = d.sala;
+            });
+            return htmlTurma({ turma: /^[123][A-F]$/.test(t.turma) ? t.turma.charAt(0) + 'º ' + t.turma.charAt(1) : t.turma, sala: sala, quantidade: t.alunos.length });
+        }).join('');
+        $('codigo-lista').value = texto;
+        $('codigo-lista-rotulo').hidden = false;
+        listaPresente = { oficial: MaluListas.pacoteAtivo(resposta), ano: (resposta && resposta.ano) || (prova && prova.ano) || '' };
+        atualizarSugestaoMontador();
+        avisoLista('Lista puxada. O número de cada aluno entra nos códigos desta prova. Os nomes ficam só neste navegador. Uma mudança aqui vale para esta prova agora, e só entra na lista oficial se a secretaria aceitar a sugestão.');
+    }
+
+    $('codigo-lista').addEventListener('input', atualizarSugestaoMontador);
+    $('codigo-puxar').onclick = async function () {
+        if (!prova || !window.MaluListas) return;
+        const perfil = Nuvem.perfil();
+        if (!perfil) {
+            avisoLista('Entre com a sua conta para puxar a lista oficial.', true);
+            return;
+        }
+        if (!MaluListas.podePedir(perfil)) {
+            avisoLista(MaluListas.mensagemRecusa(perfil), true);
+            return;
+        }
+        const turmas = lerTurmasDoPainel().map(function (t) { return t.turma; }).filter(Boolean);
+        try {
+            let data;
+            if (!turmas.length) {
+                data = await Nuvem.listasPresente({ acao: 'listas', ano: String(prova.ano || '') });
+            } else {
+                data = { ano: String(prova.ano || ''), turmas: [] };
+                for (let i = 0; i < turmas.length; i++) {
+                    const pedaco = await Nuvem.listasPresente({
+                        acao: 'listas', ano: String(prova.ano || ''), turma: MaluListas.turmaPresente(turmas[i])
+                    });
+                    (pedaco.turmas || []).forEach(function (t) { data.turmas.push(t); });
+                }
+            }
+            aplicarListaNoPainel(data);
+        } catch (e) {
+            avisoLista(e.message || 'Não consegui puxar a lista.', true);
+        }
+    };
+    $('codigo-sugerir').onclick = async function () {
+        if (!listaPresente || !window.MaluListas) return;
+        const perfil = Nuvem.perfil();
+        const mudancas = MaluListas.diferencas(listaPresente.oficial, MaluListas.lerTexto($('codigo-lista').value));
+        const grupos = MaluListas.agrupar(listaPresente.ano || (prova && prova.ano), mudancas);
+        if (!perfil) {
+            avisoLista('Entre com a sua conta para enviar a sugestão.', true);
+            return;
+        }
+        try {
+            const resp = await Nuvem.listasPresente({ acao: 'sugestoes', ano: listaPresente.ano, grupos: grupos });
+            listaPresente.oficial = MaluListas.lerTexto($('codigo-lista').value);
+            atualizarSugestaoMontador();
+            avisoLista('Sugestão enviada (' + (resp.enviadas || mudancas.length) + '). Ela só vale na lista oficial depois que a secretaria aceitar. Nesta prova, os números novos entram quando você gerar os códigos.');
+        } catch (e) {
+            avisoLista(e.message || 'Não consegui enviar a sugestão.', true);
+        }
+    };
+    window.MontadorListasUI = { aplicar: aplicarListaNoPainel };
     $('codigo-turmas').addEventListener('click', function (e) {
         const b = e.target.closest('[data-ct-tirar]');
         if (!b) return;
@@ -1482,6 +1574,16 @@
     $('codigo-gerar').onclick = async function () {
         if (!prova) return;
         prova.turmasCodigo = lerTurmasDoPainel();
+        if (window.MaluListas && $('codigo-lista').value.trim()) {
+            const lido = MaluListas.lerTexto($('codigo-lista').value);
+            prova.turmasCodigo = prova.turmasCodigo.map(function (t) {
+                const achou = lido.turmas.filter(function (x) { return x.turma === MaluListas.turmaCurta(t.turma); })[0];
+                if (!achou) return t;
+                t.numeros = achou.alunos.map(function (a) { return a.numero; });
+                t.quantidade = t.numeros.length;
+                return t;
+            });
+        }
         prova.codigoVerificacao = true;
         if (!prova.turmasCodigo.length) {
             $('codigo-erro').hidden = false;

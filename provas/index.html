@@ -97,12 +97,15 @@
 
         <fieldset class="passo">
             <legend><span class="num">2</span> Os alunos</legend>
-            <p class="dica">Cole todas as turmas de uma vez. A turma pode vir como título (<code>TURMA 3B</code>) ou na própria linha (<code>3B; João da Silva</code>, <code>7;CARLA MENDES;1B</code>). Se a lista já vier numerada, o app usa <strong>esse</strong> número — o mesmo que o aluno preenche em “Núm. da lista” na folha de respostas.</p>
+            <p class="dica">Puxe a lista oficial do Malu Presente ou cole todas as turmas de uma vez. A turma pode vir como título (<code>TURMA 3B</code>) ou na própria linha (<code>3B; João da Silva</code>, <code>7;CARLA MENDES;1B</code>). Se a lista já vier numerada, o app usa <strong>esse</strong> número — o mesmo que o aluno preenche em “Núm. da lista” na folha de respostas. Os nomes ficam só neste navegador.</p>
             <textarea id="lote" rows="10" spellcheck="false" placeholder="TURMA 1A&#10;01 - Ana Beatriz Lima&#10;02 - Bruno Dias&#10;&#10;TURMA 1B&#10;01 - Carla Mendes&#10;02 - Daniel Souza"></textarea>
             <div class="acoes-lista">
+                <button type="button" class="btn" id="puxar-presente">Puxar do Malu Presente</button>
                 <button type="button" class="btn" id="limpar-lote">Limpar a lista</button>
                 <span class="contagem" id="contagem-lote">Nenhum aluno lido ainda.</span>
             </div>
+            <p class="aviso" id="aviso-presente" hidden></p>
+            <button type="button" class="btn btn--primary" id="sugerir-presente" hidden>Enviar estas mudanças como sugestão para a secretaria</button>
             <div id="resumo-turmas" class="turmas"></div>
             <div id="avisos-lista" class="avisos"></div>
         </fieldset>
@@ -393,6 +396,7 @@
 <script src="js/qrprova.js?v=1"></script>
 <script src="js/identificacao.js?v=3"></script>
 <script src="js/lista.js"></script>
+<script src="js/listas.js"></script>
 <script src="js/mapa.js"></script>
 <script src="js/qr.js"></script>
 <script src="js/pdf.js"></script>

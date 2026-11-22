@@ -21,7 +21,8 @@
             historicoChave: {},
             provas: [],
             leituras: [],
-            recuperacoes: {}
+            recuperacoes: {},
+            envios: []
         };
         try {
             var g = JSON.parse(localStorage.getItem(CHAVE) || 'null');
@@ -48,6 +49,7 @@
         st.provas = d.provas;
         st.leituras = d.leituras;
         st.recuperacoes = d.recuperacoes;
+        st.envios = d.envios || [];
         if (!st.provas.some(function (p) { return p.id === st.provaSel; })) st.provaSel = d.provas[0].id;
     }
 
@@ -68,6 +70,24 @@
             if ((p.secoes || []).some(function (s) { return s.responsavel === eu.id; })) return true;
         }
         return false;
+    }
+
+    function podeEnviarPresente(p) {
+        return !!(globalThis.MaluPresente && MaluPresente.podeEnviar(st.perfil, p));
+    }
+
+    function enviosDa(provaId) {
+        return (st.envios || []).filter(function (e) { return e.provaId === provaId; });
+    }
+
+    function consultaDe(nome) {
+        var q = {};
+        String(st.consulta || '').split('&').forEach(function (par) {
+            if (!par) return;
+            var p = par.split('=');
+            q[decodeURIComponent(p[0])] = decodeURIComponent(p[1] || '');
+        });
+        return q[nome] || '';
     }
 
     function leiturasDa(provaId) {
@@ -105,6 +125,14 @@
 
     function alunoDe(p, l) {
         return (p.alunos || []).filter(function (a) { return a.id === l.alunoId || (a.copiaId === l.copiaId && a.turma === l.turma); })[0];
+    }
+
+    function nomeVisivel(p, l) {
+        if (!p || !l || !globalThis.MaluListas) return l && l.nome;
+        var achado = (p.alunos || []).filter(function (a) {
+            return MaluListas.turmaCurta(a.turma) === MaluListas.turmaCurta(l.turma) && Number(a.lista) === Number(l.lista);
+        })[0];
+        return (achado && achado.nome) || l.nome;
     }
 
     function turmasDe(p) {
@@ -222,6 +250,7 @@
                 '<a class="btn" href="#/enviar">' + ic('enviar', 20) + ' Enviar fotos</a>' +
                 (p && comCodigo(p) ? '<a class="btn" href="#/ponto">' + ic('alerta', 20) + ' Ponto devido</a>' : '') +
                 '<a class="btn" href="#/exportar">' + ic('baixar', 20) + ' Exportar CSV</a>' +
+                (p && podeEnviarPresente(p) ? '<a class="btn" href="#/presente">' + ic('enviar', 20) + ' Notas no Malu Presente</a>' : '') +
                 (st.modo === 'demo' ? '<a class="btn" href="#/entrar">' + ic('pessoa', 20) + ' Entrar</a>' : '<button class="btn" id="sair" type="button">' + ic('semrede', 20) + ' Sair</button>') +
                 '</div></div>',
             montar: function (el) {
@@ -280,6 +309,8 @@
                     '<a class="btn grande" href="#/enviar">' + ic('enviar') + ' Enviar fotos</a>' +
                     '<a class="btn grande" href="#/resultados">' + ic('grafico') + ' Ver resultados</a></div>' :
                     '<a class="btn primario grande" href="#/resultados">' + ic('grafico') + ' Ver resultados</a>') +
+                (podeEnviarPresente(p) ? '<a class="btn laranja grande" href="#/presente">' + ic('enviar') + ' Enviar notas para o Malu Presente</a>' : '') +
+                (globalThis.MaluListas && MaluListas.podePedir(st.perfil) ? '<a class="btn grande" href="#/lista">' + ic('pessoa') + ' Puxar lista do Malu Presente</a>' : '') +
                 '<section class="cartao"><div class="linha entre"><h2>Chave do Montador</h2>' +
                 (corrige ? '<button class="btn mini" type="button" id="corrigir-chave">' + ic('chave', 20) + ' Corrigir a chave</button>' : '') +
                 '</div><p class="suave">Se uma resposta da chave estiver errada, corrija aqui. As notas são recalculadas e a mudança fica registrada.</p><div class="chave">' + chave + '</div></section></div>',
@@ -692,7 +723,7 @@
         }
         return {
             html: '<div class="pilha">' + topo('Revisão', itens.length + ' cartão(ões) com dúvida', '#/prova') +
-                '<article class="cartao revisao"><h2>' + esc(l.nome) + '</h2><p class="suave">' + esc(l.turma) + ' · lista ' + esc(l.lista) + '</p>' +
+                '<article class="cartao revisao"><h2>' + esc(nomeVisivel(p, l)) + '</h2><p class="suave">' + esc(l.turma) + ' · lista ' + esc(l.lista) + '</p>' +
                 (l.alertas || []).map(function (a) { return '<p>' + esc(a.detalhe) + '</p>'; }).join('') +
                 botoes + '<button class="btn primario grande" type="button" id="resolver">Confirmar e seguir</button></article></div>',
             montar: function (el) {
@@ -756,7 +787,7 @@
                     chip = '<span class="' + cls + '">' + esc(rotuloPonto(recLista)) + '</span>';
                 }
             }
-            return '<a class="aluno-item" href="#/aluno?id=' + encodeURIComponent(l.id) + '"><span><strong>' + esc(l.nome) + '</strong><br><span class="suave">lista ' + esc(l.lista) + ' · ' + esc(l.turma) + '</span></span><span class="nota">' + fmtNota(n) + '</span><span class="sub">' + chip + '</span></a>';
+            return '<a class="aluno-item" href="#/aluno?id=' + encodeURIComponent(l.id) + '"><span><strong>' + esc(nomeVisivel(p, l)) + '</strong><br><span class="suave">lista ' + esc(l.lista) + ' · ' + esc(l.turma) + '</span></span><span class="nota">' + fmtNota(n) + '</span><span class="sub">' + chip + '</span></a>';
         }).join('');
         var dias = MaluAnalise.diasAte(p.prazoNotas, hoje());
         return {
@@ -799,7 +830,7 @@
             }
         }
         return {
-            html: '<div class="pilha">' + topo(esc(l.nome), esc(l.turma) + ' · lista ' + esc(l.lista), '#/resultados') +
+            html: '<div class="pilha">' + topo(esc(nomeVisivel(p, l)), esc(l.turma) + ' · lista ' + esc(l.lista), '#/resultados') +
                 '<div class="cartao"><p class="nota" style="font-size:2rem;color:var(--verde-esc)">' + fmtNota(n) + '</p>' +
                 '<p class="suave">Questões: ' + U.fmt(n.base == null ? 0 : n.base) + (n.ponto === 1 ? ' · código +1' : n.ponto === -1 ? ' · código −1, já na nota' : '') + '</p>' +
                 avisoNota + cod + foto + '<div class="q-grade">' + grade + '</div></div></div>'
@@ -834,7 +865,7 @@
             var rec = situacaoPonto(l, p);
             var chipCls = rec.status === 'recuperada' ? 'chip laranja' : 'chip erro';
             var modo = rec.modalidade ? ' · ' + nomeModalidade(rec.modalidade) : '';
-            return '<article class="cartao"><div class="linha entre"><h3>' + esc(l.nome) + '</h3><span class="' + chipCls + '">' + esc(rotuloStatus(l.statusCodigo)) + '</span></div>' +
+            return '<article class="cartao"><div class="linha entre"><h3>' + esc(nomeVisivel(p, l)) + '</h3><span class="' + chipCls + '">' + esc(rotuloStatus(l.statusCodigo)) + '</span></div>' +
                 '<p><strong>' + esc(rotuloPonto(rec)) + '</strong></p>' +
                 '<p class="suave">' + esc(l.turma) + ' · lista ' + esc(l.lista) + esc(modo) + (rec.prazo ? ' · até ' + U.dataBR(rec.prazo) : '') + '</p>' +
                 '<p class="suave">Nota registrada: ' + fmtNota(notaDe(l, p)) + ' (o −1 continua aqui).</p>' +
@@ -889,6 +920,226 @@
         rotear();
     }
 
+    telas.lista = function () {
+        var p = provaAtual();
+        if (!p) return { html: topo('Lista', '', '#/inicio') + '<p>Não há prova.</p>' };
+        if (!globalThis.MaluListas || !MaluListas.podePedir(st.perfil)) {
+            return {
+                html: '<div class="pilha">' + topo('Lista do Malu Presente', esc(p.titulo), '#/prova') +
+                    '<div class="aviso">' + ic('alerta') + '<span>' + esc(MaluListas.mensagemRecusa(st.perfil)) + '</span></div></div>'
+            };
+        }
+        st.listas = st.listas || {};
+        st.rascunhoLista = st.rascunhoLista || {};
+        var oficial = st.listas[p.id];
+        var texto = st.rascunhoLista[p.id] != null ? st.rascunhoLista[p.id] : (oficial ? MaluListas.textoDaLista(oficial) : '');
+        var mudancas = oficial ? MaluListas.diferencas(oficial, MaluListas.lerTexto(texto)) : [];
+        return {
+            html: '<div class="pilha">' + topo('Puxar lista do Malu Presente', esc(p.titulo), '#/prova') +
+                '<p class="suave">O número 7 daqui é o mesmo aluno do Identificador e do Montador. Os nomes ficam só neste navegador. Ajuste a lista se precisar: vale nesta prova agora. A lista oficial só muda se a secretaria aceitar a sugestão.</p>' +
+                '<p class="aviso" id="aviso-lista"' + (oficial ? '' : ' hidden') + '>' + (oficial ? 'Lista nesta tela. Ela não foi gravada no servidor.' : '') + '</p>' +
+                '<button class="btn primario grande" type="button" id="puxar-lista">' + ic('baixar') + ' Puxar do Malu Presente</button>' +
+                '<label class="rotulo" for="texto-lista">Lista desta prova</label>' +
+                '<textarea class="campo" id="texto-lista" rows="10" spellcheck="false">' + esc(texto) + '</textarea>' +
+                '<button class="btn grande" type="button" id="usar-lista">Usar nesta prova</button>' +
+                '<button class="btn laranja grande" type="button" id="sugerir-lista"' + (mudancas.length ? '' : ' hidden') + '>Enviar estas mudanças como sugestão para a secretaria</button></div>',
+            montar: function (el) {
+                var caixa = el.querySelector('#aviso-lista');
+                var area = el.querySelector('#texto-lista');
+                function aviso(msg) { caixa.hidden = !msg; caixa.textContent = msg || ''; }
+                function sincronizar() {
+                    st.rascunhoLista[p.id] = area.value;
+                    var tem = oficial && MaluListas.diferencas(oficial, MaluListas.lerTexto(area.value)).length;
+                    el.querySelector('#sugerir-lista').hidden = !tem;
+                }
+                area.addEventListener('input', sincronizar);
+                el.querySelector('#puxar-lista').onclick = async function () {
+                    var botao = el.querySelector('#puxar-lista');
+                    botao.disabled = true;
+                    try {
+                        var filtro = (p.alunos || []).map(function (a) { return a.turma; });
+                        var resposta;
+                        if (st.modo === 'demo') {
+                            resposta = MaluListas.simular({ ano: p.ano || '2026' });
+                            aviso('Demonstração com estudantes fictícios. Nada foi pedido ao Malu Presente.');
+                        } else {
+                            resposta = await MaluNuvem.chamarPresente({ acao: 'listas', ano: String(p.ano || '') });
+                            aviso('Lista puxada. Os nomes ficam só neste navegador.');
+                        }
+                        var textoNovo = MaluListas.textoDaLista(resposta, filtro);
+                        oficial = MaluListas.pacoteAtivo({ ano: resposta.ano, turmas: (resposta.turmas || []).filter(function (t) {
+                            return !filtro.length || filtro.map(MaluListas.turmaCurta).indexOf(MaluListas.turmaCurta(t.turma)) !== -1;
+                        }) });
+                        st.listas[p.id] = oficial;
+                        area.value = textoNovo;
+                        st.rascunhoLista[p.id] = textoNovo;
+                        sincronizar();
+                    } catch (falha) {
+                        aviso(falha.message || 'Não consegui puxar a lista.');
+                    } finally {
+                        botao.disabled = false;
+                    }
+                };
+                el.querySelector('#usar-lista').onclick = function () {
+                    aplicarListaNaProva(p, area.value);
+                    U.toast('Lista aplicada nesta prova, só neste navegador.');
+                };
+                el.querySelector('#sugerir-lista').onclick = async function () {
+                    var mud = MaluListas.diferencas(oficial, MaluListas.lerTexto(area.value));
+                    var grupos = MaluListas.agrupar(p.ano || (oficial && oficial.ano), mud);
+                    if (st.modo === 'demo') {
+                        aplicarListaNaProva(p, area.value);
+                        oficial = MaluListas.lerTexto(area.value);
+                        st.listas[p.id] = oficial;
+                        sincronizar();
+                        aviso('Nesta demonstração a sugestão não sai do aparelho. Com a conta, a secretaria recebe e decide se aceita.');
+                        return;
+                    }
+                    try {
+                        var resp = await MaluNuvem.chamarPresente({ acao: 'sugestoes', ano: String(p.ano || ''), grupos: grupos });
+                        aplicarListaNaProva(p, area.value);
+                        oficial = MaluListas.lerTexto(area.value);
+                        st.listas[p.id] = oficial;
+                        sincronizar();
+                        aviso('Sugestão enviada (' + (resp.enviadas || mud.length) + '). Ela só vale na lista oficial depois que a secretaria aceitar. Nesta prova, a lista nova já vale.');
+                    } catch (falha) {
+                        aviso(falha.message || 'Não consegui enviar a sugestão.');
+                    }
+                };
+            }
+        };
+    };
+
+    function aplicarListaNaProva(p, texto) {
+        var lido = MaluListas.lerTexto(texto);
+        if (!lido.turmas.length) return;
+        var tocadas = {};
+        lido.turmas.forEach(function (t) { tocadas[t.turma] = true; });
+        var salaDe = {};
+        var nomeTurma = {};
+        (p.alunos || []).forEach(function (a) {
+            var c = MaluListas.turmaCurta(a.turma);
+            salaDe[c] = a.sala || salaDe[c] || '';
+            nomeTurma[c] = a.turma;
+        });
+        var novos = [];
+        lido.turmas.forEach(function (t) {
+            var turma = nomeTurma[t.turma] || MaluListas.turmaPresente(t.turma);
+            var sala = salaDe[t.turma] || '';
+            t.alunos.forEach(function (a) {
+                novos.push({
+                    id: p.id + ':' + t.turma + ':' + a.numero,
+                    nome: a.nome,
+                    turma: turma,
+                    sala: sala,
+                    lista: a.numero,
+                    copiaId: turma + '-' + String(a.numero).padStart(2, '0')
+                });
+            });
+        });
+        var mantidos = (p.alunos || []).filter(function (a) { return !tocadas[MaluListas.turmaCurta(a.turma)]; });
+        p.alunos = mantidos.concat(novos);
+    }
+
+    telas.presente = function () {
+        var id = consultaDe('prova');
+        if (id) st.provaSel = id;
+        var p = provaAtual();
+        if (!p) return { html: topo('Malu Presente', '', '#/inicio') + '<p>Não há prova fechada.</p>' };
+        if (!podeEnviarPresente(p)) {
+            return {
+                html: '<div class="pilha">' + topo('Malu Presente', esc(p.titulo), '#/prova') +
+                    '<div class="aviso">' + ic('alerta') + '<span>' + esc(MaluPresente.mensagemRecusa(st.perfil, p)) + ' A administração do Malu Presente revisa e aprova antes de os pais verem.</span></div></div>'
+            };
+        }
+        var pacote = MaluPresente.resumo(p, leiturasDa(p.id), st.recuperacoes, hoje());
+        var ultimo = enviosDa(p.id)[0];
+        var motivo = MaluPresente.motivoReenvio(ultimo && ultimo.ok ? ultimo.assinatura : '', pacote.notas);
+        var turmas = pacote.turmas.map(function (t) {
+            return '<li><strong>' + esc(t.turma) + '</strong> · ' + t.notas + (t.notas === 1 ? ' nota' : ' notas') + '</li>';
+        }).join('');
+        var aviso = '';
+        if (pacote.bloqueado) {
+            aviso = '<div class="aviso erro">' + ic('alerta') + '<span>Há ' + pacote.pendentes + (pacote.pendentes === 1 ? ' leitura' : ' leituras') + ' na revisão. O envio fica bloqueado até você resolver essa fila.</span></div>';
+        } else if (motivo === 'recuperacao') {
+            aviso = '<div class="aviso">' + ic('alerta') + '<span>A recuperação de alguém mudou. Pode enviar de novo. O Malu Presente atualiza só o aviso; a nota no seu registro continua a que você ajusta.</span></div>';
+        } else if (motivo === 'correcoes') {
+            aviso = '<div class="aviso">' + ic('alerta') + '<span>Há correção desde o último envio. Pode enviar de novo.</span></div>';
+        } else if (motivo === null) {
+            aviso = '<p class="suave">Estas notas já foram enviadas. Envie de novo se corrigir uma nota ou se mudar a recuperação de alguém.</p>';
+        }
+        var historico = enviosDa(p.id).map(function (e) {
+            var fora = (e.semCorrespondencia || []).map(function (s) {
+                return '<li>Turma ' + esc(s.turma) + ', lista ' + esc(s.lista) + '</li>';
+            }).join('');
+            return '<article class="cartao"><div class="linha entre"><h3>' + (e.ok ? 'Enviado' : 'Não enviado') + '</h3><span class="chip' + (e.ok ? '' : ' erro') + '">' + esc(U.dataBR(e.enviadoEm)) + '</span></div>' +
+                '<p class="suave">' + esc(e.enviadoPorNome || '') + '</p><p class="suave" style="word-break:break-all">Lote ' + esc(e.loteId) + '</p>' +
+                '<p>' + (e.recebidas == null ? '—' : e.recebidas) + ' nota(s) recebidas.</p>' +
+                (e.erro ? '<p class="aviso erro">' + esc(e.erro) + '</p>' : '') +
+                (fora ? '<p><strong>Sem correspondência no Malu Presente</strong></p><ul>' + fora + '</ul><p class="suave">Confira a turma e o número da lista. O nome do estudante não sai daqui.</p>' : '') +
+                '</article>';
+        }).join('');
+        var pode = !pacote.bloqueado && motivo !== null && pacote.quantidade > 0;
+        return {
+            html: '<div class="pilha">' + topo('Enviar notas para o Malu Presente', esc(p.titulo), '#/prova') +
+                '<p class="suave">Vão turma, número da lista e a nota já com o +1 ou o −1. Não vão nome, resposta, código nem foto. A administração do Malu Presente revisa e aprova antes de os pais verem.</p>' +
+                aviso +
+                '<section class="cartao"><h2>Resumo</h2><ul>' + (turmas || '<li>Nenhuma nota pronta.</li>') + '</ul>' +
+                '<p><strong>' + pacote.quantidade + '</strong> ' + (pacote.quantidade === 1 ? 'nota pronta' : 'notas prontas') + '.</p></section>' +
+                '<button class="btn primario grande" type="button" id="enviar-presente"' + (pode ? '' : ' disabled') + '>' + ic('enviar') +
+                (ultimo && ultimo.ok ? ' Enviar de novo' : ' Enviar notas para o Malu Presente') + '</button>' +
+                (historico ? '<h2>Envios</h2>' + historico : '') +
+                '</div>',
+            montar: function (el) {
+                var botao = el.querySelector('#enviar-presente');
+                if (!botao) return;
+                botao.onclick = function () {
+                    var atual = MaluPresente.resumo(p, leiturasDa(p.id), st.recuperacoes, hoje());
+                    if (atual.bloqueado || !atual.notas.length) return;
+                    var linhas = atual.turmas.map(function (t) {
+                        return '<li>' + esc(t.turma) + ' · ' + t.notas + (t.notas === 1 ? ' nota' : ' notas') + '</li>';
+                    }).join('');
+                    U.folha('Confirmar envio',
+                        '<p>Enviar <strong>' + atual.quantidade + '</strong> ' + (atual.quantidade === 1 ? 'nota' : 'notas') + ' de ' + esc(p.titulo) + '?</p><ul>' + linhas + '</ul>' +
+                        '<p class="suave">A nota registrada segue com o +1 ou o −1. Recuperar um ponto não muda esse número aqui.</p>' +
+                        '<button class="btn primario grande" type="button" id="confirmar-presente">Enviar agora</button>',
+                        function (f) {
+                            f.querySelector('#confirmar-presente').onclick = async function () {
+                                var btn = f.querySelector('#confirmar-presente');
+                                btn.disabled = true;
+                                try {
+                                    var resp;
+                                    if (st.modo === 'demo') {
+                                        resp = MaluPresente.simular(atual, '77777777-7777-4777-8777-777777777777').body;
+                                    } else {
+                                        resp = await MaluNuvem.enviarPresente(p.id);
+                                    }
+                                    st.envios.unshift({
+                                        provaId: p.id,
+                                        loteId: resp.lote_id,
+                                        enviadoPorNome: st.perfil.nome,
+                                        enviadoEm: new Date().toISOString(),
+                                        recebidas: resp.recebidas,
+                                        semCorrespondencia: resp.sem_correspondencia || [],
+                                        assinatura: resp.assinatura || MaluPresente.assinatura(atual.notas),
+                                        ok: true,
+                                        erro: null
+                                    });
+                                    U.fecharFolha();
+                                    var fora = (resp.sem_correspondencia || []).length;
+                                    U.toast(fora ? 'Enviado. ' + fora + ' sem correspondência.' : 'Notas enviadas ao Malu Presente.');
+                                    rotear();
+                                } catch (falha) {
+                                    btn.disabled = false;
+                                    U.toast(falha.message || 'Não consegui enviar.');
+                                }
+                            };
+                        });
+                };
+            }
+        };
+    };
+
     telas.exportar = function () {
         var p = provaAtual();
         return {
@@ -903,7 +1154,7 @@
                     leiturasDa(p.id).forEach(function (l) {
                         var n = notaDe(l, p);
                         var cont = MaluAnalise.acertosDe(l.respostas, p.gabarito);
-                        var row = [l.turma, l.sala, l.lista, l.nome, cont.acertos, n.nota == null ? '' : String(n.nota).replace('.', ',')];
+                        var row = [l.turma, l.sala, l.lista, nomeVisivel(p, l), cont.acertos, n.nota == null ? '' : String(n.nota).replace('.', ',')];
                         if (comCodigo(p)) {
                             var recCsv = situacaoPonto(l, p);
                             var ponto = !recCsv ? (l.statusCodigo === 'correto' ? 'certo' : '') : (recCsv.status === 'recuperada' ? 'recuperado' : recCsv.status === 'nao_recuperada' ? 'nao recuperado' : 'aberto');
@@ -972,6 +1223,7 @@
                     modalidade: r.modalidade, quando: r.quando, obs: r.obs, prazo: r.prazo
                 };
             });
+            st.envios = await MaluNuvem.enviosDasProvas(ids);
         }
     }
 

@@ -79,15 +79,87 @@
     /* ===================== passo 2: a lista ===================== */
 
     let temporizador = null;
-    $('lote').addEventListener('input', function () {
-        clearTimeout(temporizador);
-        temporizador = setTimeout(lerLote, 220);
-    });
 
     $('limpar-lote').addEventListener('click', function () {
         $('lote').value = '';
+        listaOficial = null;
+        $('sugerir-presente').hidden = true;
+        $('aviso-presente').hidden = true;
         lerLote();
     });
+
+    let listaOficial = null;
+
+    function mostrarSugestao() {
+        const botao = $('sugerir-presente');
+        if (!listaOficial) { botao.hidden = true; return; }
+        const mudancas = MaluListas.diferencas(listaOficial, estado.lote);
+        botao.hidden = !mudancas.length;
+        botao.dataset.mudancas = mudancas.length ? '1' : '';
+    }
+
+    function aplicarListaOficial(resposta, aviso) {
+        listaOficial = MaluListas.pacoteAtivo(resposta);
+        $('lote').value = MaluListas.textoDaLista(resposta);
+        lerLote();
+        const caixa = $('aviso-presente');
+        caixa.hidden = false;
+        caixa.textContent = aviso || 'Lista puxada. Os nomes ficam só neste navegador. Se você incluir, tirar ou renumerar alguém, pode mandar a mudança como sugestão. Ela só entra na lista oficial depois que a secretaria aceitar.';
+        mostrarSugestao();
+    }
+
+    $('lote').addEventListener('input', function () {
+        clearTimeout(temporizador);
+        temporizador = setTimeout(function () { lerLote(); mostrarSugestao(); }, 220);
+    });
+
+    $('puxar-presente').addEventListener('click', async function () {
+        const botao = $('puxar-presente');
+        const perfil = window.IdentificadorAcesso && IdentificadorAcesso.perfil && IdentificadorAcesso.perfil();
+        const caixa = $('aviso-presente');
+        if (!perfil) {
+            caixa.hidden = false;
+            caixa.textContent = 'Entre com a conta da gestão para puxar a lista oficial.';
+            return;
+        }
+        botao.disabled = true;
+        try {
+            const data = await IdentificadorAcesso.chamarPresente({ acao: 'listas', ano: $('ano').value });
+            aplicarListaOficial(data);
+        } catch (erro) {
+            caixa.hidden = false;
+            caixa.textContent = erro.message || 'Não consegui puxar a lista.';
+        } finally {
+            botao.disabled = false;
+        }
+    });
+
+    $('sugerir-presente').addEventListener('click', async function () {
+        const perfil = IdentificadorAcesso.perfil && IdentificadorAcesso.perfil();
+        const mudancas = MaluListas.diferencas(listaOficial, estado.lote);
+        const grupos = MaluListas.agrupar($('ano').value, mudancas);
+        const caixa = $('aviso-presente');
+        if (!perfil) {
+            caixa.hidden = false;
+            caixa.textContent = 'Entre com a conta da gestão para enviar a sugestão.';
+            return;
+        }
+        $('sugerir-presente').disabled = true;
+        try {
+            const resp = await IdentificadorAcesso.chamarPresente({ acao: 'sugestoes', ano: $('ano').value, grupos: grupos });
+            caixa.hidden = false;
+            caixa.textContent = 'Sugestão enviada (' + (resp.enviadas || mudancas.length) + '). Ela só vale na lista oficial depois que a secretaria aceitar.';
+            listaOficial = JSON.parse(JSON.stringify(estado.lote));
+            mostrarSugestao();
+        } catch (erro) {
+            caixa.hidden = false;
+            caixa.textContent = erro.message || 'Não consegui enviar a sugestão.';
+        } finally {
+            $('sugerir-presente').disabled = false;
+        }
+    });
+
+    window.IdentificadorPresente = { aplicarListaOficial: aplicarListaOficial };
 
     function lerLote() {
         estado.lote = Lista.lerLote($('lote').value);

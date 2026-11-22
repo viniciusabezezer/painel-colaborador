@@ -214,6 +214,58 @@
         await c.storage.from('corretor-cartoes').remove([caminho]);
     }
 
+    function linhaParaEnvio(row) {
+        return {
+            id: row.id,
+            provaId: row.prova_id,
+            loteId: row.lote_id,
+            enviadoPorNome: row.enviado_por_nome,
+            enviadoEm: row.enviado_em,
+            recebidas: row.recebidas,
+            semCorrespondencia: row.sem_correspondencia || [],
+            assinatura: row.assinatura || '',
+            ok: row.ok,
+            erro: row.erro
+        };
+    }
+
+    async function enviosDasProvas(ids) {
+        const c = obter();
+        if (!c || !ids || !ids.length) return [];
+        const { data, error } = await c.from('corretor_envios_presente')
+            .select('id,prova_id,lote_id,enviado_por_nome,enviado_em,recebidas,sem_correspondencia,assinatura,ok,erro')
+            .in('prova_id', ids)
+            .order('enviado_em', { ascending: false });
+        if (error) return [];
+        return (data || []).map(linhaParaEnvio);
+    }
+
+    async function chamarPresente(corpo) {
+        const c = obter();
+        if (!c) throw new Error('Entre com a sua conta.');
+        const { data, error } = await c.functions.invoke('presente-listas', { body: corpo });
+        if (error) {
+            let texto = '';
+            try { texto = (await error.context.json()).erro; } catch (e) { /* a função explica no corpo */ }
+            throw new Error(texto || error.message || 'Não consegui falar com o Malu Presente.');
+        }
+        if (data && data.erro) throw new Error(data.erro);
+        return data;
+    }
+
+    async function enviarPresente(provaId) {
+        const c = obter();
+        if (!c) throw new Error('Entre com a sua conta.');
+        const { data, error } = await c.functions.invoke('gabaritos-enviar-presente', { body: { prova_id: provaId } });
+        if (error) {
+            let texto = '';
+            try { texto = (await error.context.json()).erro; } catch (e) { /* a função explica no corpo */ }
+            throw new Error(texto || error.message || 'Não consegui enviar.');
+        }
+        if (data && data.erro) throw new Error(data.erro);
+        return data;
+    }
+
     async function limparFotosVencidas(leituras) {
         const agora = Date.now();
         const vencidas = (leituras || []).filter(function (l) {
@@ -236,6 +288,9 @@
         salvarChave: salvarChave,
         enviarFoto: enviarFoto,
         apagarFoto: apagarFoto,
-        limparFotosVencidas: limparFotosVencidas
+        limparFotosVencidas: limparFotosVencidas,
+        enviosDasProvas: enviosDasProvas,
+        enviarPresente: enviarPresente,
+        chamarPresente: chamarPresente
     };
 })(typeof globalThis !== 'undefined' ? globalThis : this);

@@ -217,7 +217,14 @@
 
     function casco(prova) {
         const dados = {};
-        CASCO.forEach(function (k) { if (prova[k] !== undefined) dados[k] = prova[k]; });
+        CASCO.forEach(function (k) {
+            if (prova[k] === undefined) return;
+            if (k === 'turmasCodigo' && global.MaluListas) {
+                dados[k] = global.MaluListas.turmasParaGuardar(prova[k]);
+                return;
+            }
+            dados[k] = prova[k];
+        });
         return dados;
     }
 
@@ -744,6 +751,7 @@
         travar: travar,
         mudarPrazo: mudarPrazo,
         salvarCodigos: salvarCodigos,
+        listasPresente: function (corpo) { return funcaoNome('presente-listas', corpo); },
         uuid: uuid,
         mensagem: mensagem,
         semRede: semRede
