@@ -402,8 +402,14 @@
         const copias = [];
         const erros = [];
         turmas.forEach(function (t) {
-            const qtd = Math.max(0, t.quantidade | 0);
-            for (let i = 1; i <= qtd; i++) {
+            const numeros = (global.MaluListas ? global.MaluListas.numerosDaTurma(t) : null) || (function () {
+                const qtd = Math.max(0, t.quantidade | 0);
+                const seq = [];
+                for (let n = 1; n <= qtd; n++) seq.push(n);
+                return seq;
+            })();
+            numeros.forEach(function (numero) {
+                const i = Number(numero);
                 const lista = String(i).padStart(2, '0');
                 const copiaId = String(t.turma || 'turma').trim() + '-' + lista;
                 try {
@@ -416,7 +422,7 @@
                 } catch (e) {
                     erros.push(copiaId + ': ' + e.message);
                 }
-            }
+            });
         });
         return { copias: copias, erros: erros, provaId: idEstavel(prova) };
     }

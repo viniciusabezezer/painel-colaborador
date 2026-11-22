@@ -386,6 +386,14 @@
                                 <div id="codigo-turmas"></div>
                                 <button type="button" class="btn btn--pequeno" id="codigo-mais-turma">+ Turma</button>
                                 <div class="acoes-lista">
+                                    <button type="button" class="btn btn--pequeno" id="codigo-puxar">Puxar do Malu Presente</button>
+                                </div>
+                                <p class="aviso" id="codigo-lista-aviso" hidden></p>
+                                <label id="codigo-lista-rotulo" hidden>Lista desta prova (só neste navegador)
+                                    <textarea id="codigo-lista" rows="8" spellcheck="false"></textarea>
+                                </label>
+                                <button type="button" class="btn btn--pequeno" id="codigo-sugerir" hidden>Enviar estas mudanças como sugestão para a secretaria</button>
+                                <div class="acoes-lista">
                                     <button type="button" class="btn btn--laranja btn--pequeno" id="codigo-gerar">Gerar os códigos</button>
                                     <button type="button" class="btn btn--pequeno" id="codigo-folha">Folha de códigos do professor</button>
                                     <button type="button" class="btn btn--pequeno" id="codigo-todas">Imprimir todas as cópias</button>
@@ -620,6 +628,7 @@
 <script src="js/icones.js"></script>
 <script src="js/gabarito.js"></script>
 <script src="js/codigo.js"></script>
+<script src="js/listas.js"></script>
 <script src="js/importar.js"></script>
 <script src="js/colar.js"></script>
 <script src="js/paginar.js"></script>

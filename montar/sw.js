@@ -6,7 +6,7 @@
    Estratégia: responde do que está guardado (rápido e sem rede) e, quando há
    internet, busca a versão nova por trás e guarda para a próxima abertura.
    Mudou um arquivo do app? Suba VERSAO para limpar os guardados antigos. */
-const VERSAO = 'montador-v13';
+const VERSAO = 'montador-v14';
 const ARQUIVOS = [
     './',
     './index.html',
@@ -20,6 +20,7 @@ const ARQUIVOS = [
     './js/icones.js',
     './js/gabarito.js',
     './js/codigo.js',
+    './js/listas.js',
     './js/importar.js',
     './js/colar.js',
     './js/paginar.js',

@@ -9,6 +9,7 @@
     const CONFIG = global.IDENTIFICADOR_ACESSO || {};
     const CHAVE_PERFIL = 'montador-provas:perfil';
     let cliente = null;
+    let perfilLiberado = null;
 
     function obterCliente() {
         if (cliente) return cliente;
@@ -65,6 +66,7 @@
     const $ = (id) => document.getElementById(id);
 
     function liberar(perfil) {
+        perfilLiberado = perfil;
         const nome = perfil.nome || perfil.email || '';
         $('conta-nome').textContent = nome;
         $('conta-identificador').hidden = false;
@@ -107,7 +109,21 @@
         }
     }
 
+    async function chamarPresente(corpo) {
+        const c = obterCliente();
+        if (!c) throw new Error('Entre com a sua conta.');
+        const { data, error } = await c.functions.invoke('presente-listas', { body: corpo });
+        if (error) {
+            let texto = '';
+            try { texto = (await error.context.json()).erro; } catch (e) { /* a função explica no corpo */ }
+            throw new Error(texto || error.message || 'Não consegui falar com o Malu Presente.');
+        }
+        if (data && data.erro) throw new Error(data.erro);
+        return data;
+    }
+
     async function sair() {
+        perfilLiberado = null;
         const c = obterCliente();
         try { if (c) await c.auth.signOut(); } catch (e) { /* segue */ }
         try { localStorage.removeItem(CHAVE_PERFIL); } catch (e) { /* segue */ }
@@ -127,7 +143,11 @@
         }
     }
 
-    global.IdentificadorAcesso = { autorizado: autorizado };
+    global.IdentificadorAcesso = {
+        autorizado: autorizado,
+        perfil: function () { return perfilLiberado; },
+        chamarPresente: chamarPresente
+    };
     if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', iniciar);
     else iniciar();
 })(typeof window !== 'undefined' ? window : globalThis);
