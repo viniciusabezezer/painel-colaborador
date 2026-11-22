@@ -70,9 +70,18 @@ cada aula; relatório do aluno imprimível, um ou a turma toda; ★ perguntas pa
 retomar.
 
 **Dados e login** — ★ entrada com a conta do Montador de Provas (Supabase Auth;
-só quem tem perfil ativo em `montador_perfis` entra; a gestão cria as contas e
-redefine senhas); "Lembrar neste aparelho" opcional; trocar senha pedindo a
-atual. ★ Tudo vai para a nuvem da escola (`provashow_itens`) e fica também no
+só quem tem perfil ativo em `montador_perfis` entra); "Lembrar neste aparelho"
+opcional; trocar senha pedindo a atual. O Início cumprimenta pelo primeiro nome
+("Olá, Maria!"). ★ **Convite pelo WhatsApp** — em Administração (só a gestão;
+botão no topo e em Mais), a gestão digita o nome do professor novo (e, se
+quiser, o WhatsApp) e o app abre o WhatsApp com a mensagem e o link
+(`app/#cadastro/…`): a pessoa vê o próprio nome, escolhe o e-mail (o login) e a
+senha, e já entra. Vale 7 dias, um uso; dá para reenviar (link novo, o antigo
+cai) e cancelar. Para quem já tem conta, "Link de senha" (`app/#senha/…`) cria
+uma senha nova mantendo o e-mail. Servidor: `supabase/002_provashow_convites.sql`
+(token só como hash, RLS fechada) e a função `provashow-convites` (em
+`montar/supabase/functions/`, ao lado de `montador-convites`, que cuida do link
+de senha). A conta criada vale também no Montador. ★ Tudo vai para a nuvem da escola (`provashow_itens`) e fica também no
 aparelho (IndexedDB, uma cópia por conta) para funcionar sem internet: o app
 baixa, junta (vence a alteração mais nova) e envia o que falta a cada mudança,
 a cada 45 s e ao voltar a conexão. ★ Nada se apaga na nuvem: não existe DELETE
@@ -115,7 +124,8 @@ As duas possibilidades estão prontas:
 - `js/armazem.js` (IndexedDB), `js/texto.js` (marcação + LaTeX), `js/midia.js`,
   `js/slide.js` (o slide comum ao telão, à prévia e à aula), `js/explorar.js`.
 - `app/js/` — núcleo, biblioteca, editor, turmas, aula, relatórios, ajustes,
-  conta (login, selo da nuvem, relatórios da escola).
+  conta (login, selo da nuvem, relatórios da escola), convite (página aberta
+  pelo link do WhatsApp) e admin (convites da gestão).
 
 > O canal pela internet usa canais públicos do Realtime: quem souber o código
 > entra enquanto a aula durar; o código é aleatório e muda a cada aula. As

@@ -105,7 +105,7 @@
         if (!perfil || !perfil.ativo) {
             await c.auth.signOut();
             usuario = null; perfil = null;
-            throw new Error('Esta conta não tem acesso ao ProvaShow. Peça à gestão para ativá-la no Montador de Provas (tela Professores).');
+            throw new Error('Esta conta não tem acesso ao ProvaShow. Peça à gestão um convite.');
         }
         guardarPerfil(perfil);
         return { usuario, perfil };
@@ -237,7 +237,40 @@
         return global.Dados.migrar(d);
     }
 
+    /* ----- convites (funções do servidor) -----
+       provashow-convites: professor NOVO escolhe e-mail e senha.
+       montador-convites: quem já tem conta só cria uma senha nova. */
+    async function funcao(nome, corpo) {
+        const c = obterCliente();
+        if (!c) throw new Error('Sem conexão com o servidor da escola.');
+        let data, error;
+        try { ({ data, error } = await c.functions.invoke(nome, { body: corpo })); }
+        catch (e) { throw new Error('Sem internet. Confira a conexão e tente de novo.'); }
+        if (data && data.erro) throw new Error(data.erro);
+        if (error) {
+            let texto = '';
+            try { texto = (await error.context.json()).erro; } catch (e) { /* segue */ }
+            if (!texto && erroDeRede(error)) texto = 'Sem internet. Confira a conexão e tente de novo.';
+            throw new Error(texto || 'O servidor da escola não respondeu. Tente de novo.');
+        }
+        return data;
+    }
+    const convites = {
+        criar: (dados) => funcao('provashow-convites', Object.assign({ acao: 'criar' }, dados)),
+        listar: async () => (await funcao('provashow-convites', { acao: 'listar' })).convites || [],
+        renovar: (id) => funcao('provashow-convites', { acao: 'renovar', id }),
+        cancelar: (id) => funcao('provashow-convites', { acao: 'cancelar', id }),
+        ver: (token) => funcao('provashow-convites', { acao: 'ver', token }),
+        aceitar: (token, email, senha) => funcao('provashow-convites', { acao: 'aceitar', token, email, senha }),
+        /* para quem já tem conta */
+        senhaGerar: (id) => funcao('montador-convites', { acao: 'gerar', id }),
+        senhaVer: (token) => funcao('montador-convites', { acao: 'ver', token }),
+        senhaAceitar: (token, senha) => funcao('montador-convites', { acao: 'aceitar', token, senha }),
+        acessos: async () => { try { return (await funcao('montador-convites', { acao: 'acessos' })).acessos || []; } catch (e) { return null; } }
+    };
+
     const Nuvem = {
+        convites,
         iniciar, entrar, sair, trocarSenha, sincronizar, quantosPendentes, itensDe, listarProfessores, dadosDoProfessor, erroDeRede,
         usuario: () => usuario, perfil: () => perfil, lembrar, disponivel: () => !!obterCliente()
     };

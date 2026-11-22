@@ -37,6 +37,13 @@
             mostrarLogin('Não foi possível carregar o acesso à nuvem da escola. Confira a internet e recarregue a página.');
             return new Promise(() => {});
         }
+        /* link de convite (WhatsApp): vem antes de tudo, mesmo com outra conta aberta neste aparelho */
+        const convite = PS.rotaConvite && PS.rotaConvite();
+        if (convite) {
+            const quem = await PS.telaConvite(convite);
+            history.replaceState(null, '', location.pathname + location.search + '#inicio');
+            if (quem) return quem;
+        }
         try {
             const salvo = await Nuvem.iniciar();
             if (salvo) return salvo;
@@ -70,6 +77,8 @@
         conta.perfil = quem.perfil;
         esconderLogin();
         desenharSelo();
+        PS.desenharAdmin && PS.desenharAdmin();
+        if (PS.boasVindas) { PS.avisar(PS.boasVindas); PS.boasVindas = ''; }
         await sincronizar(true);
         /* conta nova, nuvem vazia: começa com o exemplo (turma e conjunto) */
         if (!PS.d.turmas.length && !PS.d.conjuntos.length && conta.estado === 'ok') {
@@ -203,8 +212,9 @@
                 <button class="btn btn-p" data-acao="trocar-senha">🔑 Trocar senha</button>
                 <button class="btn btn-p btn-perigo" data-acao="sair">Sair</button>
             </div>
-            ${p.papel === 'gestao' ? '<p class="margem"><a class="btn btn-principal" href="#escola">🏫 Relatórios da escola (todos os professores)</a></p>' : ''}
-            <p class="sub">A mesma conta do Montador de Provas. Esqueceu a senha? A gestão define uma nova em Montador → Professores → Editar.</p>
+            ${p.papel === 'gestao' ? `<div class="botoes margem"><a class="btn btn-principal" href="#admin">🛡 Administração: convidar professores</a>
+                <a class="btn" href="#escola">🏫 Relatórios da escola</a></div>` : ''}
+            <p class="sub">A mesma conta do Montador de Provas. Esqueceu a senha? Peça à gestão um link para criar uma senha nova.</p>
         </section>`;
     };
 

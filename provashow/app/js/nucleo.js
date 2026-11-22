@@ -115,7 +115,7 @@
     const ABA_DA_TELA = {
         inicio: 'inicio', biblioteca: 'biblioteca', conjunto: 'biblioteca', busca: 'biblioteca', lixeira: 'biblioteca', pacotes: 'biblioteca', pacote: 'biblioteca', explorar: 'biblioteca',
         turmas: 'turmas', turma: 'turmas', aula: 'aula', relatorios: 'relatorios', aulas: 'relatorios', 'relatorio-aula': 'relatorios', 'relatorio-aluno': 'relatorios',
-        escola: 'mais', ajustes: 'mais', mais: 'mais'
+        escola: 'mais', ajustes: 'mais', mais: 'mais', admin: 'admin'
     };
 
     PS.desenhar = function () {

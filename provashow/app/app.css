@@ -492,7 +492,7 @@ body::before {
 }
 
 /* campos */
-input[type=text], input[type=search], input[type=number], input[type=date], input[type=email], input[type=password], textarea, select {
+input[type=text], input[type=search], input[type=number], input[type=date], input[type=email], input[type=password], input[type=tel], textarea, select {
     background: rgba(255, 255, 255, .85); border-color: #dfe3d8; border-radius: var(--raio-p);
     transition: border-color .3s var(--mola), box-shadow .3s var(--mola);
 }
@@ -542,3 +542,22 @@ input:focus, textarea:focus, select:focus { outline: none; border-color: var(--p
     .cabeca h1 { -webkit-text-fill-color: currentColor; background: none; }
     .conteudo .cartao-painel, .relatorio-aluno { backdrop-filter: none; background: #fff; }
 }
+
+/* convite (página aberta pelo WhatsApp) e administração */
+.convite-titulo {
+    font-size: 30px; font-weight: 800; letter-spacing: -1px; margin-top: 6px;
+    background: var(--degrade-escola); background-size: 220% auto;
+    -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent;
+    animation: degradeEscola 8s ease infinite;
+}
+.convite-erro { color: var(--perigo); font-weight: 600; margin: 6px 0 10px; }
+.tela-convite .login-caixa .btn-principal { margin-top: 8px; padding: 12px; font-size: 16px; width: 100%; }
+.btn-whatsapp { background: #25D366; border-color: #25D366; color: #fff; box-shadow: 0 10px 22px -12px rgba(37, 211, 102, .8); }
+.btn-whatsapp:hover { background: #1ebe5a; border-color: #1ebe5a; }
+.dialogo textarea.mensagem-convite { font-family: inherit; font-size: 14.5px; line-height: 1.5; background: #f7f8f3; }
+.linha-convite { align-items: flex-start; flex-wrap: wrap; }
+.linha-convite .linha-texto .selo { align-self: flex-start; margin-top: 4px; }
+.linha-convite .botoes { margin-left: auto; }
+.titulo-secao small { font-weight: 500; font-size: 14px; }
+#botao-admin { border-color: hsla(var(--h-azul), 78%, 40%, .35); color: var(--palco); }
+@media (max-width: 720px) { .linha-convite .botoes { margin-left: 50px; } }

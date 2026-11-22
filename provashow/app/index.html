@@ -31,10 +31,14 @@
             <button class="btn btn-principal" type="submit">Entrar</button>
             <p class="login-mensagem" id="login-mensagem" role="alert"></p>
         </form>
-        <p class="sub">Use a mesma conta do <strong>Montador de Provas</strong>. Não tem conta ou esqueceu a senha? Fale com a gestão: ela cria e redefine as senhas em Montador → Professores.</p>
+        <p class="sub">Use a mesma conta do <strong>Montador de Provas</strong>. Ainda não tem conta ou esqueceu a senha? Peça à gestão um convite: ele chega pelo WhatsApp e, pelo link, você cria o seu login e a sua senha.</p>
         <p class="sub">Num computador compartilhado, desmarque “Lembrar neste aparelho”.</p>
         <a class="voltar-site" href="../">Conhecer o ProvaShow</a>
     </div>
+</section>
+
+<section class="tela-login tela-convite" id="tela-convite" hidden>
+    <div class="login-caixa"></div>
 </section>
 
 <header class="topo">
@@ -51,6 +55,7 @@
         <a href="#relatorios" data-aba="relatorios">Relatórios</a>
     </nav>
     <div class="topo-direita">
+        <a class="btn btn-p esconder-celular" id="botao-admin" href="#admin" data-aba="admin" title="Administração: convidar professores" hidden>🛡 Administração</a>
         <a class="estado-nuvem parado" id="estado-nuvem" href="#mais" title="Nuvem da escola">☁</a>
         <a class="btn btn-p esconder-celular" href="../cartoes/" target="_blank" rel="noopener">🖨 Cartões</a>
         <a class="btn btn-p btn-icone" href="#mais" data-aba="mais" title="Mais: ajustes, instalar, cópia de segurança">⋯</a>
@@ -94,6 +99,8 @@
 <script src="js/relatorios.js"></script>
 <script src="js/ajustes.js"></script>
 <script src="js/conta.js"></script>
+<script src="js/convite.js"></script>
+<script src="js/admin.js"></script>
 <script>PS.iniciar();</script>
 </body>
 </html>

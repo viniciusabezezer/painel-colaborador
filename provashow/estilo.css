@@ -80,7 +80,7 @@ h1, h2, h3 { line-height: 1.15; letter-spacing: -.3px; }
 .btn-p { padding: 6px 12px; font-size: 13.5px; }
 .btn-icone { padding: 6px 9px; border-radius: 10px; }
 
-input[type=text], input[type=search], input[type=number], input[type=date], input[type=email], input[type=password], textarea, select {
+input[type=text], input[type=search], input[type=number], input[type=date], input[type=email], input[type=password], input[type=tel], textarea, select {
     font: inherit; font-size: 15px; color: var(--tinta);
     border: 1.5px solid var(--linha); border-radius: var(--raio-p);
     padding: 9px 12px; background: #fff; width: 100%;

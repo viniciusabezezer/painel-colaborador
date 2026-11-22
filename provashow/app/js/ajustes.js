@@ -12,7 +12,7 @@
         const aula = PS.aulaViva;
         PS.$('#conteudo').innerHTML = `
             ${aula ? `<a class="faixa-ao-vivo" href="#aula">● Aula ao vivo em andamento — ${esc((PS.turma(aula.turmaId) || {}).nome || '')} · código ${aula.codigo} <strong>Voltar à aula →</strong></a>` : ''}
-            <div class="cabeca"><div><h1>Olá, professor(a)!</h1><p class="sub">Prepare as perguntas, escolha a turma e leia a sala inteira com o celular.</p></div>
+            <div class="cabeca"><div><h1>Olá, ${esc(PS.primeiroNome(((PS.conta && PS.conta.perfil) || Nuvem.perfil() || {}).nome) || 'professor(a)')}!</h1><p class="sub">Prepare as perguntas, escolha a turma e leia a sala inteira com o celular.</p></div>
             <div class="botoes"><button class="btn btn-principal" data-acao="novo-conjunto-inicio">+ Novo conjunto</button></div></div>
             <h2 class="titulo-secao">Suas turmas</h2>
             <div class="grade-cartoes">${turmas.map((t) => {
