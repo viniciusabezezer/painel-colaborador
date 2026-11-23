@@ -93,7 +93,8 @@ test('os códigos da prova usam o número oficial, não uma sequência nova', fu
         { numero: 3, questao: { tipo: 'objetiva', enunciado: 'A respiração celular libera energia para a célula.' } },
         { numero: 4, questao: { tipo: 'objetiva', enunciado: 'A parede celular é típica da célula vegetal.' } },
         { numero: 5, questao: { tipo: 'objetiva', enunciado: 'O vacúolo guarda líquido na célula vegetal.' } },
-        { numero: 6, questao: { tipo: 'objetiva', enunciado: 'A membrana controla o que entra na célula.' } }]);
+        { numero: 6, questao: { tipo: 'objetiva', enunciado: 'A membrana controla o que entra na célula.' } },
+        { numero: 7, questao: { tipo: 'objetiva', enunciado: 'O ribossomo produz proteínas para a célula.' } }]);
     assert.deepEqual(pacote.copias.map(function (c) { return c.lista; }), [7, 8]);
     assert.equal(JSON.stringify(pacote.copias).includes('Fictício'), false);
 });

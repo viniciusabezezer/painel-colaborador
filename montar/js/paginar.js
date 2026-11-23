@@ -99,6 +99,13 @@
         return n ? n + 'º bimestre ' + (prova.ano || '') : '';
     }
 
+    /* A explicação do código vai dentro do enunciado da cópia. O quadro do topo
+       só sai nas cópias geradas antes disso (sem `instrucaoNoEnunciado`). */
+    function instrucaoDoCodigoNoTopo(prova) {
+        const c = prova && prova.copiaImpressa;
+        return !!(prova && prova.codigoVerificacao && Codigo && c && !c.instrucaoNoEnunciado);
+    }
+
     function quadroInstrucoes(layout, prova) {
         const caixa = el('div', 'instrucoes');
         caixa.appendChild(el('div', 'instrucoes-titulo', 'Instruções:'));
@@ -107,7 +114,7 @@
             lista.appendChild(el('li', null, Texto.html(linha)));
         });
         caixa.appendChild(lista);
-        if (prova && prova.codigoVerificacao && Codigo) {
+        if (instrucaoDoCodigoNoTopo(prova)) {
             const extra = el('div', 'instrucoes-codigo');
             Codigo.TEXTO_INSTRUCOES.forEach(function (linha) {
                 extra.appendChild(el('p', null, Texto.escapar(linha)));
@@ -261,13 +268,19 @@
                 }
                 const classePar = texto ? 'q-par texto-apoio' : 'q-par';
 
+                /* A instrução do código abre o enunciado da cópia, mas sai antes do
+                   número e da fonte, para "01. (Fonte) Enunciado" continuar inteiro. */
+                const pars = Texto.paragrafos(q.enunciado);
+                if (!texto && Codigo && pars.length && Codigo.ehInstrucao(pars[0])) {
+                    doItem.push({ tipo: 'par', classe: classePar, palavras: Texto.palavras(pars.shift()), manter: true });
+                }
+
                 if (acima.length && prefixo.length) {
                     doItem.push({ tipo: 'par', classe: classePar, palavras: prefixo, manter: true });
                     prefixo = [];
                 }
                 acima.forEach(function (img) { doItem.push({ tipo: 'img', imagem: img, manter: true }); });
 
-                const pars = Texto.paragrafos(q.enunciado);
                 if (lado) {
                     doItem.push({ tipo: 'lado', imagem: lado, prefixo: prefixo, pars: pars, classe: classePar, manter: true });
                 } else {
@@ -473,7 +486,7 @@
                 const topo = el('div', 'topo' + (layout.cabecalho === 'faixa' ? ' com-faixa' : ''));
                 if (layout.cabecalho === 'faixa') topo.appendChild(topoFaixa(prova, layout, base));
                 else if (layout.cabecalho === 'completo') topo.appendChild(topoCompleto(prova, base));
-                if ((layout.instrucoes && (layout.textoInstrucoes || []).some(function (l) { return String(l).trim(); })) || prova.codigoVerificacao) {
+                if ((layout.instrucoes && (layout.textoInstrucoes || []).some(function (l) { return String(l).trim(); })) || instrucaoDoCodigoNoTopo(prova)) {
                     topo.appendChild(quadroInstrucoes(layout, prova));
                 }
                 if (topo.childNodes.length) f.miolo.appendChild(topo);
@@ -572,8 +585,16 @@
         });
         f.miolo.appendChild(grade);
         if (prova.codigoVerificacao && Codigo) {
+            const questoesInstrucao = [];
+            (prova.codigos || []).forEach(function (c) {
+                const q = c.instrucao && c.instrucao.questao;
+                if (q && questoesInstrucao.indexOf(q) === -1) questoesInstrucao.push(q);
+            });
+            const ondeEstaAInstrucao = questoesInstrucao.length
+                ? ' A explicação de como montar o código está escrita dentro do enunciado da questão ' + questoesInstrucao.sort(function (a, b) { return a - b; }).join(', ') + ' de cada cópia: não instrua a turma antes, o aluno descobre lendo a prova.'
+                : '';
             f.miolo.appendChild(el('p', 'chave-codigo',
-                'Código de verificação: certo = +1 ponto na nota registrada (teto 10). Em branco ou errado = −1 (piso 0). O aluno pode recuperar até o prazo de lançamento das notas, de um jeito só (tarefa, medida restaurativa ou mini teste oral). A nota registrada não muda sozinha: se ele recuperar, ajuste a nota no seu registro. A lista dos códigos por sala e turma está na folha de códigos.'));
+                'Código de verificação: certo = +1 ponto na nota registrada (teto 10). Em branco ou errado = −1 (piso 0). O aluno pode recuperar até o prazo de lançamento das notas, de um jeito só (tarefa, medida restaurativa ou mini teste oral). A nota registrada não muda sozinha: se ele recuperar, ajuste a nota no seu registro. A lista dos códigos por sala e turma está na folha de códigos.' + ondeEstaAInstrucao));
         }
         return { paginas: 1 };
     }

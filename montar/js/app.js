@@ -1445,6 +1445,10 @@
         if (ligado && !(prova.codigos || []).length) {
             erro.hidden = false;
             erro.textContent = 'Ainda não há códigos. Cadastre sala, turma e a quantidade de alunos e clique em Gerar os códigos.';
+        } else if (ligado && (prova.codigos || []).some(function (c) { return !c.instrucao; })) {
+            erro.hidden = false;
+            erro.className = 'aviso';
+            erro.textContent = 'Estes códigos foram gerados antes de a explicação ir dentro da prova: as cópias saem com a explicação no quadro de instruções do topo. Para a explicação ficar escondida no enunciado, clique em Gerar os códigos de novo. Os códigos mudam, então não misture com cópias já impressas.';
         }
     }
 
@@ -1594,7 +1598,7 @@
         const erro = $('codigo-erro');
         if (pacote.erros.length && !pacote.copias.length) {
             erro.hidden = false;
-            erro.textContent = pacote.erros[0] + ' Os enunciados precisam de palavras começando com A, C, E, F, P, R, T ou V, em pelo menos 6 questões.';
+            erro.textContent = pacote.erros[0] + ' A prova precisa de pelo menos ' + MontarCodigo.MIN_QUESTOES + ' questões. Depois da primeira, os enunciados precisam de palavras começando com A, C, E, F, P, R, T ou V, em pelo menos 3 questões.';
             return;
         }
         prova.codigos = pacote.copias;
