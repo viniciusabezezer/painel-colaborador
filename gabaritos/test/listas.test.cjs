@@ -32,6 +32,28 @@ test('o texto puxado é o mesmo formato do colar e ignora quem está inativo', f
     assert.equal(lote.turmas[0].alunos[0].nome, 'Estudante Fictício 07');
 });
 
+test('número grudado no nome e número vazio viram o número da chamada', function () {
+    const resposta = { ano: '2026', turmas: [{ turma: '1ºA', alunos: [
+        { numero: null, nome: '19 - Estudante Fictício Dezenove', matricula: '1', ativo: true },
+        { numero: null, nome: '2 - Estudante Fictício Dois', matricula: '2', ativo: true },
+        { numero: null, nome: '20 – Estudante Fictício Vinte', matricula: '3', ativo: true },
+        { numero: 5, nome: '5 - Estudante Fictício Cinco', matricula: '4', ativo: true },
+        { numero: null, nome: 'Estudante Fictício Sem Número', matricula: '5', ativo: true }
+    ] }] };
+    const texto = Listas.textoDaLista(resposta);
+    assert.equal(texto, 'TURMA 1A\n02 - Estudante Fictício Dois\n05 - Estudante Fictício Cinco\n' +
+        '19 - Estudante Fictício Dezenove\n20 - Estudante Fictício Vinte\nEstudante Fictício Sem Número');
+    assert.equal(texto.includes('null'), false);
+    const pacote = Listas.pacoteAtivo(resposta);
+    assert.deepEqual(pacote.turmas[0].alunos.map(function (a) { return [a.numero, a.nome]; }), [
+        [19, 'Estudante Fictício Dezenove'], [2, 'Estudante Fictício Dois'], [20, 'Estudante Fictício Vinte'],
+        [5, 'Estudante Fictício Cinco'], [null, 'Estudante Fictício Sem Número']
+    ]);
+    const lote = ProvasLista.lerLote(texto);
+    assert.deepEqual(lote.turmas[0].alunos.slice(0, 4).map(function (a) { return a.numero; }), [2, 5, 19, 20]);
+    assert.equal(lote.turmas[0].alunos[0].nome, 'Estudante Fictício Dois');
+});
+
 test('incluir, remover, renumerar, corrigir o nome e remanejar', function () {
     const oficial = Listas.pacoteAtivo(Listas.simular({ ano: '2026' }));
     const atual = {

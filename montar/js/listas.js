@@ -50,8 +50,37 @@
         return String((perfil && perfil.nome) || 'Sem nome').trim() + ' · ' + rotuloPapel(perfil && perfil.papel);
     }
 
+    /* Há cadastros em que o número da chamada veio grudado no nome
+       ("17 - JOÃO DA SILVA") e o campo numero chega vazio. Separa os dois:
+       vale o número do campo; sem ele, o do nome; sem nenhum, fica null. */
+    var NUMERO_NO_NOME = /^\s*(\d{1,3})\s*[-–—.]\s*(.+)$/;
+
+    function numeroValido(valor) {
+        if (valor == null || valor === '') return null;
+        var n = Number(valor);
+        return isFinite(n) && n > 0 ? Math.floor(n) : null;
+    }
+
+    function separarNumero(aluno) {
+        var nome = String(aluno.nome || '').trim();
+        var numero = numeroValido(aluno.numero);
+        var achou = nome.match(NUMERO_NO_NOME);
+        if (achou && normalizar(achou[2]).length >= 3) {
+            nome = achou[2].trim();
+            if (numero == null) numero = parseInt(achou[1], 10);
+        }
+        return Object.assign({}, aluno, { numero: numero, nome: nome });
+    }
+
     function alunosAtivos(alunos) {
-        return (alunos || []).filter(function (a) { return a && a.ativo !== false && String(a.nome || '').trim(); });
+        return (alunos || []).filter(function (a) { return a && a.ativo !== false && String(a.nome || '').trim(); }).map(separarNumero);
+    }
+
+    function porNumero(a, b) {
+        if (a.numero == null && b.numero == null) return 0;
+        if (a.numero == null) return 1;
+        if (b.numero == null) return -1;
+        return a.numero - b.numero;
     }
 
     function pacoteAtivo(resposta) {
@@ -61,7 +90,7 @@
                 return {
                     turma: turmaCurta(t.turma),
                     alunos: alunosAtivos(t.alunos).map(function (a) {
-                        return { numero: Number(a.numero), nome: String(a.nome).trim(), matricula: a.matricula || null };
+                        return { numero: a.numero, nome: a.nome, matricula: a.matricula || null };
                     })
                 };
             }).filter(function (t) { return t.alunos.length; })
@@ -74,11 +103,11 @@
         (resposta && resposta.turmas || []).forEach(function (t) {
             var curta = turmaCurta(t.turma);
             if (quer.length && quer.indexOf(curta) === -1) return;
-            var ativos = alunosAtivos(t.alunos).slice().sort(function (a, b) { return Number(a.numero) - Number(b.numero); });
+            var ativos = alunosAtivos(t.alunos).sort(porNumero);
             if (!ativos.length) return;
             linhas.push('TURMA ' + curta);
             ativos.forEach(function (a) {
-                linhas.push(String(a.numero).padStart(2, '0') + ' - ' + String(a.nome).trim());
+                linhas.push(a.numero == null ? a.nome : String(a.numero).padStart(2, '0') + ' - ' + a.nome);
             });
             linhas.push('');
         });
