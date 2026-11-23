@@ -3,6 +3,16 @@
   "framework": null,
   "buildCommand": null,
   "outputDirectory": ".",
+  "rewrites": [
+    {
+      "source": "/montar/:path*",
+      "destination": "https://montador-provas-malu.vercel.app/:path*"
+    },
+    {
+      "source": "/provas/:path*",
+      "destination": "https://identificador-de-provas.vercel.app/:path*"
+    }
+  ],
   "headers": [
     {
       "source": "/(.*)",
