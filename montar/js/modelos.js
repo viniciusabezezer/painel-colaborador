@@ -33,6 +33,42 @@
         '**O descumprimento de qualquer regra acarretará na anulação da avaliação**.'
     ];
 
+    /* ----- Redação no formato do ENEM -----
+       Numa seção de Redação o espaço das questões vira o caderno de redação
+       do ENEM: textos motivadores (TEXTO I, II...) com texto e imagens, a
+       proposta com o tema e, no fim, a folha de redação com linhas numeradas. */
+    const INSTRUCOES_REDACAO = [
+        'O rascunho da redação deve ser feito no espaço apropriado.',
+        'O texto definitivo deve ser escrito à tinta, na folha própria, em até 30 linhas.',
+        'A redação que apresentar cópia dos textos da Proposta de Redação ou do Caderno de Questões terá o número de linhas copiadas desconsiderado para efeito de correção.',
+        'Receberá nota zero, em qualquer das situações expressas a seguir, a redação que: tiver até 7 (sete) linhas escritas, sendo considerada "texto insuficiente"; fugir ao tema ou que não atender ao tipo dissertativo-argumentativo; apresentar parte do texto deliberadamente desconectada do tema proposto.'
+    ];
+
+    const COMANDO_REDACAO = 'A partir da leitura dos textos motivadores e com base nos conhecimentos construídos ao longo de sua formação, ' +
+        'redija texto dissertativo-argumentativo em modalidade escrita formal da língua portuguesa sobre o tema {tema}, ' +
+        'apresentando proposta de intervenção que respeite os direitos humanos. Selecione, organize e relacione, ' +
+        'de forma coerente e coesa, argumentos e fatos para defesa de seu ponto de vista.';
+
+    /* Tipos que não levam número nem entram no gabarito. */
+    const SEM_NUMERO = ['texto', 'motivador', 'proposta'];
+    function semNumero(q) { return SEM_NUMERO.indexOf(q && q.tipo) !== -1; }
+
+    /* A seção é de Redação pelo título (REDAÇÃO, PRODUÇÃO TEXTUAL...) ou
+       pelo ícone escolhido. As demais seções não mudam nada. */
+    function secaoDeRedacao(secao) {
+        if (!secao) return false;
+        if (secao.icone === 'redacao') return true;
+        const t = String(secao.titulo || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toUpperCase();
+        return /REDACA|PRODUCAO TEXTUAL|PRODUCAO DE TEXTO/.test(t);
+    }
+
+    function numeroRomano(n) {
+        const tabela = [[10, 'X'], [9, 'IX'], [5, 'V'], [4, 'IV'], [1, 'I']];
+        let saida = '';
+        tabela.forEach(function (par) { while (n >= par[0]) { saida += par[1]; n -= par[0]; } });
+        return saida;
+    }
+
     /* As fontes oferecidas. Todas existem no Windows e no Mac; no Linux e no
        Android entram as equivalentes de mesma medida (Liberation, Tinos,
        Carlito), para a paginação não mudar de um computador para outro. */
@@ -246,7 +282,8 @@
     /* ----- a prova ----- */
 
     function novaQuestao(tipo, alternativas) {
-        const t = tipo === 'discursiva' || tipo === 'texto' ? tipo : 'objetiva';
+        const t = ['discursiva', 'texto', 'motivador', 'proposta'].indexOf(tipo) !== -1 ? tipo : 'objetiva';
+        if (t === 'proposta') return normalizarQuestao({ id: novoId('q'), tipo: 'proposta', enunciado: COMANDO_REDACAO, linhas: 30 });
         return {
             id: novoId('q'),
             tipo: t,
@@ -277,7 +314,13 @@
         if (!Array.isArray(q.alternativas)) q.alternativas = [];
         if (!Array.isArray(q.altImagens)) q.altImagens = [];
         if (!q.disposicao) q.disposicao = 'auto';
-        if (q.linhas == null) q.linhas = 6;
+        if (q.linhas == null) q.linhas = q.tipo === 'proposta' ? 30 : 6;
+        if (q.tipo === 'proposta') {
+            if (q.tema == null) q.tema = '';
+            if (q.instrucoesRedacao == null) q.instrucoesRedacao = true;
+            if (!Array.isArray(q.textoInstrucoesRedacao)) q.textoInstrucoesRedacao = INSTRUCOES_REDACAO.slice();
+            q.rascunho = !!q.rascunho;
+        }
         return q;
     }
 
@@ -467,7 +510,7 @@
         const lista = [];
         prova.secoes.forEach(function (secao) {
             secao.questoes.forEach(function (q) {
-                if (q.tipo === 'texto') return; /* texto de apoio não tem número */
+                if (semNumero(q)) return; /* texto de apoio e itens da redação não têm número */
                 lista.push({ numero: lista.length + 1, questao: q, secao: secao });
             });
         });
@@ -490,6 +533,18 @@
                 if (!q.correta) avisos.push('Questão ' + n + ' sem a resposta certa marcada (só faz falta no gabarito do professor).');
             }
         });
+        prova.secoes.forEach(function (secao) {
+            if (!secaoDeRedacao(secao)) return;
+            let t = 0;
+            secao.questoes.forEach(function (q) {
+                if (q.tipo === 'motivador') {
+                    t++;
+                    if (!String(q.enunciado || '').trim() && !(q.imagens || []).length) avisos.push('Redação: o TEXTO ' + numeroRomano(t) + ' está vazio (sem texto e sem imagem).');
+                } else if (q.tipo === 'proposta' && !String(q.tema || '').trim()) {
+                    avisos.push('Redação: a proposta está sem o tema.');
+                }
+            });
+        });
         if (layout.gabarito && layout.gabaritoOrigem === 'imagem' && !(prova.gabaritoImagem && prova.gabaritoImagem.src)) {
             avisos.unshift('O gabarito está como "imagem enviada por mim", mas nenhuma imagem foi escolhida: por enquanto sai o gerado pelo app.');
         }
@@ -503,6 +558,11 @@
         SUGESTOES_INSTRUCOES: SUGESTOES_INSTRUCOES,
         MARGENS: MARGENS,
         INSTRUCOES_BIMESTRAL: INSTRUCOES_BIMESTRAL,
+        INSTRUCOES_REDACAO: INSTRUCOES_REDACAO,
+        COMANDO_REDACAO: COMANDO_REDACAO,
+        semNumero: semNumero,
+        secaoDeRedacao: secaoDeRedacao,
+        numeroRomano: numeroRomano,
         normalizarQuestao: normalizarQuestao,
         normalizarProva: normalizarProva,
         versaoEmbaralhada: versaoEmbaralhada,
