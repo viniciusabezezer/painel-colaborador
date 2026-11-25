@@ -86,8 +86,8 @@
         return String(numero).padStart(3, '0');
     }
 
-    /* O grid da folha de respostas tem duas casas para o "Núm. da lista", então
-       o número impresso segue o mesmo tamanho. */
+    /* O número impresso na identificação tem duas casas até o 99 (como sempre
+       foi na folha da escola); o código e o QR usam as três. */
     function numeroCurto(numero) {
         const n = parseInt(numero, 10);
         if (!isNaN(n) && n < 100) return String(n).padStart(2, '0');
@@ -142,7 +142,7 @@
 
     /* Aceita a lista como nomes soltos ou como { nome, numero, matricula, ativo }.
        Quando a lista colada já vem numerada, é esse número que vale: é o
-       "Núm. da lista" que o aluno preenche na folha de respostas. Sem numeração,
+       número da lista (chamada) da escola, o mesmo que vai no QR. Sem numeração,
        a ordem alfabética manda — e aí a mesma turma gera sempre os mesmos códigos.
        Quem veio com ativo === false (a lista do Malu Presente marca isso) fica
        de fora: não recebe código nem QR. */

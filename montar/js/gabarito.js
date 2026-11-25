@@ -1,8 +1,9 @@
 /* A folha de respostas da primeira página, no desenho da prova bimestral da
-   escola: o "Núm. da lista" com dois dígitos para marcar, o rótulo da série e
-   da área, as questões em blocos de cinco com o "A B C D E" em cima e as
-   marcas quadradas de alinhamento em quatro fileiras verticais, de cinco em
-   cinco linhas.
+   escola: o rótulo da série e da área, as questões em blocos de cinco com o
+   "A B C D E" em cima e as marcas quadradas de alinhamento em quatro fileiras
+   verticais, de cinco em cinco linhas. Não há mais "Núm. da lista" para o
+   aluno marcar: quem é o aluno vem do QR da folha e qual é a prova vem da
+   chave dentro dele.
 
    Sai como SVG em milímetros, para imprimir no tamanho certo em qualquer
    impressora. A grade é sempre a mesma (três colunas de 31 linhas): só muda
@@ -24,8 +25,8 @@
     const LARGURA = COLUNAS * LARGURA_COLUNA + MARCA;
     const ALTURA = TOPO * 2 + LINHAS * PASSO;
 
-    /* As primeiras linhas da coluna 1 são do número da lista e do rótulo. */
-    const PRIMEIRA_LINHA_QUESTOES = 14;
+    /* As duas primeiras linhas da coluna 1 são do rótulo (série e área). */
+    const PRIMEIRA_LINHA_QUESTOES = 2;
 
     function y(linha) { return TOPO + linha * PASSO + PASSO / 2; }
     function xColuna(coluna) { return coluna * LARGURA_COLUNA + MARCA + 1.2; }
@@ -191,11 +192,6 @@
                 marcas.push({ cx: f3(fileira * LARGURA_COLUNA + MARCA / 2), cy: f3(y(linha)), linha: linha, fileira: fileira });
             }
         }
-        const lista = [];
-        for (let d = 0; d <= 9; d++) {
-            lista.push({ casa: 'dezena', valor: String(d), cx: f3(xBolha(0, 0)), cy: f3(y(d + 2)) });
-            lista.push({ casa: 'unidade', valor: String(d), cx: f3(xBolha(0, 1)), cy: f3(y(d + 2)) });
-        }
         const questoes = [];
         grade.questoes.forEach(function (q) {
             if (discursivas.indexOf(q.numero) !== -1) return;
@@ -205,7 +201,6 @@
         });
         return Object.assign({}, codigo, {
             marcas_grade: marcas,
-            bolhas_lista: lista,
             bolhas_questoes: questoes,
             alternativas: LETRAS.slice(0, alternativas),
             n_questoes: grade.questoes.length
@@ -231,19 +226,10 @@
             }
         }
 
-        /* número da lista */
-        const meioLista = (xBolha(0, 0) + xBolha(0, 1)) / 2;
-        partes.push(texto(meioLista, y(0), 'Núm. da lista', 1.9, 'middle'));
-        [0, 1].forEach(function (k) {
-            partes.push('<rect class="caixa" x="' + f(xBolha(0, k) - 1.75) + '" y="' + f(y(1) - 1.6) + '" width="3.5" height="3.2"/>');
-        });
-        for (let d = 0; d <= 9; d++) {
-            partes.push(texto(xColuna(0) + 4.6, y(d + 2), String(d), 2.1, 'end'));
-            partes.push(bolha(xBolha(0, 0), y(d + 2)));
-            partes.push(bolha(xBolha(0, 1), y(d + 2)));
-        }
+        /* rótulo da série e da área, nas duas linhas acima da primeira questão */
+        const meioRotulo = xBolha(0, 2);
         rotulo.forEach(function (linhaRotulo, i) {
-            partes.push(texto(meioLista + 3, y(12 + i), escapar(linhaRotulo), 1.9, 'middle'));
+            partes.push(texto(meioRotulo, y(i), escapar(linhaRotulo), 1.9, 'middle'));
         });
 
         grade.cabecalhos.forEach(function (c) {

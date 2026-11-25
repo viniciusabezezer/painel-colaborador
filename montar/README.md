@@ -161,11 +161,12 @@ está embutido no app, para sair sempre, até sem internet.)
 Logo abaixo vem o quadro de **Instruções** e as duas colunas. Com o gabarito
 ligado, a primeira coluna abre com o **GABARITO (NÃO RASURE)**:
 
-- o *Núm. da lista* com dois dígitos para marcar;
-- o rótulo da série e da área (`2º Ano` / `C.N.`);
-- as questões em blocos de cinco, com `A B C D E` em cima, de 1 a 14 na
-  primeira coluna, de 15 a 40 na segunda e de 41 em diante na terceira, como na
-  prova impressa da escola (até 65 questões);
+- o rótulo da série e da área (`2º Ano` / `C.N.`) nas duas primeiras linhas.
+  **Não há "Núm. da lista" para marcar**: quem é o aluno vem do QR da folha
+  (Identificador) e qual é a prova vem da chave dentro dele;
+- as questões em blocos de cinco, com `A B C D E` em cima, enchendo a primeira
+  coluna logo abaixo do rótulo, depois a segunda e a terceira (até
+  `Gabarito.capacidade()` questões);
 - as marcas quadradas de alinhamento em quatro fileiras verticais, de cinco em
   cinco linhas, sempre no mesmo lugar, qualquer que seja o número de questões.
 

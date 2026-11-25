@@ -101,14 +101,14 @@ test('a chave do QR acha a prova entre as que o aparelho tem', () => {
 });
 
 test('prova com chave e QR sem chave: o aluno sai do QR e a leitura vai para revisão', () => {
-    const sem = Id.resolver({ qr: Qr.ler(A7), listaMarcada: 7, alunos: ALUNOS, exigirChave: true });
+    const sem = Id.resolver({ qr: Qr.ler(A7), alunos: ALUNOS, exigirChave: true });
     assert.equal(sem.aluno.id, 'a7');
     assert.equal(sem.revisar, true);
     assert.equal(sem.alertas[0].tipo, 'chave');
     assert.match(sem.alertas[0].detalhe, /não tem a chave da prova/);
-    const com = Id.resolver({ qr: Qr.ler(A7_A), listaMarcada: 7, alunos: ALUNOS, exigirChave: true });
+    const com = Id.resolver({ qr: Qr.ler(A7_A), alunos: ALUNOS, exigirChave: true });
     assert.equal(com.revisar, false);
-    assert.equal(Id.resolver({ qr: Qr.ler(A7), listaMarcada: 7, alunos: ALUNOS, exigirChave: false }).revisar, false, 'prova sem chave não cobra chave');
+    assert.equal(Id.resolver({ qr: Qr.ler(A7), alunos: ALUNOS, exigirChave: false }).revisar, false, 'prova sem chave não cobra chave');
 });
 
 test('trocar de prova pelo QR: a identidade leva o aviso da troca', () => {
@@ -120,7 +120,7 @@ test('trocar de prova pelo QR: a identidade leva o aviso da troca', () => {
             return Id.conferirProva(qr, aberta);
         }
     });
-    const cartao = { lido: { ok: true, lista: { numero: 7 }, codigo: { texto: 'X' }, respostas: {} }, nitido: 30 };
+    const cartao = { lido: { ok: true, codigo: { texto: 'X' }, respostas: {} }, nitido: 30 };
     fluxo.quadro({ agora: 1000, qrTexto: A7_A, ler: () => cartao });
     assert.equal(aberta.id, ID_A, 'o QR é da prova que já estava aberta: nada troca');
     assert.equal(fluxo.identidade().nota, '');
@@ -131,51 +131,41 @@ test('trocar de prova pelo QR: a identidade leva o aviso da troca', () => {
 
 /* ===== quem é o aluno ===== */
 
-test('com QR, o QR manda: o número marcado nas bolhas só confere', () => {
-    const certo = Id.resolver({ qr: Qr.ler(A7), listaMarcada: 7, alunos: ALUNOS });
-    assert.equal(certo.aluno.id, 'a7');
-    assert.equal(certo.origem, 'qr');
-    assert.equal(certo.revisar, false);
-
-    const errado = Id.resolver({ qr: Qr.ler(A7), listaMarcada: 12, alunos: ALUNOS });
-    assert.equal(errado.aluno.id, 'a7', 'vale o QR, não o que o aluno marcou');
-    assert.equal(errado.lista, 7);
-    assert.equal(errado.revisar, true);
-    assert.match(errado.alertas[0].detalhe, /marcado no cartão \(12\) não bate com o QR \(7\)/);
-
-    const semBolhas = Id.resolver({ qr: Qr.ler(A7), listaMarcada: null, alunos: ALUNOS });
-    assert.equal(semBolhas.aluno.id, 'a7');
-    assert.equal(semBolhas.revisar, false, 'sem o número marcado não há o que conferir');
+test('o aluno sai do QR; o cartão não tem número da lista para conferir', () => {
+    const r = Id.resolver({ qr: Qr.ler(A7), alunos: ALUNOS });
+    assert.equal(r.aluno.id, 'a7');
+    assert.equal(r.lista, 7);
+    assert.equal(r.origem, 'qr');
+    assert.equal(r.revisar, false);
 });
 
 test('a turma do QR é obrigatória: o mesmo número existe em outra turma', () => {
-    const b7 = Id.resolver({ qr: Qr.ler(qrTexto('1B', '007', 'BETO')), listaMarcada: 7, alunos: ALUNOS });
+    const b7 = Id.resolver({ qr: Qr.ler(qrTexto('1B', '007', 'BETO')), alunos: ALUNOS });
     assert.equal(b7.aluno.id, 'b7');
-    const semTurma = Id.resolver({ qr: Qr.ler(qrTexto('1C', '007', 'CAIO')), listaMarcada: 7, alunos: ALUNOS });
+    const semTurma = Id.resolver({ qr: Qr.ler(qrTexto('1C', '007', 'CAIO')), alunos: ALUNOS });
     assert.equal(semTurma.aluno, null, 'não cai no 7 de outra turma');
     assert.equal(semTurma.revisar, true);
     assert.match(semTurma.alertas[0].detalhe, /1C nº 7, que não está na lista desta prova/);
 });
 
-test('sem QR (ligado de propósito), o aluno sai do número marcado, como antes', () => {
-    const r = Id.resolver({ qr: null, listaMarcada: 8, alunos: ALUNOS });
-    assert.equal(r.aluno.id, 'a8');
-    assert.equal(r.origem, 'lista');
-    assert.equal(r.revisar, false);
-    assert.equal(Id.resolver({ qr: null, listaMarcada: null, alunos: ALUNOS }).aluno, null);
+test('sem QR ninguém é identificado: a leitura vai para revisão', () => {
+    const r = Id.resolver({ qr: null, alunos: ALUNOS });
+    assert.equal(r.aluno, null);
+    assert.equal(r.lista, null);
+    assert.equal(r.origem, 'sem-qr');
+    assert.equal(r.revisar, true);
+    assert.equal(r.alertas[0].tipo, 'qr');
 });
 
 /* ===== o passo a passo da câmera ===== */
 
-function cena(opcoes) {
-    opcoes = opcoes || {};
+function cena() {
     const lidas = { n: 0 };
     let t = 0;
     const fluxo = Id.criarFluxo({
-        semQr: !!opcoes.semQr,
         aceitar: (qr) => Id.conferirProva(qr, PROVA)
     });
-    const cartao = { lido: { ok: true, lista: { numero: 7 }, codigo: { texto: 'ACE345' }, respostas: {} }, nitido: 30 };
+    const cartao = { lido: { ok: true, codigo: { texto: 'ACE345' }, respostas: {} }, nitido: 30 };
     return {
         lidas,
         fluxo,
@@ -220,7 +210,7 @@ test('QR primeiro, depois o gabarito: registra uma vez, com a identidade do QR',
     assert.equal(r.acao, 'registrar');
     assert.equal(r.qrTexto, A7);
     assert.equal(r.identidade.qr.nome, 'ANA FICTICIA');
-    assert.equal(r.lido.lista.numero, 7);
+    assert.equal(r.lido.lista, undefined);
     assert.equal(c.fluxo.identidade(), null, 'a identidade some ao registrar');
 });
 
@@ -309,10 +299,10 @@ test('enquanto o QR segue aparecendo, a identidade não expira', () => {
 test('leitura instável (o cartão muda de um quadro para o outro) não registra', () => {
     const c = cena();
     c.quadro(A7);
-    const variacoes = [7, 8, 7, 9, 7, 8];
+    const variacoes = ['A', 'B', 'A', 'C', 'A', 'B'];
     let acao = 'esperar';
-    variacoes.forEach((n) => {
-        acao = c.quadro('', { lido: { ok: true, lista: { numero: n }, codigo: { texto: 'ACE345' } }, nitido: 30 }).acao;
+    variacoes.forEach((letra) => {
+        acao = c.quadro('', { lido: { ok: true, respostas: { 1: { status: 'marcada', valor: letra } }, codigo: { texto: 'ACE345' } }, nitido: 30 }).acao;
     });
     assert.equal(acao, 'esperar');
     assert.equal(ate(c, '', 3).acao, 'registrar', 'firme de novo, registra');
@@ -321,7 +311,7 @@ test('leitura instável (o cartão muda de um quadro para o outro) não registra
 test('foto tremida ou sem as marcas não registra e a dica diz o que fazer', () => {
     const c = cena();
     c.quadro(A7);
-    assert.equal(c.quadro('', { lido: { ok: true, lista: { numero: 7 } }, nitido: 3 }).dica, 'Chegue mais perto: a foto está tremida.');
+    assert.equal(c.quadro('', { lido: { ok: true, respostas: {} }, nitido: 3 }).dica, 'Chegue mais perto: a foto está tremida.');
     assert.equal(c.quadro('', { lido: { ok: false }, nitido: 30 }).dica, 'Enquadre o cartão inteiro, com as marcas pretas visíveis.');
 });
 
@@ -331,7 +321,7 @@ const lixoDoQr = (() => {
     const respostas = {};
     for (let q = 1; q <= 10; q++) respostas[q] = { status: q <= 8 ? 'dupla' : (q === 9 ? 'ambigua' : 'marcada') };
     return {
-        ok: true, erroPx: 3.09, lista: { numero: null }, respostas,
+        ok: true, erroPx: 3.09, respostas,
         codigo: { texto: '??????', status: 'ilegivel', posicoes: [1, 2, 3, 4, 5, 6].map(() => ({ status: 'dupla' })) }
     };
 })();
@@ -355,19 +345,6 @@ test('com o QR lido, o QR de perto no quadro não é registrado como se fosse a 
     assert.equal(r.dica, 'Enquadre o cartão inteiro, com as marcas pretas visíveis.');
     assert.equal(c.fluxo.identidade().qr.numero, '007', 'a identidade continua esperando o gabarito');
     assert.equal(ate(c, '', 4).acao, 'registrar', 'quando o cartão de verdade aparece, registra');
-});
-
-test('"Folhas sem QR" ligado: lê o cartão sem identidade, como antes', () => {
-    const c = cena({ semQr: true });
-    const r = ate(c, '', 4);
-    assert.equal(r.acao, 'registrar');
-    assert.equal(r.identidade, null);
-    assert.equal(r.qrTexto, '');
-    /* e, se o QR aparecer, ele continua valendo */
-    c.quadro(A8);
-    assert.equal(ate(c, '', 4).qrTexto, A8);
-    c.fluxo.semQr(false);
-    assert.equal(ate(c, '', 6).acao, 'esperar', 'desligado, volta a exigir o QR');
 });
 
 /* ===== ler o QR de verdade ===== */

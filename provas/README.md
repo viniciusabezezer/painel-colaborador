@@ -68,8 +68,8 @@ do alto e 1 cm da esquerda), então basta subir o PDF.
 2. **Os alunos** — cola-se tudo de uma vez, todas as turmas juntas. A turma pode
    vir como título de bloco (`TURMA 3B`) ou na própria linha (`3B; João da
    Silva`, `7;CARLA MENDES;1B`, `PEDRO ALVES - 3A`). Se a lista já vier
-   numerada, é **esse** número que vale: é o mesmo que o aluno preenche em
-   “Núm. da lista” na folha de respostas. Sem numeração, a ordem alfabética
+   numerada, é **esse** número que vale: é o número da lista (chamada) da
+   escola, o mesmo que vai no QR. Sem numeração, a ordem alfabética
    manda — e aí a mesma turma gera sempre os mesmos códigos. Além de **Puxar do
    Malu Presente** (todas as turmas do ano), dá para **escolher só as turmas que
    se quer puxar agora**: A a F das séries das provas importadas. Cada puxada
@@ -209,11 +209,9 @@ depois o gabarito:
 2. **A identidade vale para uma leitura só.** Ao registrar, ela é apagada, então
    o QR de um aluno nunca vai parar na folha do seguinte. Sem o QR aparecer por
    6 segundos, ela também some.
-3. **O aluno sai da turma e do número do QR.** O número da lista marcado nas
-   bolhas, se existir, só confere: se não bate com o QR, a leitura vai para
-   revisão e vale o QR.
-4. **Folhas sem QR** (prova que não passou pelo Identificador, folha antiga): a
-   pessoa liga "Folhas sem QR" e o aluno sai do número marcado, como antes.
+3. **O aluno sai da turma e do número do QR.** A folha de respostas não tem
+   mais o "Núm. da lista" para o aluno marcar: só o QR diz quem é. Foto sem QR
+   não é registrada (no envio de fotos) e a câmera nem começa a ler sem ele.
 
 O QR é lido pelo navegador (BarcodeDetector, no Chrome do Android e do
 computador) e, onde ele não existe, pelo leitor embutido jsQR

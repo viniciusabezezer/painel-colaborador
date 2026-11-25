@@ -120,7 +120,7 @@ try {
     conferir(info.secao === 'BIOLOGIA', 'o título da seção sai na folha');
 
     const svg = await pagina.$eval('#paginas .gabarito-svg', (s) => ({ bolhas: s.querySelectorAll('circle').length, texto: s.textContent }));
-    conferir(svg.bolhas === 20 + 12 * 5, 'o gabarito tem as bolhas do número da lista e das 12 questões');
+    conferir(svg.bolhas === 12 * 5, 'o gabarito tem só as bolhas das 12 questões (sem número da lista)');
 
     const aparencia = await pagina.evaluate(() => {
         const f = document.querySelector('#paginas .folha');
@@ -325,7 +325,7 @@ try {
     await pagina.fill('.questao--texto textarea[data-campo="enunciado"]', 'TEXTO I\nUm texto de apoio para as próximas questões.');
     await pagina.waitForTimeout(500);
     conferir(await pagina.$$eval('#paginas .texto-apoio', (n) => n.length) === 2, 'o texto de apoio sai na prova');
-    conferir(await pagina.$eval('#paginas .gabarito-svg', (s) => s.querySelectorAll('circle').length) === 20 + 12 * 5, 'o texto de apoio não entra no gabarito');
+    conferir(await pagina.$eval('#paginas .gabarito-svg', (s) => s.querySelectorAll('circle').length) === 12 * 5, 'o texto de apoio não entra no gabarito');
 
     /* desfazer */
     const antesDeApagar = await pagina.$$eval('#secoes .questao', (n) => n.length);

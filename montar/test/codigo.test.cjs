@@ -262,6 +262,6 @@ test('a geometria exportada é a mesma da referência do bloco de código', () =
     assert.deepEqual(geo.marcas_codigo, ref.marcas_codigo);
     assert.deepEqual(geo.bolhas_letras, ref.bolhas_letras);
     assert.deepEqual(geo.bolhas_digitos, ref.bolhas_digitos);
-    assert.equal(geo.bolhas_lista.length, 20);
+    assert.equal(geo.bolhas_lista, undefined, 'o número da lista não existe mais na folha');
     assert.ok(geo.bolhas_questoes.length > 0);
 });

@@ -10,8 +10,7 @@
      o QR de um aluno nunca vai parar na folha do aluno seguinte.
    - O QR tem de ser da prova que está aberta. QR de outra prova não vira
      identidade.
-   - O número da lista marcado nas bolhas, quando existe, só confere: se não
-     bate com o QR, a leitura vai para revisão e vale o QR.
+   - O cartão não tem número da lista para marcar: só o QR diz quem é o aluno.
 
    Nada aqui mexe na tela. A câmera e as telas ficam em app.js. */
 (function (global) {
@@ -129,17 +128,16 @@
         })[0] || null;
     }
 
-    /* Quem é, qual é o número da lista e o que merece revisão.
-       entrada: { qr, listaMarcada, alunos, exigirChave }
+    /* Quem é, qual é o número da lista e o que merece revisão. O cartão não
+       tem mais o número da lista para marcar: sem QR, ninguém é identificado.
+       entrada: { qr, alunos, exigirChave }
        exigirChave: a prova tem chave, então um QR sem chave é de antes dela. */
     function resolver(entrada) {
         var qr = entrada.qr;
-        var marcada = entrada.listaMarcada;
-        var temMarcada = marcada != null && marcada !== '';
         var alertas = [];
         var aluno = null;
         var lista = null;
-        var origem = 'lista';
+        var origem = 'sem-qr';
         if (qr) {
             origem = 'qr';
             lista = parseInt(qr.numero, 10);
@@ -147,15 +145,11 @@
             if (!aluno) {
                 alertas.push({ tipo: 'aluno', campo: 'lista', detalhe: 'O QR é de ' + qr.turma + ' nº ' + lista + ', que não está na lista desta prova.' });
             }
-            if (temMarcada && Number(marcada) !== lista) {
-                alertas.push({ tipo: 'lista', campo: 'lista', detalhe: 'O número da lista marcado no cartão (' + marcada + ') não bate com o QR (' + lista + '). Vale o QR.' });
-            }
             if (entrada.exigirChave && !qr.chave) {
                 alertas.push({ tipo: 'chave', campo: 'qr', detalhe: 'Este QR não tem a chave da prova (foi gerado antes dela existir, ou fora do Montador). Confira se a folha é desta prova.' });
             }
         } else {
-            lista = temMarcada ? Number(marcada) : null;
-            aluno = Qr.casarAluno(entrada.alunos, lista, null);
+            alertas.push({ tipo: 'qr', campo: 'qr', detalhe: 'Cartão lido sem o QR da folha: não sei de quem é. Mostre o QR primeiro, ou escolha o aluno.' });
         }
         return { aluno: aluno, lista: lista, origem: origem, alertas: alertas, revisar: alertas.length > 0 };
     }
@@ -171,7 +165,6 @@
     function criarFluxo(opcoes) {
         opcoes = opcoes || {};
         var aceitar = opcoes.aceitar || function () { return { ok: true }; };
-        var semQr = !!opcoes.semQr;
         var identidade = null;
         var lida = '';        /* QR da folha que acabou de ser registrada */
         var estavel = [];
@@ -201,7 +194,6 @@
         }
 
         return {
-            semQr: function (valor) { if (valor !== undefined) semQr = !!valor; return semQr; },
             identidade: function () { return identidade; },
             quadro: function (e) {
                 var aviso = e.qrTexto ? entregarQr(e.qrTexto, e.agora) : '';
@@ -213,7 +205,7 @@
                     aviso = aviso || 'O QR saiu do quadro. Mostre o QR da folha de novo.';
                 }
 
-                if (!identidade && !semQr) {
+                if (!identidade) {
                     estavel = [];
                     return resposta('esperar', folhaJaLida ? 'Folha lida. Mostre o QR da próxima.' : 'Mostre o QR da folha primeiro.', { aviso: aviso });
                 }
@@ -226,7 +218,9 @@
                     return resposta('esperar', tremida ? 'Chegue mais perto: a foto está tremida.' : 'Enquadre o cartão inteiro, com as marcas pretas visíveis.', { aviso: aviso });
                 }
 
-                var chave = (lido.lista && lido.lista.numero) + '|' + (lido.codigo && lido.codigo.texto);
+                var chave = Object.keys(lido.respostas || {}).sort(function (a, b) { return a - b; }).map(function (n) {
+                    return lido.respostas[n].valor || '-';
+                }).join('') + '|' + (lido.codigo && lido.codigo.texto);
                 estavel.push(chave);
                 if (estavel.length > ESTAVEIS) estavel.shift();
                 if (estavel.length < ESTAVEIS) return resposta('esperar', 'Segure firme…', { aviso: aviso });

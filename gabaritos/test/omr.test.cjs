@@ -60,9 +60,6 @@ test('lê lista, respostas e código numa folha sintética com o código ligado'
     const geo = Gabarito.geometria({ total: 10, alternativas: 5 });
     const gabarito = { 1: 'B', 2: 'C', 3: 'D', 4: 'C', 5: 'A', 6: 'D', 7: 'B', 8: 'B', 9: 'C', 10: 'C' };
     const preenchidas = [];
-    /* lista 07: dezena 0, unidade 7 */
-    preenchidas.push(achar(geo.bolhas_lista, 'casa', 'dezena').filter(function (b) { return b.valor === '0'; })[0]);
-    preenchidas.push(achar(geo.bolhas_lista, 'casa', 'unidade').filter(function (b) { return b.valor === '7'; })[0]);
     Object.keys(gabarito).forEach(function (q) {
         preenchidas.push(geo.bolhas_questoes.filter(function (b) { return b.questao === Number(q) && b.valor === gabarito[q]; })[0]);
     });
@@ -74,7 +71,7 @@ test('lê lista, respostas e código numa folha sintética com o código ligado'
     const img = raster(geo, preenchidas, { comCodigo: true });
     const lido = OMR.ler(img, geo, { codigo: true });
     assert.equal(lido.ok, true, JSON.stringify(lido.alertas));
-    assert.equal(lido.lista.numero, 7);
+    assert.equal(lido.lista, undefined, 'a folha não tem mais o número da lista');
     Object.keys(gabarito).forEach(function (q) {
         assert.equal(lido.respostas[q].status, 'marcada', 'questão ' + q);
         assert.equal(lido.respostas[q].valor, gabarito[q]);

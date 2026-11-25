@@ -59,11 +59,6 @@
 
     function comCodigo(p) { return !!(p && p.codigoVerificacao); }
 
-    /* Folhas sem QR (prova que não passou pelo Identificador, folha antiga):
-       a pessoa liga isto de propósito e o aluno sai do número da lista marcado.
-       Na demonstração já vem ligado, porque os cartões de exemplo não têm QR. */
-    function semQrAtivo() { return st.semQr == null ? st.modo === 'demo' : !!st.semQr; }
-
     function podeCorrigir(p) {
         if (st.modo === 'demo') return true;
         var eu = st.perfil;
@@ -372,7 +367,6 @@
                 avisoFoto() +
                 '<div class="camera" id="camera"><video id="video" playsinline autoplay muted></video><div class="moldura"><i class="canto tl"></i><i class="canto tr"></i><i class="canto bl"></i><i class="canto br"></i></div><div class="dica"><span id="dica-cam">Mostre o QR da folha primeiro.</span></div><div class="flash" id="flash"></div></div>' +
                 '<p class="suave" id="qr-lido">Em cada folha: primeiro o QR, depois o gabarito.</p>' +
-                '<label class="suave"><input type="checkbox" id="sem-qr"' + (semQrAtivo() ? ' checked' : '') + '> Folhas sem QR (o aluno sai do número da lista marcado)</label>' +
                 '<label class="suave">Sem leitura do QR? Cole o texto dele aqui <input class="campo" id="colar-qr" placeholder="MLSPROVA1|… ou o código antigo, com o nome na linha de baixo" autocomplete="off"></label>' +
                 '<div class="camera-barra"><button class="btn" type="button" id="parar">' + ic('pausa', 20) + ' Parar</button><a class="btn" href="#/enviar">' + ic('enviar', 20) + ' Enviar fotos</a></div>' +
                 '<p class="suave" id="cam-erro" hidden></p><ul class="fila-lidos" id="fila-cam"></ul></div>',
@@ -418,7 +412,6 @@
         /* Em cada folha: primeiro o QR (quem é), depois o gabarito. A identidade
            vale para uma leitura só e é apagada ao registrar (ver identificar.js). */
         var fluxo = MaluIdentificar.criarFluxo({
-            semQr: semQrAtivo(),
             aceitar: function (qr) {
                 /* A chave do QR acha a prova: se a folha é de outra prova que a
                    pessoa corrige, a tela troca de prova sozinha. */
@@ -434,8 +427,6 @@
                 return MaluIdentificar.conferirProva(qr, p);
             }
         });
-        var caixaSemQr = el.querySelector('#sem-qr');
-        caixaSemQr.addEventListener('change', function () { st.semQr = caixaSemQr.checked; fluxo.semQr(caixaSemQr.checked); });
         var saidaQr = el.querySelector('#qr-lido');
         var campoQr = el.querySelector('#colar-qr');
         var AJUDA_QR = 'Em cada folha: primeiro o QR, depois o gabarito.';
@@ -537,7 +528,7 @@
     }
 
     /* item: a leitura já registrada. Com ele, o código é conferido com o do
-       aluno identificado (pelo QR), não com o número marcado nas bolhas. */
+       aluno identificado pelo QR. */
     function resumoCurto(p, lido, item) {
         var ac = 0;
         var total = Object.keys(p.gabarito).length;
@@ -547,14 +538,13 @@
         });
         var cod = '';
         if (comCodigo(p) && lido.codigo) {
-            var stc = item && item.statusCodigo ? item.statusCodigo : MontarCodigo.conferir(codigoEsperado(p, lido), lido.codigo);
+            var stc = item && item.statusCodigo ? item.statusCodigo : MontarCodigo.conferir(codigoEsperado(p, item && item.lista), lido.codigo);
             cod = stc === 'correto' ? ' · código certo' : (stc === 'em_branco' ? ' · código em branco' : ' · código ' + stc);
         }
         return ac + '/' + total + ' acertos' + cod;
     }
 
-    function codigoEsperado(p, lidoOuLista, turma) {
-        var lista = typeof lidoOuLista === 'number' ? lidoOuLista : (lidoOuLista.lista && lidoOuLista.lista.numero);
+    function codigoEsperado(p, lista, turma) {
         var achados = (p.codigos || []).filter(function (c) { return c.lista === lista && (!turma || c.turma === turma); });
         return achados[0] ? achados[0].codigo : '';
     }
@@ -606,10 +596,8 @@
 
     function registrar(p, lido, jpeg) {
         var qr = (window.MaluQrProva && lido.qrTexto) ? MaluQrProva.ler(lido.qrTexto) : null;
-        /* O QR manda. O número marcado nas bolhas só confere: se não bate, a
-           leitura vai para revisão e vale o QR. Sem QR (folha sem QR, ligada de
-           propósito), o aluno sai do número marcado, como antes. */
-        var ident = MaluIdentificar.resolver({ qr: qr, listaMarcada: lido.lista && lido.lista.numero, alunos: p.alunos, exigirChave: !!p.chave });
+        /* Quem é o aluno vem só do QR: o cartão não tem número da lista. */
+        var ident = MaluIdentificar.resolver({ qr: qr, alunos: p.alunos, exigirChave: !!p.chave });
         var lista = ident.lista;
         var aluno = ident.aluno;
         var status = null;
@@ -618,8 +606,7 @@
             codigoLido = lido.codigo ? lido.codigo.texto : '';
             status = MontarCodigo.conferir(aluno ? aluno.codigo : codigoEsperado(p, lista), lido.codigo || '');
         }
-        /* com o QR, "não consegui ler o número da lista" não importa mais */
-        var alertas = (lido.alertas || []).filter(function (a) { return !(ident.origem === 'qr' && a.tipo === 'lista'); }).concat(ident.alertas);
+        var alertas = (lido.alertas || []).concat(ident.alertas);
         var revisar = alertas.length > 0 || status === 'ambiguo';
         Object.keys(lido.respostas || {}).forEach(function (q) {
             var r = lido.respostas[q];
@@ -697,14 +684,11 @@
             html: '<div class="pilha">' + topo('Enviar fotos', 'Várias de uma vez. PDF do scanner também entra, uma página por cartão.', '#/prova') +
                 avisoFoto() +
                 '<p class="suave">Cada foto precisa mostrar o QR da folha: é ele que diz de quem é o cartão.</p>' +
-                '<label class="suave"><input type="checkbox" id="sem-qr"' + (semQrAtivo() ? ' checked' : '') + '> Folhas sem QR (o aluno sai do número da lista marcado)</label>' +
                 '<div class="soltar" id="soltar"><p><strong>Toque para escolher</strong> ou solte as fotos aqui.</p><input id="arquivos" type="file" accept="image/*,application/pdf" multiple hidden></div>' +
                 '<ul class="arquivos" id="lista-arq"></ul></div>',
             montar: function (el) {
                 var input = el.querySelector('#arquivos');
                 var zona = el.querySelector('#soltar');
-                var caixaSemQr = el.querySelector('#sem-qr');
-                caixaSemQr.addEventListener('change', function () { st.semQr = caixaSemQr.checked; });
                 zona.onclick = function () { input.click(); };
                 zona.ondragover = function (e) { e.preventDefault(); zona.classList.add('sobre'); };
                 zona.ondragleave = function () { zona.classList.remove('sobre'); };
@@ -746,14 +730,13 @@
                         continue;
                     }
                     /* Sem QR (ou com o de outra prova) a folha não é registrada. */
-                    if (qr) {
-                        var confere = MaluIdentificar.conferirProva(qr, alvo);
-                        if (!confere.ok) {
-                            textos.push('Cartão ' + (k + 1) + ': ' + confere.motivo + ' Não registrei.');
-                            continue;
-                        }
-                    } else if (!semQrAtivo()) {
-                        textos.push('Cartão ' + (k + 1) + ': não achei o QR. Fotografe de novo com o QR visível, ou marque "Folhas sem QR". Não registrei.');
+                    if (!qr) {
+                        textos.push('Cartão ' + (k + 1) + ': não achei o QR. Fotografe de novo com o QR visível. Não registrei.');
+                        continue;
+                    }
+                    var confere = MaluIdentificar.conferirProva(qr, alvo);
+                    if (!confere.ok) {
+                        textos.push('Cartão ' + (k + 1) + ': ' + confere.motivo + ' Não registrei.');
                         continue;
                     }
                     lido.qrTexto = qrTexto;
@@ -1301,7 +1284,7 @@
                 '<section class="cartao"><label class="opcao-linha"><span class="tx">Letra maior</span><input class="chave-sw" type="checkbox" id="fonte"' + (st.ajustes.fonteMaior ? ' checked' : '') + '></label>' +
                 '<label class="opcao-linha"><span class="tx">Contraste alto</span><input class="chave-sw" type="checkbox" id="contraste"' + (st.ajustes.contraste ? ' checked' : '') + '></label></section>' +
                 '<section class="cartao"><h2>Fotos e LGPD</h2><p>Os alunos são menores. A foto do cartão serve só para revisar a leitura e fica 3 dias. Depois é apagada, e para reler é preciso fotografar de novo.</p>' +
-                '<p>O cartão leva o número da lista. A nota e as respostas ficam na escola, no mesmo lugar do Montador. Nada disso vai para uma inteligência artificial de fora.</p>' +
+                '<p>O cartão é ligado ao aluno pelo QR da folha. A nota e as respostas ficam na escola, no mesmo lugar do Montador. Nada disso vai para uma inteligência artificial de fora.</p>' +
                 (p ? '<p class="suave">Prazo das notas desta prova: ' + (p.prazoNotas ? U.dataBR(p.prazoNotas) : 'ainda não informado no Montador') + '.</p>' : '') +
                 '</section></div>',
             montar: function (el) {

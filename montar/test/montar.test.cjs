@@ -109,19 +109,19 @@ test('pendências apontam alternativa vazia e resposta não marcada', () => {
 
 /* ===== gabarito ===== */
 
-test('a grade repete o desenho da prova bimestral: 1 a 14, 15 a 40, 41 em diante', () => {
-    const g = Gabarito.distribuir(45);
+test('a grade começa logo abaixo do rótulo e enche coluna por coluna', () => {
+    const g = Gabarito.distribuir(60);
     assert.ok(g.cabeu);
-    const coluna = (n) => g.questoes[n - 1].coluna;
-    assert.equal(coluna(14), 0);
-    assert.equal(coluna(15), 1);
-    assert.equal(coluna(40), 1);
-    assert.equal(coluna(41), 2);
-    /* cabeçalho no topo de cada coluna e a cada bloco de cinco */
+    /* cabeçalho no topo de cada coluna; a coluna 1 deixa duas linhas ao rótulo */
+    assert.ok(g.cabecalhos.some((c) => c.coluna === 0 && c.linha === 2));
     assert.ok(g.cabecalhos.some((c) => c.coluna === 1 && c.linha === 0));
-    assert.equal(g.questoes[14].linha, 1, 'a 15 vem logo abaixo do cabeçalho da coluna');
-    assert.equal(g.questoes[19].linha, 6, 'de 15 a 20 sob um cabeçalho só, como na prova da escola');
-    assert.equal(g.questoes[39].linha, 30, 'a 40 fecha a segunda coluna');
+    assert.equal(g.questoes[0].linha, 3, 'a 1 vem logo abaixo do cabeçalho da coluna');
+    /* de uma coluna para a seguinte, sem pular número nem repetir posição */
+    const posicoes = g.questoes.map((q) => q.coluna + ':' + q.linha);
+    assert.equal(new Set(posicoes).size, 60);
+    g.questoes.forEach((q, i) => { if (i) assert.ok(q.coluna > g.questoes[i - 1].coluna || q.linha > g.questoes[i - 1].linha); });
+    /* as duas primeiras linhas da coluna 1 ficam livres para o rótulo */
+    g.questoes.filter((q) => q.coluna === 0).forEach((q) => assert.ok(q.linha >= 3));
 });
 
 test('nenhuma linha passa do fim da coluna e a capacidade é respeitada', () => {
@@ -137,8 +137,9 @@ test('o SVG tem as marcas, as bolhas e o rótulo, em milímetros', () => {
     const svg = Gabarito.svg({ total: 10, alternativas: 5, rotulo: ['2º Ano', 'C.N.'], discursivas: [10] });
     assert.match(svg, /width="86.6mm"/);
     assert.equal((svg.match(/class="marca"/g) || []).length, 4 * 7, 'quatro fileiras de sete marcas');
-    /* 20 bolhas do número da lista + 9 questões × 5 */
-    assert.equal((svg.match(/<circle/g) || []).length, 20 + 9 * 5);
+    /* 9 questões × 5 bolhas; o número da lista não existe mais */
+    assert.equal((svg.match(/<circle/g) || []).length, 9 * 5);
+    assert.ok(!/Núm\. da lista/.test(svg));
     assert.match(svg, />C\.N\.</);
     assert.match(svg, />discursiva</);
     assert.ok(Gabarito.LARGURA_MM <= 87, 'cabe numa coluna de 8,7 cm');
