@@ -59,6 +59,11 @@
 
     function comCodigo(p) { return !!(p && p.codigoVerificacao); }
 
+    /* Folhas sem QR (prova que não passou pelo Identificador, folha antiga):
+       a pessoa liga isto de propósito e o aluno sai do número da lista marcado.
+       Na demonstração já vem ligado, porque os cartões de exemplo não têm QR. */
+    function semQrAtivo() { return st.semQr == null ? st.modo === 'demo' : !!st.semQr; }
+
     function podeCorrigir(p) {
         if (st.modo === 'demo') return true;
         var eu = st.perfil;
@@ -365,15 +370,16 @@
         return {
             html: '<div class="pilha">' + topo('Escanear', esc(p.titulo), '#/prova') +
                 avisoFoto() +
-                '<div class="camera" id="camera"><video id="video" playsinline autoplay muted></video><div class="moldura"><i class="canto tl"></i><i class="canto tr"></i><i class="canto bl"></i><i class="canto br"></i></div><div class="dica"><span id="dica-cam">Aponte para o cartão inteiro.</span></div><div class="flash" id="flash"></div></div>' +
-                '<label class="suave">Texto do QR da prova <input class="campo" id="colar-qr" placeholder="MLSPROVA1|… ou o código antigo, com o nome na linha de baixo" autocomplete="off"></label>' +
-                '<p class="suave" id="qr-lido"></p>' +
+                '<div class="camera" id="camera"><video id="video" playsinline autoplay muted></video><div class="moldura"><i class="canto tl"></i><i class="canto tr"></i><i class="canto bl"></i><i class="canto br"></i></div><div class="dica"><span id="dica-cam">Mostre o QR da folha primeiro.</span></div><div class="flash" id="flash"></div></div>' +
+                '<p class="suave" id="qr-lido">Em cada folha: primeiro o QR, depois o gabarito.</p>' +
+                '<label class="suave"><input type="checkbox" id="sem-qr"' + (semQrAtivo() ? ' checked' : '') + '> Folhas sem QR (o aluno sai do número da lista marcado)</label>' +
+                '<label class="suave">Sem leitura do QR? Cole o texto dele aqui <input class="campo" id="colar-qr" placeholder="MLSPROVA1|… ou o código antigo, com o nome na linha de baixo" autocomplete="off"></label>' +
                 '<div class="camera-barra"><button class="btn" type="button" id="parar">' + ic('pausa', 20) + ' Parar</button><a class="btn" href="#/enviar">' + ic('enviar', 20) + ' Enviar fotos</a></div>' +
                 '<p class="suave" id="cam-erro" hidden></p><ul class="fila-lidos" id="fila-cam"></ul></div>',
             montar: function (el) {
                 var campo = el.querySelector('#colar-qr');
                 var saida = el.querySelector('#qr-lido');
-                campo.addEventListener('input', function () { mostrarQrLido(saida, campo.value); });
+                campo.addEventListener('input', function () { if (campo.value.trim()) mostrarQrLido(saida, campo.value); });
                 iniciarCamera(el, p);
             },
             desmontar: pararCamera
@@ -399,7 +405,8 @@
         var dica = el.querySelector('#dica-cam');
         var erro = el.querySelector('#cam-erro');
         try {
-            var stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: { ideal: 'environment' } }, audio: false });
+            /* O QR é pequeno: pede a resolução mais alta que o aparelho der. */
+            var stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: { ideal: 'environment' }, width: { ideal: 1920 }, height: { ideal: 1080 } }, audio: false });
             video.srcObject = stream;
             await video.play();
         } catch (e) {
@@ -407,56 +414,90 @@
             erro.textContent = 'A câmera não abriu neste aparelho. Envie as fotos pelo botão ao lado.';
             return;
         }
-        var estavel = [];
+
+        /* Em cada folha: primeiro o QR (quem é), depois o gabarito. A identidade
+           vale para uma leitura só e é apagada ao registrar (ver identificar.js). */
+        var fluxo = MaluIdentificar.criarFluxo({
+            semQr: semQrAtivo(),
+            aceitar: function (qr) { return MaluIdentificar.conferirProva(qr, p); }
+        });
+        var caixaSemQr = el.querySelector('#sem-qr');
+        caixaSemQr.addEventListener('change', function () { st.semQr = caixaSemQr.checked; fluxo.semQr(caixaSemQr.checked); });
+        var saidaQr = el.querySelector('#qr-lido');
+        var campoQr = el.querySelector('#colar-qr');
+        var AJUDA_QR = 'Em cada folha: primeiro o QR, depois o gabarito.';
         var ultimo = 0;
         var ultimoQr = 0;
-        var qrVisto = '';
-        var canvas = document.createElement('canvas');
+        var lendoQr = false;
+        var qrPronto = '';
+        var identidadeMostrada = '';
+        var canvas = document.createElement('canvas');   /* lê o cartão: até 1280 de largura */
+        var canvasQr = document.createElement('canvas'); /* lê o QR: na resolução cheia da câmera */
         function quadro() {
             if (cameraParada) return;
             requestAnimationFrame(quadro);
             var agora = Date.now();
             if (agora - ultimo < 280 || !video.videoWidth) return;
             ultimo = agora;
-            canvas.width = video.videoWidth;
-            canvas.height = video.videoHeight;
-            var ctx = canvas.getContext('2d', { willReadFrequently: true });
-            ctx.drawImage(video, 0, 0);
-            if (agora - ultimoQr > 700) {
+            if (agora - ultimoQr > 700 && !lendoQr) {
                 ultimoQr = agora;
-                textoQrDeCanvas(canvas).then(function (texto) {
-                    if (!texto || texto === qrVisto) return;
-                    qrVisto = texto;
-                    mostrarQrLido(el.querySelector('#qr-lido'), texto);
-                });
+                lendoQr = true;
+                canvasQr.width = video.videoWidth;
+                canvasQr.height = video.videoHeight;
+                canvasQr.getContext('2d', { willReadFrequently: true }).drawImage(video, 0, 0);
+                textoQrDeCanvas(canvasQr).then(function (texto) {
+                    lendoQr = false;
+                    if (texto) qrPronto = texto;
+                }, function () { lendoQr = false; });
             }
-            var img = ctx.getImageData(0, 0, canvas.width, canvas.height);
-            var geo = MontarGabarito.geometria({ total: Object.keys(p.gabarito).length, alternativas: p.alternativas || 5 });
-            var lido = MaluOMR.ler(img, geo, { codigo: comCodigo(p), limiarMarcada: st.ajustes.limiar });
-            var nitido = nitidez(img);
-            var cantos = el.querySelectorAll('.canto');
-            cantos.forEach(function (c) { c.classList.toggle('aceso', !!(lido.ok && nitido > 12)); });
-            if (!lido.ok || nitido < 12) {
-                estavel = [];
-                dica.textContent = lido.ok ? 'Chegue mais perto: a foto está tremida.' : 'Enquadre o cartão inteiro, com as marcas pretas visíveis.';
-                return;
+            var qrTexto = qrPronto;
+            qrPronto = '';
+            if (!qrTexto && window.MaluQrProva && MaluQrProva.ler(campoQr.value)) qrTexto = campoQr.value.trim();
+            var passo = fluxo.quadro({
+                agora: agora,
+                qrTexto: qrTexto,
+                ler: function () {
+                    var escala = Math.min(1, 1280 / video.videoWidth);
+                    canvas.width = Math.round(video.videoWidth * escala);
+                    canvas.height = Math.round(video.videoHeight * escala);
+                    var ctx = canvas.getContext('2d', { willReadFrequently: true });
+                    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+                    var img = ctx.getImageData(0, 0, canvas.width, canvas.height);
+                    var geo = MontarGabarito.geometria({ total: Object.keys(p.gabarito).length, alternativas: p.alternativas || 5 });
+                    var lido = MaluOMR.ler(img, geo, { codigo: comCodigo(p), limiarMarcada: st.ajustes.limiar });
+                    var nitido = nitidez(img);
+                    el.querySelectorAll('.canto').forEach(function (c) { c.classList.toggle('aceso', !!(lido.ok && nitido > 12)); });
+                    return { lido: lido, nitido: nitido };
+                }
+            });
+            dica.textContent = passo.dica;
+            var quem = passo.identidade;
+            if (quem && quem.texto !== identidadeMostrada) {
+                identidadeMostrada = quem.texto;
+                mostrarQrLido(saidaQr, quem.texto);
+                if (navigator.vibrate) navigator.vibrate(40);
+            } else if (!quem && identidadeMostrada) {
+                identidadeMostrada = '';
+                saidaQr.textContent = AJUDA_QR;
             }
-            var chave = (lido.lista && lido.lista.numero) + '|' + (lido.codigo && lido.codigo.texto);
-            estavel.push(chave);
-            if (estavel.length > 3) estavel.shift();
-            dica.textContent = estavel.length < 3 ? 'Segure firme…' : 'Lendo…';
-            if (estavel.length === 3 && estavel.every(function (x) { return x === chave; })) {
-                estavel = [];
+            if (passo.aviso) saidaQr.textContent = passo.aviso;
+            if (passo.acao === 'registrar') {
+                var lido = passo.lido;
+                lido.qrTexto = passo.qrTexto;
                 el.querySelector('#flash').classList.remove('vai');
                 void el.querySelector('#flash').offsetWidth;
                 el.querySelector('#flash').classList.add('vai');
                 var jpeg = canvas.toDataURL('image/jpeg', 0.7);
-                lido.qrTexto = window.MaluQrProva ? MaluQrProva.escolher(qrVisto, el.querySelector('#colar-qr').value) : '';
-                registrar(p, lido, jpeg);
+                var item = registrar(p, lido, jpeg);
                 var li = document.createElement('li');
-                li.innerHTML = '<span>Lista ' + esc(lido.lista && lido.lista.numero) + '</span><span>' + esc(resumoCurto(p, lido)) + '</span>';
+                li.innerHTML = '<span>' + esc((item.turma ? item.turma + ' · ' : '') + (item.lista != null ? 'Lista ' + item.lista : 'Sem número')) + '</span><span>' +
+                    esc(resumoCurto(p, lido, item) + (item.revisar ? ' · revisar' : '')) + '</span>';
                 el.querySelector('#fila-cam').prepend(li);
-                U.toast(resumoCurto(p, lido));
+                U.toast(resumoCurto(p, lido, item));
+                /* o QR colado vale para uma folha só */
+                campoQr.value = '';
+                identidadeMostrada = '';
+                saidaQr.textContent = AJUDA_QR;
             }
         }
         requestAnimationFrame(quadro);
@@ -481,7 +522,9 @@
         return vals.reduce(function (s, n) { return s + (n - m) * (n - m); }, 0) / vals.length;
     }
 
-    function resumoCurto(p, lido) {
+    /* item: a leitura já registrada. Com ele, o código é conferido com o do
+       aluno identificado (pelo QR), não com o número marcado nas bolhas. */
+    function resumoCurto(p, lido, item) {
         var ac = 0;
         var total = Object.keys(p.gabarito).length;
         Object.keys(p.gabarito).forEach(function (q) {
@@ -490,7 +533,7 @@
         });
         var cod = '';
         if (comCodigo(p) && lido.codigo) {
-            var stc = MontarCodigo.conferir(codigoEsperado(p, lido), lido.codigo);
+            var stc = item && item.statusCodigo ? item.statusCodigo : MontarCodigo.conferir(codigoEsperado(p, lido), lido.codigo);
             cod = stc === 'correto' ? ' · código certo' : (stc === 'em_branco' ? ' · código em branco' : ' · código ' + stc);
         }
         return ac + '/' + total + ' acertos' + cod;
@@ -507,41 +550,62 @@
         var lido = window.MaluQrProva ? MaluQrProva.ler(texto) : null;
         if (!texto || !String(texto).trim()) { saida.textContent = ''; return; }
         saida.textContent = lido
-            ? 'QR da prova: ' + (lido.nome || 'sem nome') + ' · turma ' + lido.turma + ' · nº ' + lido.numero + ' · ' + lido.codigo
+            ? 'QR lido: ' + (lido.nome || 'sem nome') + ' · turma ' + lido.turma + ' · nº ' + parseInt(lido.numero, 10) + '. Agora mostre o gabarito.'
             : 'Não reconheci esse QR. Vale o formato MLSPROVA1 e o antigo, com o código e o nome.';
     }
 
-    function textoQrDeCanvas(canvas) {
-        if (!window.BarcodeDetector || !window.MaluQrProva || textoQrDeCanvas.indisponivel) return Promise.resolve('');
-        var det;
+    /* Lê o QR da prova numa imagem. Usa o leitor do navegador (BarcodeDetector,
+       do Chrome no Android e no computador) e, se ele não existir ou não achar,
+       o jsQR embutido: o Safari e o Chrome do iPhone não têm o leitor nativo. */
+    function textoQrDeImagem(img) {
+        if (!window.jsQR || !window.MaluQrProva) return '';
+        var r;
         try {
-            det = textoQrDeCanvas.det || (textoQrDeCanvas.det = new BarcodeDetector({ formats: ['qr_code'] }));
-        } catch (e) {
-            textoQrDeCanvas.indisponivel = true;
-            return Promise.resolve('');
+            r = window.jsQR(img.data, img.width, img.height, { inversionAttempts: 'dontInvert' });
+        } catch (e) { return ''; }
+        return r && MaluQrProva.ler(r.data) ? r.data : '';
+    }
+
+    function textoQrDeCanvas(canvas) {
+        if (!window.MaluQrProva) return Promise.resolve('');
+        function porJsQr() {
+            try {
+                return textoQrDeImagem(canvas.getContext('2d', { willReadFrequently: true }).getImageData(0, 0, canvas.width, canvas.height));
+            } catch (e) { return ''; }
         }
+        var det = null;
+        if (window.BarcodeDetector && !textoQrDeCanvas.indisponivel) {
+            try {
+                det = textoQrDeCanvas.det || (textoQrDeCanvas.det = new BarcodeDetector({ formats: ['qr_code'] }));
+            } catch (e) {
+                textoQrDeCanvas.indisponivel = true;
+            }
+        }
+        if (!det) return Promise.resolve(porJsQr());
         return det.detect(canvas).then(function (achados) {
             for (var i = 0; i < achados.length; i++) {
                 if (MaluQrProva.ler(achados[i].rawValue)) return achados[i].rawValue;
             }
-            return '';
-        }).catch(function () { return ''; });
+            return porJsQr();
+        }).catch(function () { return porJsQr(); });
     }
 
     function registrar(p, lido, jpeg) {
         var qr = (window.MaluQrProva && lido.qrTexto) ? MaluQrProva.ler(lido.qrTexto) : null;
-        var lista = lido.lista && lido.lista.numero;
-        if ((lista == null || lista === '') && qr && qr.numero) lista = parseInt(qr.numero, 10);
-        var aluno = window.MaluQrProva
-            ? MaluQrProva.casarAluno(p.alunos, lista, qr)
-            : (p.alunos || []).filter(function (a) { return a.lista === lista; })[0];
+        /* O QR manda. O número marcado nas bolhas só confere: se não bate, a
+           leitura vai para revisão e vale o QR. Sem QR (folha sem QR, ligada de
+           propósito), o aluno sai do número marcado, como antes. */
+        var ident = MaluIdentificar.resolver({ qr: qr, listaMarcada: lido.lista && lido.lista.numero, alunos: p.alunos });
+        var lista = ident.lista;
+        var aluno = ident.aluno;
         var status = null;
         var codigoLido = null;
         if (comCodigo(p)) {
             codigoLido = lido.codigo ? lido.codigo.texto : '';
             status = MontarCodigo.conferir(aluno ? aluno.codigo : codigoEsperado(p, lista), lido.codigo || '');
         }
-        var alertas = (lido.alertas || []).slice();
+        /* com o QR, "não consegui ler o número da lista" não importa mais */
+        var alertas = (lido.alertas || []).filter(function (a) { return !(ident.origem === 'qr' && a.tipo === 'lista'); }).concat(ident.alertas);
         var revisar = alertas.length > 0 || status === 'ambiguo';
         Object.keys(lido.respostas || {}).forEach(function (q) {
             var r = lido.respostas[q];
@@ -560,6 +624,7 @@
             turma: aluno ? aluno.turma : (qr && qr.turma ? qr.turma : ''),
             sala: aluno ? aluno.sala : '',
             lista: lista,
+            identificadoPor: ident.origem,
             copiaId: aluno ? aluno.copiaId : null,
             respostas: lido.respostas || {},
             codigoLido: codigoLido,
@@ -617,11 +682,15 @@
         return {
             html: '<div class="pilha">' + topo('Enviar fotos', 'Várias de uma vez. PDF do scanner também entra, uma página por cartão.', '#/prova') +
                 avisoFoto() +
+                '<p class="suave">Cada foto precisa mostrar o QR da folha: é ele que diz de quem é o cartão.</p>' +
+                '<label class="suave"><input type="checkbox" id="sem-qr"' + (semQrAtivo() ? ' checked' : '') + '> Folhas sem QR (o aluno sai do número da lista marcado)</label>' +
                 '<div class="soltar" id="soltar"><p><strong>Toque para escolher</strong> ou solte as fotos aqui.</p><input id="arquivos" type="file" accept="image/*,application/pdf" multiple hidden></div>' +
                 '<ul class="arquivos" id="lista-arq"></ul></div>',
             montar: function (el) {
                 var input = el.querySelector('#arquivos');
                 var zona = el.querySelector('#soltar');
+                var caixaSemQr = el.querySelector('#sem-qr');
+                caixaSemQr.addEventListener('change', function () { st.semQr = caixaSemQr.checked; });
                 zona.onclick = function () { input.click(); };
                 zona.ondragover = function (e) { e.preventDefault(); zona.classList.add('sobre'); };
                 zona.ondragleave = function () { zona.classList.remove('sobre'); };
@@ -646,13 +715,24 @@
                     var lido = MaluOMR.ler(folha.imagem, MontarGabarito.geometria({ total: Object.keys(p.gabarito).length, alternativas: p.alternativas || 5 }), { codigo: comCodigo(p), limiarMarcada: st.ajustes.limiar });
                     var qrTexto = folha.qrTexto || '';
                     var qr = window.MaluQrProva ? MaluQrProva.ler(qrTexto) : null;
-                    if (!lido.ok) {
+                    if (!MaluIdentificar.leituraPlausivel(lido)) {
                         textos.push('Cartão ' + (k + 1) + ': não li as marcas.' + (qr ? ' QR da prova: ' + qr.nome + ' · ' + qr.turma + ' · ' + qr.codigo + '.' : ''));
                         continue;
                     }
+                    /* Primeiro o QR: sem ele (ou com o de outra prova) a folha não é registrada. */
+                    if (qr) {
+                        var confere = MaluIdentificar.conferirProva(qr, p);
+                        if (!confere.ok) {
+                            textos.push('Cartão ' + (k + 1) + ': ' + confere.motivo + ' Não registrei.');
+                            continue;
+                        }
+                    } else if (!semQrAtivo()) {
+                        textos.push('Cartão ' + (k + 1) + ': não achei o QR. Fotografe de novo com o QR visível, ou marque "Folhas sem QR". Não registrei.');
+                        continue;
+                    }
                     lido.qrTexto = qrTexto;
-                    registrar(p, lido, null);
-                    textos.push('Cartão ' + (k + 1) + ': ' + resumoCurto(p, lido) + (qr ? ' · ' + qr.codigo : ''));
+                    var item = registrar(p, lido, null);
+                    textos.push('Cartão ' + (k + 1) + ': ' + (qr ? (qr.nome || ('lista ' + item.lista)) + ' · ' : '') + resumoCurto(p, lido, item) + (item.revisar ? ' · revisar' : ''));
                 }
                 li.lastElementChild.textContent = textos.join(' ');
             } catch (e) {
@@ -666,12 +746,19 @@
         return new Promise(function (ok, erro) {
             var img = new Image();
             img.onload = function () {
+                /* O QR é pequeno: é lido na foto quase inteira (até 4000 px); o
+                   cartão é lido numa versão menor (até 1600 px). */
+                var capQr = Math.min(1, 4000 / Math.max(img.width, img.height));
+                var grande = document.createElement('canvas');
+                grande.width = Math.round(img.width * capQr);
+                grande.height = Math.round(img.height * capQr);
+                grande.getContext('2d', { willReadFrequently: true }).drawImage(img, 0, 0, grande.width, grande.height);
                 var c = document.createElement('canvas');
                 var escala = Math.min(1, 1600 / Math.max(img.width, img.height));
                 c.width = Math.round(img.width * escala);
                 c.height = Math.round(img.height * escala);
                 c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
-                textoQrDeCanvas(c).then(function (qrTexto) {
+                textoQrDeCanvas(grande).then(function (qrTexto) {
                     ok({ imagem: c.getContext('2d').getImageData(0, 0, c.width, c.height), qrTexto: qrTexto });
                 });
             };
@@ -687,12 +774,19 @@
         var saida = [];
         for (var i = 1; i <= pdf.numPages; i++) {
             var page = await pdf.getPage(i);
-            var vp = page.getViewport({ scale: 2 });
+            /* A página sai em escala 3 para o QR (2 cm) ficar legível; o cartão é
+               lido numa versão em escala 2, para não pesar na memória. */
+            var vp = page.getViewport({ scale: 3 });
+            var grande = document.createElement('canvas');
+            grande.width = vp.width;
+            grande.height = vp.height;
+            await page.render({ canvasContext: grande.getContext('2d', { willReadFrequently: true }), viewport: vp }).promise;
+            var qrTexto = await textoQrDeCanvas(grande);
             var c = document.createElement('canvas');
-            c.width = vp.width;
-            c.height = vp.height;
-            await page.render({ canvasContext: c.getContext('2d'), viewport: vp }).promise;
-            saida.push(c.getContext('2d').getImageData(0, 0, c.width, c.height));
+            c.width = Math.round(vp.width * 2 / 3);
+            c.height = Math.round(vp.height * 2 / 3);
+            c.getContext('2d').drawImage(grande, 0, 0, c.width, c.height);
+            saida.push({ imagem: c.getContext('2d').getImageData(0, 0, c.width, c.height), qrTexto: qrTexto });
         }
         return saida;
     }

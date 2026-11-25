@@ -158,6 +158,35 @@ A aba Conferir e o Malu Gabaritos leem os dois. O verificador do código usa o n
 Guarde a chave: sem ela nem a conferência funciona, nem os mesmos alunos geram
 os mesmos códigos numa segunda rodada.
 
+### Como o Malu Gabaritos usa o QR
+
+O QR é o que diz de quem é a folha. Na correção, em cada folha, primeiro o QR e
+depois o gabarito:
+
+1. **O QR vira a identidade.** Sem QR lido, a leitura do gabarito nem começa. O
+   QR tem de ser da prova aberta (ano, bimestre, série e componente do código
+   `MLS-2026-B3-1A-007-LIN-…`); de outra prova, o app avisa de qual é e não
+   registra.
+2. **A identidade vale para uma leitura só.** Ao registrar, ela é apagada, então
+   o QR de um aluno nunca vai parar na folha do seguinte. Sem o QR aparecer por
+   6 segundos, ela também some.
+3. **O aluno sai da turma e do número do QR.** O número da lista marcado nas
+   bolhas, se existir, só confere: se não bate com o QR, a leitura vai para
+   revisão e vale o QR.
+4. **Folhas sem QR** (prova que não passou pelo Identificador, folha antiga): a
+   pessoa liga "Folhas sem QR" e o aluno sai do número marcado, como antes.
+
+O QR é lido pelo navegador (BarcodeDetector, no Chrome do Android e do
+computador) e, onde ele não existe, pelo leitor embutido jsQR
+(`gabaritos/vendor/`, Apache-2.0). É o caso do Safari e do Chrome no iPhone. O QR
+precisa de pelo menos 3 pixels por módulo: com a câmera, mostre o QR de perto
+antes do gabarito; nas fotos enviadas, vale a foto inteira do celular, não uma
+imagem reduzida.
+
+```bash
+node --test gabaritos/test/identificar.test.cjs   # o passo do QR primeiro, a conferência da prova, o jsQR com o QR real
+```
+
 Componentes: `RED` redação, `LIN` linguagens e códigos, `NAT` ciências da
 natureza, `HUM` ciências humanas, `MAT` matemática.
 
