@@ -1417,8 +1417,16 @@
     function desenharCodigo() {
         const painel = $('codigo-painel');
         if (!painel || !prova) return;
-        painel.hidden = false;
+        /* Só a coordenação (Gestão) liga, configura e gera o código. Quem só
+           coordena a prova (o PCA) ou escreve nela vê, no máximo, o painel de
+           impressão das cópias que a coordenação já gerou. */
+        const coordenacao = Nuvem.podeCodigo();
         const ligado = !!prova.codigoVerificacao;
+        painel.hidden = !coordenacao && !(ligado && (prova.codigos || []).length);
+        $('codigo-ligado-rotulo').hidden = !coordenacao;
+        $('codigo-config').hidden = !coordenacao;
+        $('codigo-so-coordenacao').hidden = coordenacao;
+        if (painel.hidden) return;
         $('codigo-ligado').checked = ligado;
         $('codigo-corpo').hidden = !ligado;
         $('codigo-prazo').value = prova.prazoNotas || '';
@@ -1442,10 +1450,10 @@
         const erro = $('codigo-erro');
         erro.className = 'aviso aviso--erro';
         erro.hidden = true;
-        if (ligado && !(prova.codigos || []).length) {
+        if (coordenacao && ligado && !(prova.codigos || []).length) {
             erro.hidden = false;
             erro.textContent = 'Ainda não há códigos. Cadastre sala, turma e a quantidade de alunos e clique em Gerar os códigos.';
-        } else if (ligado && (prova.codigos || []).some(function (c) { return !c.instrucao; })) {
+        } else if (coordenacao && ligado && (prova.codigos || []).some(function (c) { return !c.instrucao; })) {
             erro.hidden = false;
             erro.className = 'aviso';
             erro.textContent = 'Estes códigos foram gerados antes de a explicação ir dentro da prova: as cópias saem com a explicação no quadro de instruções do topo. Para a explicação ficar escondida no enunciado, clique em Gerar os códigos de novo. Os códigos mudam, então não misture com cópias já impressas.';
@@ -1453,7 +1461,7 @@
     }
 
     $('codigo-ligado').addEventListener('change', function () {
-        if (!prova) return;
+        if (!prova || !Nuvem.podeCodigo()) return;
         prova.codigoVerificacao = this.checked;
         if (!this.checked) prova.copiaPrevia = '';
         mudou();
@@ -1461,11 +1469,12 @@
         repaginar();
     });
     $('codigo-prazo').addEventListener('change', function () {
-        if (!prova) return;
+        if (!prova || !Nuvem.podeCodigo()) return;
         prova.prazoNotas = this.value;
         mudou();
     });
     $('codigo-mais-turma').onclick = function () {
+        if (!Nuvem.podeCodigo()) return;
         $('codigo-turmas').insertAdjacentHTML('beforeend', htmlTurma({ turma: '', sala: '', quantidade: 30 }));
     };
 
@@ -1511,7 +1520,7 @@
 
     $('codigo-lista').addEventListener('input', atualizarSugestaoMontador);
     $('codigo-puxar').onclick = async function () {
-        if (!prova || !window.MaluListas) return;
+        if (!prova || !window.MaluListas || !Nuvem.podeCodigo()) return;
         const perfil = Nuvem.perfil();
         if (!perfil) {
             avisoLista('Entre com a sua conta para puxar a lista oficial.', true);
@@ -1541,7 +1550,7 @@
         }
     };
     $('codigo-sugerir').onclick = async function () {
-        if (!listaPresente || !window.MaluListas) return;
+        if (!listaPresente || !window.MaluListas || !Nuvem.podeCodigo()) return;
         const perfil = Nuvem.perfil();
         const mudancas = MaluListas.diferencas(listaPresente.oficial, MaluListas.lerTexto($('codigo-lista').value));
         const grupos = MaluListas.agrupar(listaPresente.ano || (prova && prova.ano), mudancas);
@@ -1576,7 +1585,7 @@
         repaginar();
     });
     $('codigo-gerar').onclick = async function () {
-        if (!prova) return;
+        if (!prova || !Nuvem.podeCodigo()) return;
         prova.turmasCodigo = lerTurmasDoPainel();
         if (window.MaluListas && $('codigo-lista').value.trim()) {
             const lido = MaluListas.lerTexto($('codigo-lista').value);
@@ -2358,6 +2367,7 @@
         $('area-modelo').innerHTML = opcoesHtml(Modelos.listar().map(function (m) { return [m.id, m.nome]; }), Modelos.FIXO_ID);
         $('area-componente').value = p.area || 'NAT';
         $('area-componente').disabled = p.papel !== 'gestao';
+        $('area-codigo-rotulo').hidden = !Nuvem.podeCodigo();
         $('area-serie').value = '1';
         $('area-bimestre').value = 'B' + Math.min(4, Math.max(1, Math.ceil((new Date().getMonth() + 1 - 1) / 3)));
         $('area-ano').value = String(new Date().getFullYear());
@@ -2385,7 +2395,7 @@
             const id = await Nuvem.criarProva({
                 modeloId: $('area-modelo').value, componente: $('area-componente').value, serie: $('area-serie').value,
                 bimestre: $('area-bimestre').value, ano: $('area-ano').value, prazo: $('area-prazo').value || null, secoes: secoes,
-                codigoVerificacao: $('area-codigo').checked
+                codigoVerificacao: Nuvem.podeCodigo() && $('area-codigo').checked
             });
             $('dialogo-area').close();
             location.hash = '#/area/' + encodeURIComponent(id);

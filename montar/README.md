@@ -26,6 +26,14 @@ cada um com o seu login.
 | **PCA** | Cria as provas da sua área e distribui as seções; mexe no formato, nas instruções e no gabarito; escreve as suas questões; **edita qualquer questão** da área; **comenta, devolve e aprova** cada seção; **trava** a prova para impressão. |
 | **Professor** | Escreve as questões das seções atribuídas a ele; vê a prova inteira (as seções dos colegas ficam só para leitura); comenta; marca a sua seção como **pronta para revisão**. |
 
+**Código de verificação: só a Gestão (a coordenação).** Só ela liga a opção,
+cadastra as turmas, define o prazo e gera os códigos. O PCA e o professor não
+veem onde ligar. Se a Gestão já gerou os códigos de uma prova, o PCA vê apenas
+os botões de imprimir as cópias e a folha de códigos. Isso vale no banco, não
+só na tela (`supabase/007_codigo_so_gestao.sql`): mesmo por fora do Montador, o
+PCA não liga, não desliga e não apaga o código, e continua salvando formato e
+instruções como sempre.
+
 **O caminho de uma prova da área**
 
 1. O PCA clica em **+ Nova prova da área**: escolhe o modelo, a série, o
@@ -81,9 +89,10 @@ a função que cria as contas estão em `supabase/`:
 | `supabase/002_funcoes_privadas.sql` | as funções das regras fora da API |
 | `supabase/003_ver_prova_pela_linha.sql` | ajuste da regra de leitura das provas |
 | `supabase/004_montador_convites.sql` | convites por link (tabela com RLS fechada; não mexe no Auth) |
+| `supabase/007_codigo_so_gestao.sql` | o código de verificação é só da Gestão: o PCA não liga nem altera, e só a Gestão grava os códigos gerados (se a 005 estiver aplicada) |
 | `supabase/functions/montador-usuarios/` | a função que cria e altera contas (só a gestão a usa) |
 | `supabase/functions/montador-convites/` | gera o link, confere o token e grava a senha (só a gestão gera) |
-| `supabase/teste_permissoes.sql` | 28 verificações das regras, para rodar no SQL Editor (não grava nada) |
+| `supabase/teste_permissoes.sql` | 36 verificações das regras (34 se a 005 não estiver aplicada), para rodar no SQL Editor (não grava nada) |
 
 O endereço e a chave publicável do Supabase estão em `js/config.js` — a chave
 publicável é feita para ir no navegador; os dados ficam protegidos pelas regras.
