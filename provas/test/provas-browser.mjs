@@ -380,6 +380,10 @@ try {
     const pedidos2 = await importa.evaluate(() => window.PEDIDOS_AO_PRESENTE.map((p) => p.turma));
     conferir(pedidos2.join() === '1ºA,2ºA,1ºB', 'a segunda puxada pediu só a 1B: ' + pedidos2.join());
     conferir((await importa.inputValue('#lote')).includes('Bruno Dias Editado'), 'puxar mais uma turma não apaga a edição feita nas que já estavam');
+    const textoDaCaixa = await importa.inputValue('#lote');
+    conferir(textoDaCaixa.includes('01 - Ana Beatriz Lima de Souza - 20260001') && textoDaCaixa.includes('02 - Bruno Dias Editado - 20260002') &&
+        textoDaCaixa.includes('01 - Carla Mendes - 20260011'),
+        'a matrícula vem junto de cada aluno puxado (e sobrevive à edição do nome) na caixa de alunos');
     conferir((await importa.$$eval('#resumo-turmas .turma-chip', (n) => n.map((x) => x.textContent.slice(0, 2)))).sort().join() === '1A,1B,2A',
         'a lista fica com as três turmas, 1A, 1B e 2A');
 
@@ -452,6 +456,16 @@ try {
     }, (await readFile(caminhoImportado)).toString('base64'));
     conferir(qrImportado && ['8F3A2C1D', '11112222'].includes(qrImportado.chave) && /^1[AB]$/.test(qrImportado.turma),
         'o QR do PDF gerado a partir da importação leva a chave da prova (' + (qrImportado && qrImportado.chave) + ') e a turma ' + (qrImportado && qrImportado.turma));
+    conferir(qrImportado.matricula === (qrImportado.turma === '1A' ? '20260001' : '20260011'),
+        'e a matrícula do aluno puxado do Malu Presente chega ao QR: ' + qrImportado.matricula);
+
+    /* o botão que puxa todas as turmas também leva a matrícula */
+    await importa.click('#limpar-lote');
+    await importa.click('#puxar-presente');
+    await importa.waitForFunction(() => document.querySelectorAll('#resumo-turmas .turma-chip').length === 3);
+    const todasAsTurmas = await importa.inputValue('#lote');
+    conferir(todasAsTurmas.includes('01 - Eva Prado - 20260021') && todasAsTurmas.includes('02 - Daniel Souza - 20260012'),
+        '"Puxar do Malu Presente" (todas as turmas) também traz a matrícula de cada aluno');
     conferir(errosImporta.length === 0, 'nenhum erro de JavaScript na importação' + (errosImporta.length ? ': ' + errosImporta.join(' | ') : ''));
     await importa.close();
 

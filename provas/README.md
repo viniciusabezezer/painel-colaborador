@@ -162,7 +162,7 @@ MLSPROVA1|MLS-2026-B3-1A-007-LIN-DRYT|1A|007|ESTUDANTE+FICTICIO+07|AVALIACAO+BIM
 
 Quem lê troca cada `+` por espaço. Fora o `|`, o texto só tem letras, dígitos, `+` e `-`. Para colocar num endereço, troque cada `|` por `%7C`.
 
-A matrícula entra quando a lista tem o campo `matricula` — é o caso de **Puxar do Malu Presente**, que traz `numero`, `nome`, `matricula` e `ativo`. Aluno com `ativo: false` não recebe prova. Coluna de 4 a 12 dígitos na lista colada também vale como matrícula. Um valor que não seja só dígitos nesse tamanho é ignorado, para a credencial do cartão não caber nesse campo.
+A matrícula entra quando a lista tem o campo `matricula` — é o caso de **Puxar do Malu Presente**, que traz `numero`, `nome`, `matricula` e `ativo`. Na caixa de alunos ela aparece no fim de cada linha, depois de um traço (`07 - Estudante Fictício 07 - 20260007`), e é daí que chega ao QR; só o Identificador a mostra, o Montador e o Malu Gabaritos continuam com `07 - Nome`. Aluno com `ativo: false` não recebe prova. Coluna de 4 a 12 dígitos na lista colada também vale como matrícula. Um valor que não seja só dígitos nesse tamanho é ignorado, para a credencial do cartão não caber nesse campo.
 
 Provas já impressas usam o formato antigo, em duas linhas, e continuam válidas:
 

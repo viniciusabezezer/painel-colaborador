@@ -102,7 +102,8 @@
 
     function aplicarListaOficial(resposta, aviso) {
         listaOficial = MaluListas.pacoteAtivo(resposta);
-        $('lote').value = MaluListas.textoDaLista(resposta);
+        /* com a matrícula ("07 - Nome - 20260007"): é por aqui que ela chega ao QR */
+        $('lote').value = MaluListas.textoDaLista(resposta, undefined, { matricula: true });
         lerLote();
         const caixa = $('aviso-presente');
         caixa.hidden = false;
@@ -676,7 +677,7 @@
     function juntarTurmasPuxadas(pacote, pedidas, semAlunos) {
         const novas = MaluListas.pacoteAtivo(pacote).turmas;
         const atuais = MaluListas.lerTexto($('lote').value).turmas;
-        $('lote').value = MaluListas.textoDaLista({ turmas: ProvasImportar.juntarTurmas(atuais, novas) });
+        $('lote').value = MaluListas.textoDaLista({ turmas: ProvasImportar.juntarTurmas(atuais, novas) }, undefined, { matricula: true });
         listaOficial = { ano: pacote.ano, turmas: ProvasImportar.juntarTurmas((listaOficial && listaOficial.turmas) || [], novas) };
         lerLote();
         const caixa = $('aviso-presente');

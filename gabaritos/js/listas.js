@@ -68,7 +68,12 @@
         };
     }
 
-    function textoDaLista(resposta, filtro) {
+    /* O texto da caixa de alunos: "NN - Nome". Com opcoes.matricula, quem tem
+       matrícula de 4 a 12 dígitos leva "NN - Nome - MATRICULA" (é o que o
+       Identificador pede, para a matrícula chegar ao QR; as outras telas não a
+       mostram). */
+    function textoDaLista(resposta, filtro, opcoes) {
+        var comMatricula = !!(opcoes && opcoes.matricula);
         var quer = (filtro || []).map(turmaCurta).filter(Boolean);
         var linhas = [];
         (resposta && resposta.turmas || []).forEach(function (t) {
@@ -78,7 +83,10 @@
             if (!ativos.length) return;
             linhas.push('TURMA ' + curta);
             ativos.forEach(function (a) {
-                linhas.push(String(a.numero).padStart(2, '0') + ' - ' + String(a.nome).trim());
+                var linha = String(a.numero).padStart(2, '0') + ' - ' + String(a.nome).trim();
+                var matricula = String(a.matricula == null ? '' : a.matricula).trim();
+                if (comMatricula && /^\d{4,12}$/.test(matricula)) linha += ' - ' + matricula;
+                linhas.push(linha);
             });
             linhas.push('');
         });
@@ -104,8 +112,17 @@
             var aluno = linha.match(/^(\d{1,3})\s*[-–—.]\s*(.+)$/);
             if (!aluno || !atual) return;
             var nome = aluno[2].trim();
+            /* "07 - Ana Lima - 20260007": a matrícula (4 a 12 dígitos, depois de um traço) */
+            var matricula = null;
+            var fim = nome.match(/^(.*\S)\s*[-–—]\s*(\d{4,12})$/);
+            if (fim && normalizar(fim[1]).length >= 3) {
+                nome = fim[1].trim();
+                matricula = fim[2];
+            }
             if (normalizar(nome).length < 3) return;
-            atual.alunos.push({ numero: parseInt(aluno[1], 10), nome: nome });
+            var item = { numero: parseInt(aluno[1], 10), nome: nome };
+            if (matricula) item.matricula = matricula;
+            atual.alunos.push(item);
         });
         return { turmas: turmas.filter(function (t) { return t.alunos.length; }) };
     }
