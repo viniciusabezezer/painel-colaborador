@@ -191,6 +191,11 @@ ligado, a primeira coluna abre com o **GABARITO (NÃO RASURE)**:
 
 O PDF sai com o nome `PROVA-2026-B3-2S-NAT.pdf` (ano, bimestre, série e área),
 pronto para subir no Identificador.
+Se a prova é da área (está na nuvem), o nome leva a chave da prova no fim:
+`PROVA-2026-B3-2S-NAT-K8F3A2C1D.pdf`. O navegador grava o mesmo nome como título do
+PDF e o Identificador lê a chave de lá, para pôr no QR de cada aluno e o Malu
+Gabaritos achar a prova sozinho (veja `provas/README.md`). Pode renomear o
+arquivo: a chave continua no título do PDF. O gabarito do professor sai sem a chave.
 
 ## Escrevendo as questões
 

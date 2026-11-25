@@ -134,7 +134,8 @@
                 numero: numero,
                 nome: nome,
                 titulo: dados.titulo || dados.avaliacao || '',
-                matricula: matricula
+                matricula: matricula,
+                chaveProva: dados.chaveProva
             })
         };
     }
@@ -200,7 +201,8 @@
                 nome: aluno.nome,
                 chave: opcoes.chave,
                 titulo: opcoes.titulo || opcoes.avaliacao || '',
-                matricula: aluno.matricula || ''
+                matricula: aluno.matricula || '',
+                chaveProva: opcoes.chaveProva
             });
         });
     }

@@ -12,7 +12,7 @@ const NOVO = 'MLSPROVA1|' + CODIGO + '|1A|007|ESTUDANTE+FICTICIO+07|AVALIACAO+BI
 const ANTIGO = CODIGO + '\nESTUDANTE FICTÍCIO 07';
 
 test('o leitor do Gabaritos é o mesmo contrato do Identificador', () => {
-    [NOVO, ANTIGO, CODIGO, 'MLSPRESENTE|credencial|abc', ''].forEach(function (texto) {
+    [NOVO, NOVO + '|8F3A2C1D', NOVO.split('|').slice(0, 6).join('|') + '||8F3A2C1D', NOVO + '|xyz', ANTIGO, CODIGO, 'MLSPRESENTE|credencial|abc', ''].forEach(function (texto) {
         assert.deepEqual(leitor.ler(texto), contrato.ler(texto));
     });
 });
@@ -54,4 +54,15 @@ test('a turma do QR desempata o mesmo número de lista', () => {
     assert.equal(leitor.escolher('', ANTIGO), ANTIGO);
     assert.equal(leitor.escolher(NOVO, ANTIGO), NOVO);
     assert.equal(leitor.escolher('credencial-do-cartao', ''), '');
+});
+
+test('o QR com a chave da prova: oitavo campo, e quem não a conhece segue lendo o resto', () => {
+    const comChave = NOVO + '|8F3A2C1D';
+    const lido = leitor.ler(comChave);
+    assert.equal(lido.chave, '8F3A2C1D');
+    assert.equal(lido.matricula, '20260007');
+    assert.equal(lido.turma, '1A');
+    assert.equal(leitor.ler(NOVO).chave, '');
+    assert.equal(leitor.ler(ANTIGO).chave, '');
+    assert.equal(leitor.ler(NOVO + '|xyz').chave, '', 'chave inválida não entra');
 });

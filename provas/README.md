@@ -125,6 +125,7 @@ Versão `MLSPROVA1`, campos separados por `|`:
 ```
 MLSPROVA1|<codigo>|<turma>|<numero>|<nome>|<titulo>
 MLSPROVA1|<codigo>|<turma>|<numero>|<nome>|<titulo>|<matricula>
+MLSPROVA1|<codigo>|<turma>|<numero>|<nome>|<titulo>|<matricula>|<chave>
 ```
 
 | Campo | O que é |
@@ -134,7 +135,8 @@ MLSPROVA1|<codigo>|<turma>|<numero>|<nome>|<titulo>|<matricula>
 | `numero` | Número da lista com 3 dígitos, o mesmo do código (`007`) |
 | `nome` | Nome sem acento, em maiúsculas. Espaço vira `+`. No máximo 28 caracteres, cortado no fim de uma palavra |
 | `titulo` | Nome da avaliação, com as mesmas regras, no máximo 19 caracteres. O campo fica presente mesmo vazio |
-| `matricula` | Só dígitos, de 4 a 12, e só quando a lista traz matrícula. Sem matrícula, este campo não aparece |
+| `matricula` | Só dígitos, de 4 a 12, e só quando a lista traz matrícula. Sem matrícula, este campo não aparece (a não ser que haja `chave`: aí fica vazio, para a chave continuar no oitavo lugar) |
+| `chave` | A chave da prova no Montador: 8 caracteres de `0-9` e `A-F` (`8F3A2C1D`), os primeiros do id da prova na nuvem. Só aparece em prova da área que veio do Montador com a chave. Quem não conhece o campo lê o resto normalmente |
 
 Exemplo com dados fictícios. Os quatro caracteres finais ilustram o verificador; na prova gerada eles saem do cálculo com o nome e a chave da escola:
 
@@ -158,15 +160,36 @@ A aba Conferir e o Malu Gabaritos leem os dois. O verificador do código usa o n
 Guarde a chave: sem ela nem a conferência funciona, nem os mesmos alunos geram
 os mesmos códigos numa segunda rodada.
 
+### De onde vem a chave da prova
+
+A chave liga a prova ao QR de cada aluno sem ninguém escolher nada:
+
+1. **Montador.** Ao imprimir uma prova da área, o PDF recebe o nome
+   `PROVA-2026-B3-1S-LIN-K8F3A2C1D` (o de sempre mais `-K` e a chave). O
+   navegador grava o mesmo nome como título do PDF. Prova só do navegador não
+   tem chave e sai com o nome de sempre.
+2. **Identificador.** Ao receber o PDF (prova ou gabarito), lê a chave do título
+   do PDF e, se o título faltar, do nome do arquivo. O título vale mais porque
+   sobrevive a quem renomeia o arquivo. A chave vai para o QR de cada aluno. O
+   Identificador também compara o que o nome diz (série, componente, bimestre,
+   ano) com o espaço em que o arquivo foi solto e avisa se não bate. JPG, PNG e
+   PDF de outra origem não têm chave e seguem como sempre.
+3. **Malu Gabaritos.** Acha a prova pela chave do QR (ver abaixo).
+
 ### Como o Malu Gabaritos usa o QR
 
 O QR é o que diz de quem é a folha. Na correção, em cada folha, primeiro o QR e
 depois o gabarito:
 
-1. **O QR vira a identidade.** Sem QR lido, a leitura do gabarito nem começa. O
-   QR tem de ser da prova aberta (ano, bimestre, série e componente do código
-   `MLS-2026-B3-1A-007-LIN-…`); de outra prova, o app avisa de qual é e não
-   registra.
+1. **O QR vira a identidade.** Sem QR lido, a leitura do gabarito nem começa. A
+   chave do QR acha a prova: se a folha é de outra prova que a pessoa corrige, a
+   tela troca de prova sozinha (nas fotos enviadas, cada folha vai para a prova
+   dela). Chave que nenhuma prova do aparelho tem, ou prova que a pessoa não
+   corrige, o app avisa e não registra. A chave é o que separa duas provas com os
+   mesmos ano, bimestre, série e componente (uma segunda chamada, por exemplo).
+   QR sem chave (de antes dela) vale pelo ano, bimestre, série e componente do
+   código `MLS-2026-B3-1A-007-LIN-…`, mas, se a prova tem chave, a leitura fica
+   marcada para revisão.
 2. **A identidade vale para uma leitura só.** Ao registrar, ela é apagada, então
    o QR de um aluno nunca vai parar na folha do seguinte. Sem o QR aparecer por
    6 segundos, ela também some.

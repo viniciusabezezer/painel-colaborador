@@ -1667,7 +1667,9 @@
         depoisDeImprimir();
         salvar.agora();
         if (paginar.pendente()) paginar.agora();
-        const nome = Modelos.nomeArquivo(prova) + (chave ? '-GABARITO-PROFESSOR' : '');
+        /* A prova que vai para o Identificador leva a chave no nome (e no título
+           do PDF); o gabarito do professor não vai para lá. */
+        const nome = chave ? Modelos.nomeArquivo(prova) + '-GABARITO-PROFESSOR' : Modelos.nomeParaImpressao(prova);
         tituloAntesDeImprimir = document.title;
         document.title = nome;
         if (chave) {
@@ -1686,7 +1688,7 @@
     function imprimirGabaritos(porFolha) {
         depoisDeImprimir();
         salvar.agora();
-        const nome = Modelos.nomeArquivo(prova) + (porFolha === 4 ? '-GABARITOS-4-POR-FOLHA' : '-GABARITO');
+        const nome = Modelos.nomeParaImpressao(prova) + (porFolha === 4 ? '-GABARITOS-4-POR-FOLHA' : '-GABARITO');
         tituloAntesDeImprimir = document.title;
         document.title = nome;
         Paginar.montarGabaritos(prova, $('gabaritos-impressao'), { porFolha: porFolha });

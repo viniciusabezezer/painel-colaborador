@@ -104,6 +104,8 @@
                 titulo: linha.titulo,
                 componente: linha.componente,
                 componenteNome: nomes[linha.componente] || linha.componente,
+                /* a chave que o Montador põe no PDF e o Identificador no QR de cada aluno */
+                chave: global.MaluIdentificar ? global.MaluIdentificar.chaveDaProva(linha.id) : '',
                 serie: linha.serie,
                 bimestre: linha.bimestre,
                 ano: linha.ano,

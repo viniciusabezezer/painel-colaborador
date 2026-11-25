@@ -43,6 +43,92 @@ test('o QR tem de ser da prova aberta; senão a mensagem diz de qual é', () => 
     assert.equal(Id.conferirProva(Qr.ler(A7), Object.assign({}, PROVA, { bimestre: '3' })).ok, true, 'B3 e 3 são o mesmo bimestre');
 });
 
+/* ===== a chave da prova ===== */
+
+const ID_A = '8f3a2c1d-5b6e-4a77-9c10-aabbccddeeff';
+const ID_B = '99aa88bb-1111-4222-8333-444455556666';
+/* QR com a chave como oitavo campo (matrícula vazia no sétimo) */
+const comChave = (texto, chave) => texto + '||' + chave;
+const A7_A = comChave(A7, '8F3A2C1D');
+const PROVA_A = Object.assign({}, PROVA, { id: ID_A, chave: '8F3A2C1D', titulo: 'Linguagens A' });
+const PROVA_B = Object.assign({}, PROVA, { id: ID_B, chave: '99AA88BB', titulo: 'Linguagens B (2ª chamada)' });
+
+test('a chave é o começo do id da prova na nuvem; prova de demonstração não tem', () => {
+    assert.equal(Id.chaveDaProva(ID_A), '8F3A2C1D');
+    assert.equal(Id.chaveDaProva('demo-cn'), '');
+    assert.equal(Id.chaveDaProva(''), '');
+});
+
+test('o leitor devolve a chave do QR e ignora o que não é uma chave', () => {
+    assert.equal(Qr.ler(A7_A).chave, '8F3A2C1D');
+    assert.equal(Qr.ler(A7).chave, '', 'QR sem chave');
+    assert.equal(Qr.ler(comChave(A7, 'xyz')).chave, '', 'chave inválida');
+    assert.equal(Qr.ler(comChave(A7, '8f3a2c1d')).chave, '8F3A2C1D', 'caixa baixa vira alta');
+    const antigo = Qr.ler(codigo('1A', '007') + '\nANA FICTICIA');
+    assert.equal(antigo.chave, '');
+});
+
+test('com a chave dos dois lados, a chave decide: duas provas com os mesmos dados não se misturam', () => {
+    assert.equal(Id.conferirProva(Qr.ler(A7_A), PROVA_A).ok, true);
+    const outra = Id.conferirProva(Qr.ler(A7_A), PROVA_B);
+    assert.equal(outra.ok, false, 'mesmos ano, bimestre, série e componente, mas é a outra prova');
+    assert.match(outra.motivo, /chave 8F3A2C1D/);
+    assert.match(outra.motivo, /chave 99AA88BB/);
+});
+
+test('a chave vale mais que os dados do código', () => {
+    const naoBate = Qr.ler(comChave(qrTexto('1A', '007', 'X', 'NAT'), '8F3A2C1D'));
+    assert.equal(Id.conferirProva(naoBate, PROVA_A).ok, true, 'mesma chave: é a prova, mesmo que o código diga outro componente');
+});
+
+test('QR de antes da chave: vale pelos dados do código, mas fica marcado para revisão', () => {
+    const r = Id.conferirProva(Qr.ler(A7), PROVA_A);
+    assert.equal(r.ok, true);
+    assert.equal(r.semChave, true);
+    assert.equal(Id.conferirProva(Qr.ler(qrTexto('1A', '007', 'X', 'NAT')), PROVA_A).ok, false, 'e se os dados não batem, recusa');
+    /* prova sem chave (demonstração): o QR com chave vale pelos dados */
+    assert.equal(Id.conferirProva(Qr.ler(A7_A), PROVA).ok, true);
+    assert.equal(Id.conferirProva(Qr.ler(A7_A), PROVA).semChave, false);
+});
+
+test('a chave do QR acha a prova entre as que o aparelho tem', () => {
+    const provas = [PROVA_A, PROVA_B, Object.assign({}, PROVA, { id: 'demo-cn' })];
+    assert.equal(Id.provaPeloQr(Qr.ler(A7_A), provas).id, ID_A);
+    assert.equal(Id.provaPeloQr(Qr.ler(comChave(A7, '99AA88BB')), provas).id, ID_B);
+    assert.equal(Id.provaPeloQr(Qr.ler(comChave(A7, 'DEADBEEF')), provas), null, 'chave que nenhuma prova tem');
+    assert.equal(Id.provaPeloQr(Qr.ler(A7), provas), null, 'QR sem chave não escolhe prova');
+    assert.equal(Id.provaPeloQr(Qr.ler(A7_A), [{ id: ID_A }]).id, ID_A, 'a chave sai do id quando a prova não a traz pronta');
+});
+
+test('prova com chave e QR sem chave: o aluno sai do QR e a leitura vai para revisão', () => {
+    const sem = Id.resolver({ qr: Qr.ler(A7), listaMarcada: 7, alunos: ALUNOS, exigirChave: true });
+    assert.equal(sem.aluno.id, 'a7');
+    assert.equal(sem.revisar, true);
+    assert.equal(sem.alertas[0].tipo, 'chave');
+    assert.match(sem.alertas[0].detalhe, /não tem a chave da prova/);
+    const com = Id.resolver({ qr: Qr.ler(A7_A), listaMarcada: 7, alunos: ALUNOS, exigirChave: true });
+    assert.equal(com.revisar, false);
+    assert.equal(Id.resolver({ qr: Qr.ler(A7), listaMarcada: 7, alunos: ALUNOS, exigirChave: false }).revisar, false, 'prova sem chave não cobra chave');
+});
+
+test('trocar de prova pelo QR: a identidade leva o aviso da troca', () => {
+    let aberta = PROVA_A;
+    const fluxo = Id.criarFluxo({
+        aceitar: (qr) => {
+            const outra = Id.provaPeloQr(qr, [PROVA_A, PROVA_B]);
+            if (outra && outra.id !== aberta.id) { aberta = outra; return { ok: true, nota: 'Prova trocada para ' + outra.titulo + '.' }; }
+            return Id.conferirProva(qr, aberta);
+        }
+    });
+    const cartao = { lido: { ok: true, lista: { numero: 7 }, codigo: { texto: 'X' }, respostas: {} }, nitido: 30 };
+    fluxo.quadro({ agora: 1000, qrTexto: A7_A, ler: () => cartao });
+    assert.equal(aberta.id, ID_A, 'o QR é da prova que já estava aberta: nada troca');
+    assert.equal(fluxo.identidade().nota, '');
+    fluxo.quadro({ agora: 1300, qrTexto: comChave(A8, '99AA88BB'), ler: () => cartao });
+    assert.equal(aberta.id, ID_B, 'o QR é da outra prova: a tela troca sozinha');
+    assert.match(fluxo.identidade().nota, /Prova trocada para Linguagens B/);
+});
+
 /* ===== quem é o aluno ===== */
 
 test('com QR, o QR manda: o número marcado nas bolhas só confere', () => {

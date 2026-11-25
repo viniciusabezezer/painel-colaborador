@@ -41,6 +41,14 @@
         return /^\d{4,12}$/.test(texto) ? texto : '';
     }
 
+    /* Chave da prova no Montador: 8 caracteres de 0-9 e A-F. Liga o QR à prova
+       certa no Malu Gabaritos, sem ninguém escolher nada. Qualquer outro valor
+       fica de fora. */
+    function chaveLimpa(valor) {
+        var texto = String(valor == null ? '' : valor).trim().toUpperCase();
+        return /^[0-9A-F]{8}$/.test(texto) ? texto : '';
+    }
+
     function partesDoCodigo(id) {
         var partes = String(id || '').trim().toUpperCase().split('-');
         if (partes.length !== 7 || partes[0] !== 'MLS') return null;
@@ -65,19 +73,24 @@
         var nome = campo(dados.nome, LIMITE_NOME);
         var titulo = campo(dados.titulo || dados.avaliacao, LIMITE_TITULO);
         var matricula = matriculaLimpa(dados.matricula);
-        var texto = [PREFIXO, partes.codigo, turma, numero, nome, titulo].join('|');
-        if (matricula) texto += '|' + matricula;
+        var chave = chaveLimpa(dados.chaveProva);
+        /* A chave é o oitavo campo. Com ela, a matrícula (sétimo) fica no lugar
+           mesmo vazia, para o leitor contar os campos certo. */
+        function compor() {
+            var texto = [PREFIXO, partes.codigo, turma, numero, nome, titulo].join('|');
+            if (chave) return texto + '|' + matricula + '|' + chave;
+            return matricula ? texto + '|' + matricula : texto;
+        }
+        var texto = compor();
         /* Se o código ou o nome estourar o tamanho que a impressão aguenta,
            o título sai primeiro e depois o nome, sempre num corte de palavra. */
         while (texto.length > LIMITE_TEXTO && titulo) {
             titulo = titulo.slice(0, -1).replace(/\+$/, '');
-            texto = [PREFIXO, partes.codigo, turma, numero, nome, titulo].join('|');
-            if (matricula) texto += '|' + matricula;
+            texto = compor();
         }
         while (texto.length > LIMITE_TEXTO && nome.length > 8) {
             nome = nome.slice(0, -1).replace(/\+$/, '');
-            texto = [PREFIXO, partes.codigo, turma, numero, nome, titulo].join('|');
-            if (matricula) texto += '|' + matricula;
+            texto = compor();
         }
         return texto;
     }
@@ -100,7 +113,8 @@
                 numero: abrirCampo(campos[3]) || novo.numero,
                 nome: abrirCampo(campos[4]),
                 titulo: abrirCampo(campos[5]),
-                matricula: campos.length > 6 ? matriculaLimpa(campos[6]) : ''
+                matricula: campos.length > 6 ? matriculaLimpa(campos[6]) : '',
+                chave: campos.length > 7 ? chaveLimpa(campos[7]) : ''
             };
         }
 
@@ -114,7 +128,8 @@
             numero: antigo.numero,
             nome: linhas.slice(1).join(' ').trim(),
             titulo: '',
-            matricula: ''
+            matricula: '',
+            chave: ''
         };
     }
 
@@ -125,6 +140,7 @@
         LIMITE_TEXTO: LIMITE_TEXTO,
         campo: campo,
         matriculaLimpa: matriculaLimpa,
+        chaveLimpa: chaveLimpa,
         partesDoCodigo: partesDoCodigo,
         montar: montar,
         ler: ler

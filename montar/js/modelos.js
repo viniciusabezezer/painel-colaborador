@@ -458,6 +458,22 @@
         return partes.filter(Boolean).join('-');
     }
 
+    /* Chave curta da prova da área: os 8 primeiros caracteres do id na nuvem, em
+       maiúsculas. É ela que liga o PDF, o QR de cada aluno e a prova no Malu
+       Gabaritos. Prova só do navegador não tem id na nuvem, então não tem chave. */
+    function chaveDaProva(prova) {
+        const id = String(prova && prova.nuvem && prova.nuvem.id || '');
+        return /^[0-9a-f]{8}-[0-9a-f]{4}-/i.test(id) ? id.replace(/-/g, '').slice(0, 8).toUpperCase() : '';
+    }
+
+    /* Nome do PDF que vai para o Identificador: o mesmo de sempre mais
+       "-K" e a chave (PROVA-2026-B3-1S-LIN-K8F3A2C1D). O navegador grava esse
+       nome também como título do PDF, e o Identificador lê a chave de lá. */
+    function nomeParaImpressao(prova) {
+        const chave = chaveDaProva(prova);
+        return nomeArquivo(prova) + (chave ? '-K' + chave : '');
+    }
+
     function semAcento(texto) {
         return String(texto).normalize('NFD').replace(/[̀-ͯ]/g, '');
     }
@@ -528,6 +544,8 @@
         numero: numero,
         nomeSerie: nomeSerie,
         nomeArquivo: nomeArquivo,
+        chaveDaProva: chaveDaProva,
+        nomeParaImpressao: nomeParaImpressao,
         questoesNumeradas: questoesNumeradas,
         pendencias: pendencias,
         novoId: novoId,

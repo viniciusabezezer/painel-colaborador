@@ -133,10 +133,31 @@ try {
     const slots = await pagina.$$('#slots .slot-serie');
     conferir(slots.length === 2, 'aparecem os espaços das duas séries presentes');
 
-    const prova = join(APP, 'test', 'prova-exemplo.pdf');
+    /* A prova de exemplo, com o título que o Montador grava ao imprimir uma
+       prova da área: o nome do arquivo mais a chave da prova (-K + 8 caracteres). */
+    const PDFLib = exigir('../vendor/pdf-lib.min.js');
+    const prova = join(SAIDA, 'prova-com-chave.pdf');
+    {
+        const doc = await PDFLib.PDFDocument.load(await readFile(join(APP, 'test', 'prova-exemplo.pdf')));
+        doc.setTitle('PROVA-2026-B3-1S-LIN-K8F3A2C1D');
+        await writeFile(prova, await doc.save());
+    }
     const gabaritoQuarto = join(APP, 'test', 'gabarito-exemplo.pdf');
     await pagina.setInputFiles('#slots .slot-serie >> nth=0 >> .slot >> nth=1 >> input[type=file]', prova);
     await pagina.waitForSelector('.slot.cheio');
+    await pagina.waitForFunction(() => /prova 8F3A2C1D/.test(document.querySelector('.slot.cheio .slot-estado').textContent), null, { timeout: 10000 });
+    conferir(!(await pagina.textContent('.slot.cheio .slot-estado')).includes('⚠'),
+        'o espaço mostra a chave da prova lida do título do PDF, sem aviso quando o arquivo está no lugar certo');
+    /* o mesmo arquivo no espaço de outro componente: aviso, e depois o espaço é esvaziado */
+    const espacoNat = '#slots .slot-serie >> nth=0 >> .slot:has(label:text-is("Ciências da Natureza")) >> input[type=file]';
+    await pagina.setInputFiles(espacoNat, prova);
+    await pagina.waitForFunction(() => /⚠/.test(document.querySelector('.slot:has(label)')?.parentElement?.textContent || ''), null, { timeout: 10000 });
+    const avisoEspaco = await pagina.$eval('#slots .slot-serie >> nth=0', (n) => Array.from(n.querySelectorAll('.slot-estado')).map((x) => x.textContent).join(' || '));
+    conferir(/o arquivo é de Linguagens e Códigos, mas está no espaço de Ciências da Natureza/.test(avisoEspaco),
+        'PDF de Linguagens solto no espaço de Ciências da Natureza gera aviso: ' + avisoEspaco);
+    await pagina.setInputFiles(espacoNat, []);
+    await pagina.waitForFunction(() => !/Ciências da Natureza/.test(Array.from(document.querySelectorAll('.slot.cheio')).map((n) => n.textContent).join('')), null, { timeout: 10000 });
+    conferir(true, 'e o espaço errado é esvaziado de novo');
     conferir(await pagina.isVisible('#previa-canvas'), 'a prévia da página aparece na tela');
     await pagina.waitForFunction(() => document.getElementById('previa-canvas').width >= 400, null, { timeout: 20000 })
         .catch(() => { throw new Error('a prévia não desenhou: ' + document.title); });
@@ -194,6 +215,27 @@ try {
     await download[0].saveAs(caminhoPdf);
     const tamanho = (await readFile(caminhoPdf)).length;
     conferir(tamanho > 5000, 'o PDF das primeiras páginas baixa com conteúdo (' + tamanho + ' bytes)');
+
+    /* O QR do PDF gerado, lido como o Malu Gabaritos lê (jsQR, página em escala 3),
+       leva a chave da prova que veio no título do PDF. */
+    await pagina.addScriptTag({ path: join(RAIZ, 'provas', 'vendor', 'pdf.min.js') });
+    await pagina.addScriptTag({ path: join(RAIZ, 'gabaritos', 'vendor', 'jsQR.js') });
+    const qrDoPdf = await pagina.evaluate(async (b64) => {
+        pdfjsLib.GlobalWorkerOptions.workerSrc = '/provas/vendor/pdf.worker.min.js';
+        const pdf = await pdfjsLib.getDocument({ data: Uint8Array.from(atob(b64), (c) => c.charCodeAt(0)) }).promise;
+        const pg = await pdf.getPage(1);
+        const vp = pg.getViewport({ scale: 3 });
+        const c = document.createElement('canvas');
+        c.width = vp.width; c.height = vp.height;
+        await pg.render({ canvasContext: c.getContext('2d'), viewport: vp }).promise;
+        const img = c.getContext('2d').getImageData(0, 0, c.width, c.height);
+        const r = jsQR(img.data, img.width, img.height, { inversionAttempts: 'dontInvert' });
+        return r ? { texto: r.data, lido: ProvasQrProva.ler(r.data), comprimento: r.data.length } : null;
+    }, (await readFile(caminhoPdf)).toString('base64'));
+    conferir(qrDoPdf && qrDoPdf.lido, 'o QR impresso na primeira página do PDF gerado é lido pelo jsQR');
+    conferir(qrDoPdf.lido.chave === '8F3A2C1D' && qrDoPdf.lido.turma === '1A' && qrDoPdf.lido.numero === '001',
+        'e leva a chave da prova (' + qrDoPdf.lido.chave + ') junto com a turma e o número: ' + qrDoPdf.texto);
+    conferir(qrDoPdf.comprimento <= 106, 'sem passar de 106 caracteres (' + qrDoPdf.comprimento + ')');
 
     const csv = await Promise.all([
         pagina.waitForEvent('download'),

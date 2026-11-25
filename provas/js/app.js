@@ -395,6 +395,30 @@
         mostrarResumoMapa();
     }
 
+    /* A chave da prova no Montador, lida do PDF (ver chaveprova.js). A prova e o
+       gabarito do mesmo espaço vêm da mesma prova: qualquer um dos dois serve. */
+    function chaveDaProvaDoSlot(chaveSlot, origem) {
+        const principal = (origem === 'gabaritos' ? estado.gabaritos : estado.arquivos)[chaveSlot];
+        const outro = (origem === 'gabaritos' ? estado.arquivos : estado.gabaritos)[chaveSlot];
+        return (principal && principal.chaveProva) || (outro && outro.chaveProva) || '';
+    }
+
+    /* Lê a chave do PDF que acabou de entrar e avisa se o arquivo está no espaço
+       errado (série, componente) ou fora do bimestre e do ano do passo 1. */
+    function lerChaveDoArquivo(guardado, chaveSlot, origem, alvoTexto, nome, sufixo) {
+        if (!window.ProvasChaveProva) return;
+        ProvasChaveProva.doArquivo(guardado).then(function (info) {
+            const guardados = origem === 'gabaritos' ? estado.gabaritos : estado.arquivos;
+            if (guardados[chaveSlot] !== guardado) return;
+            guardado.chaveProva = (info && info.chave) || '';
+            const partes = chaveSlot.split('|');
+            const problema = ProvasChaveProva.conferir(info, {
+                ano: $('ano').value, bimestre: $('bimestre').value, serie: partes[0], componente: partes[1]
+            });
+            alvoTexto.textContent = nome + (sufixo || '') + (guardado.chaveProva ? ' · prova ' + guardado.chaveProva : '') + (problema ? ' · ⚠ ' + problema : '');
+        });
+    }
+
     function chavesDe(origem) {
         const guardados = origem === 'gabaritos' ? estado.gabaritos : estado.arquivos;
         return Object.keys(guardados).map(function (chave) {
@@ -427,7 +451,8 @@
                     nome: via.nome,
                     chave: $('chave').value,
                     titulo: $('avaliacao').value,
-                    matricula: via.matricula || ''
+                    matricula: via.matricula || '',
+                    chaveProva: chaveDaProvaDoSlot(via.chave, origem)
                 });
                 identificacao.sala = sala.sala;
                 identificacao.posicao = via.posicao;
@@ -788,6 +813,7 @@
             };
             slot.classList.add('cheio');
             estadoTexto.textContent = arquivo.name;
+            lerChaveDoArquivo(estado.arquivos[chave], chave, 'arquivos', estadoTexto, arquivo.name, '');
             atualizarListaDePrevia();
             if (!estado.previa.chave) {
                 $('previa-arquivo').value = chave;
@@ -912,6 +938,7 @@
                 paginas: null
             };
             aviso.textContent = arquivo.name + ' carregado.';
+            lerChaveDoArquivo(estado.gabaritos[chave], chave, 'gabaritos', aviso, arquivo.name, ' carregado.');
             montarSlotsDeGabarito();
             atualizarListaDePreviaGabarito();
             if (!estado.previaGabarito.chave) $('previa-gabarito-arquivo').value = chave;
@@ -1032,7 +1059,8 @@
                     componente: tarefa.componente.codigo,
                     alunos: tarefa.turma.alunos,
                     chave: $('chave').value,
-                    titulo: $('avaliacao').value
+                    titulo: $('avaliacao').value,
+                    chaveProva: chaveDaProvaDoSlot(tarefa.chave, 'gabaritos')
                 });
 
                 const dados = {
@@ -1274,7 +1302,8 @@
                 componente: chave.split('|')[1],
                 alunos: turma.alunos.slice(0, 1),
                 chave: $('chave').value,
-                titulo: $('avaliacao').value
+                titulo: $('avaliacao').value,
+                chaveProva: chaveDaProvaDoSlot(chave, 'gabaritos')
             });
             const configuracao = montarConfiguracaoGabarito();
             const comum = {
@@ -1514,7 +1543,8 @@
                 componente: componente,
                 alunos: turma.alunos.slice(0, 1),
                 chave: $('chave').value,
-                titulo: $('avaliacao').value
+                titulo: $('avaliacao').value,
+                chaveProva: chaveDaProvaDoSlot(chave, 'arquivos')
             });
             const configuracao = montarConfiguracao();
             const bytes = await Pdf.montarPrimeirasPaginas({
@@ -1742,7 +1772,8 @@
                     componente: tarefa.componente.codigo,
                     alunos: tarefa.turma.alunos,
                     chave: $('chave').value,
-                    titulo: $('avaliacao').value
+                    titulo: $('avaliacao').value,
+                    chaveProva: chaveDaProvaDoSlot(tarefa.chave, 'arquivos')
                 });
 
                 const dados = {

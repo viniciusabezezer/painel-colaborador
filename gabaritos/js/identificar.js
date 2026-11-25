@@ -66,8 +66,25 @@
             (serie ? ', ' + serie + 'ª série' : '');
     }
 
-    /* O QR é da prova aberta? Compara ano, bimestre, componente e série (a série
-       só quando a prova a informa). */
+    /* Chave da prova no Montador: os 8 primeiros caracteres do id (uuid), em
+       maiúsculas. Prova de demonstração ou só do navegador não tem. */
+    function chaveDaProva(id) {
+        var s = String(id || '');
+        return /^[0-9a-f]{8}-[0-9a-f]{4}-/i.test(s) ? s.replace(/-/g, '').slice(0, 8).toUpperCase() : '';
+    }
+
+    /* Entre as provas, a do QR: a que tem a mesma chave. */
+    function provaPeloQr(qr, provas) {
+        if (!qr || !qr.chave) return null;
+        return (provas || []).filter(function (p) { return (p.chave || chaveDaProva(p.id)) === qr.chave; })[0] || null;
+    }
+
+    /* O QR é da prova aberta?
+       Com a chave dos dois lados, a chave decide: é a única coisa que separa duas
+       provas com os mesmos ano, bimestre, série e componente (uma segunda chamada,
+       por exemplo). Sem chave de um dos lados, compara ano, bimestre, componente
+       e série (a série só quando a prova a informa); se a prova tem chave e o QR
+       não, o QR é de antes da chave e fica marcado para revisão. */
     function conferirProva(qr, prova) {
         var d = provaDoQr(qr);
         if (!d) return { ok: false, motivo: 'Não entendi o código desse QR.' };
@@ -76,11 +93,23 @@
             ano: String(prova.ano || ''), bimestre: digitos(prova.bimestre),
             componente: String(prova.componente || '').toUpperCase(), serie: digitos(prova.serie)
         };
+        var chaveDaAberta = prova.chave || chaveDaProva(prova.id);
+        if (qr.chave && chaveDaAberta) {
+            if (qr.chave === chaveDaAberta) return { ok: true };
+            return {
+                ok: false,
+                motivo: 'Este QR é de outra prova: ' +
+                    descricao(nomeComponente(d.componente), d.bimestre, d.ano, d.serie) + ' (chave ' + qr.chave +
+                    '). A prova aberta é ' +
+                    descricao(nomeComponente(esperada.componente, prova.componenteNome), esperada.bimestre, esperada.ano, esperada.serie) +
+                    ' (chave ' + chaveDaAberta + ').'
+            };
+        }
         var difere = (esperada.ano && esperada.ano !== d.ano) ||
             (esperada.bimestre && esperada.bimestre !== d.bimestre) ||
             (esperada.componente && esperada.componente !== d.componente) ||
             (esperada.serie && esperada.serie !== d.serie);
-        if (!difere) return { ok: true };
+        if (!difere) return { ok: true, semChave: !!chaveDaAberta && !qr.chave };
         return {
             ok: false,
             motivo: 'Este QR é de outra prova: ' +
@@ -101,7 +130,8 @@
     }
 
     /* Quem é, qual é o número da lista e o que merece revisão.
-       entrada: { qr, listaMarcada, alunos } */
+       entrada: { qr, listaMarcada, alunos, exigirChave }
+       exigirChave: a prova tem chave, então um QR sem chave é de antes dela. */
     function resolver(entrada) {
         var qr = entrada.qr;
         var marcada = entrada.listaMarcada;
@@ -119,6 +149,9 @@
             }
             if (temMarcada && Number(marcada) !== lista) {
                 alertas.push({ tipo: 'lista', campo: 'lista', detalhe: 'O número da lista marcado no cartão (' + marcada + ') não bate com o QR (' + lista + '). Vale o QR.' });
+            }
+            if (entrada.exigirChave && !qr.chave) {
+                alertas.push({ tipo: 'chave', campo: 'qr', detalhe: 'Este QR não tem a chave da prova (foi gerado antes dela existir, ou fora do Montador). Confira se a folha é desta prova.' });
             }
         } else {
             lista = temMarcada ? Number(marcada) : null;
@@ -161,7 +194,7 @@
                 estavel = [];
                 return conferido.motivo || 'Esse QR não é desta prova.';
             }
-            identidade = { texto: texto, qr: qr, vistoEm: agora };
+            identidade = { texto: texto, qr: qr, vistoEm: agora, nota: conferido.nota || '' };
             estavel = [];
             lida = '';
             return '';
@@ -211,6 +244,8 @@
     var api = {
         VALIDADE_QR_MS: VALIDADE_QR_MS,
         provaDoQr: provaDoQr,
+        chaveDaProva: chaveDaProva,
+        provaPeloQr: provaPeloQr,
         conferirProva: conferirProva,
         alunoDoQr: alunoDoQr,
         leituraPlausivel: leituraPlausivel,

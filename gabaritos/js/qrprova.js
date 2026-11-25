@@ -13,6 +13,12 @@
         return /^\d{4,12}$/.test(texto) ? texto : '';
     }
 
+    /* Chave da prova no Montador: 8 caracteres de 0-9 e A-F. */
+    function chaveLimpa(valor) {
+        var texto = String(valor == null ? '' : valor).trim().toUpperCase();
+        return /^[0-9A-F]{8}$/.test(texto) ? texto : '';
+    }
+
     function partesDoCodigo(id) {
         var partes = String(id || '').trim().toUpperCase().split('-');
         if (partes.length !== 7 || partes[0] !== 'MLS') return null;
@@ -40,7 +46,8 @@
                 numero: abrirCampo(campos[3]) || novo.numero,
                 nome: abrirCampo(campos[4]),
                 titulo: abrirCampo(campos[5]),
-                matricula: campos.length > 6 ? matriculaLimpa(campos[6]) : ''
+                matricula: campos.length > 6 ? matriculaLimpa(campos[6]) : '',
+                chave: campos.length > 7 ? chaveLimpa(campos[7]) : ''
             };
         }
 
@@ -54,7 +61,8 @@
             numero: antigo.numero,
             nome: linhas.slice(1).join(' ').trim(),
             titulo: '',
-            matricula: ''
+            matricula: '',
+            chave: ''
         };
     }
 

@@ -419,7 +419,20 @@
            vale para uma leitura só e é apagada ao registrar (ver identificar.js). */
         var fluxo = MaluIdentificar.criarFluxo({
             semQr: semQrAtivo(),
-            aceitar: function (qr) { return MaluIdentificar.conferirProva(qr, p); }
+            aceitar: function (qr) {
+                /* A chave do QR acha a prova: se a folha é de outra prova que a
+                   pessoa corrige, a tela troca de prova sozinha. */
+                var outra = MaluIdentificar.provaPeloQr(qr, st.provas);
+                if (outra && outra.id !== p.id) {
+                    if (!podeCorrigir(outra)) return { ok: false, motivo: 'Este QR é da prova "' + outra.titulo + '", que você não corrige.' };
+                    p = outra;
+                    st.provaSel = outra.id;
+                    var sub = el.querySelector('.cabeca-tela p');
+                    if (sub) sub.textContent = outra.titulo;
+                    return { ok: true, nota: 'Prova trocada para ' + outra.titulo + '.' };
+                }
+                return MaluIdentificar.conferirProva(qr, p);
+            }
         });
         var caixaSemQr = el.querySelector('#sem-qr');
         caixaSemQr.addEventListener('change', function () { st.semQr = caixaSemQr.checked; fluxo.semQr(caixaSemQr.checked); });
@@ -475,6 +488,7 @@
             if (quem && quem.texto !== identidadeMostrada) {
                 identidadeMostrada = quem.texto;
                 mostrarQrLido(saidaQr, quem.texto);
+                if (quem.nota) saidaQr.textContent += ' ' + quem.nota;
                 if (navigator.vibrate) navigator.vibrate(40);
             } else if (!quem && identidadeMostrada) {
                 identidadeMostrada = '';
@@ -595,7 +609,7 @@
         /* O QR manda. O número marcado nas bolhas só confere: se não bate, a
            leitura vai para revisão e vale o QR. Sem QR (folha sem QR, ligada de
            propósito), o aluno sai do número marcado, como antes. */
-        var ident = MaluIdentificar.resolver({ qr: qr, listaMarcada: lido.lista && lido.lista.numero, alunos: p.alunos });
+        var ident = MaluIdentificar.resolver({ qr: qr, listaMarcada: lido.lista && lido.lista.numero, alunos: p.alunos, exigirChave: !!p.chave });
         var lista = ident.lista;
         var aluno = ident.aluno;
         var status = null;
@@ -712,16 +726,28 @@
                 var textos = [];
                 for (var k = 0; k < imagens.length; k++) {
                     var folha = imagens[k].imagem ? imagens[k] : { imagem: imagens[k], qrTexto: '' };
-                    var lido = MaluOMR.ler(folha.imagem, MontarGabarito.geometria({ total: Object.keys(p.gabarito).length, alternativas: p.alternativas || 5 }), { codigo: comCodigo(p), limiarMarcada: st.ajustes.limiar });
                     var qrTexto = folha.qrTexto || '';
                     var qr = window.MaluQrProva ? MaluQrProva.ler(qrTexto) : null;
+                    /* Primeiro o QR: ele diz de qual prova é a folha. A chave acha a
+                       prova entre as que a pessoa corrige, mesmo que não seja a que
+                       está aberta; só depois o cartão é lido, com a prova certa. */
+                    var alvo = p;
+                    var outra = qr ? MaluIdentificar.provaPeloQr(qr, st.provas) : null;
+                    if (outra && outra.id !== p.id) {
+                        if (!podeCorrigir(outra)) {
+                            textos.push('Cartão ' + (k + 1) + ': este QR é da prova "' + outra.titulo + '", que você não corrige. Não registrei.');
+                            continue;
+                        }
+                        alvo = outra;
+                    }
+                    var lido = MaluOMR.ler(folha.imagem, MontarGabarito.geometria({ total: Object.keys(alvo.gabarito).length, alternativas: alvo.alternativas || 5 }), { codigo: comCodigo(alvo), limiarMarcada: st.ajustes.limiar });
                     if (!MaluIdentificar.leituraPlausivel(lido)) {
                         textos.push('Cartão ' + (k + 1) + ': não li as marcas.' + (qr ? ' QR da prova: ' + qr.nome + ' · ' + qr.turma + ' · ' + qr.codigo + '.' : ''));
                         continue;
                     }
-                    /* Primeiro o QR: sem ele (ou com o de outra prova) a folha não é registrada. */
+                    /* Sem QR (ou com o de outra prova) a folha não é registrada. */
                     if (qr) {
-                        var confere = MaluIdentificar.conferirProva(qr, p);
+                        var confere = MaluIdentificar.conferirProva(qr, alvo);
                         if (!confere.ok) {
                             textos.push('Cartão ' + (k + 1) + ': ' + confere.motivo + ' Não registrei.');
                             continue;
@@ -731,8 +757,8 @@
                         continue;
                     }
                     lido.qrTexto = qrTexto;
-                    var item = registrar(p, lido, null);
-                    textos.push('Cartão ' + (k + 1) + ': ' + (qr ? (qr.nome || ('lista ' + item.lista)) + ' · ' : '') + resumoCurto(p, lido, item) + (item.revisar ? ' · revisar' : ''));
+                    var item = registrar(alvo, lido, null);
+                    textos.push('Cartão ' + (k + 1) + ': ' + (alvo !== p ? '[' + alvo.titulo + '] ' : '') + (qr ? (qr.nome || ('lista ' + item.lista)) + ' · ' : '') + resumoCurto(alvo, lido, item) + (item.revisar ? ' · revisar' : ''));
                 }
                 li.lastElementChild.textContent = textos.join(' ');
             } catch (e) {
