@@ -35,7 +35,7 @@ test('o nome do PDF que vai para o Identificador leva a chave; sem chave, é o d
 
 test('lê a chave, o ano, o bimestre, a série e o componente do nome e do título', () => {
     assert.deepEqual(Chave.doTexto('PROVA-2026-B3-1S-LIN-K8F3A2C1D'),
-        { chave: '8F3A2C1D', ano: '2026', bimestre: 'B3', serie: '1', componente: 'LIN' });
+        { chave: '8F3A2C1D', ano: '2026', bimestre: 'B3', serie: '1', componente: 'LIN', tipo: 'prova' });
     assert.equal(Chave.doTexto('PROVA-2026-B3-1S-LIN-K8F3A2C1D.pdf').chave, '8F3A2C1D', 'com a extensão');
     assert.equal(Chave.doTexto('prova-2026-b3-1s-lin-k8f3a2c1d-gabarito').chave, '8F3A2C1D', 'caixa baixa e sufixo');
     const semChave = Chave.doTexto('PROVA-2026-B3-2S-NAT');

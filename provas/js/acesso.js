@@ -122,6 +122,19 @@
         return data;
     }
 
+    /* As provas que o Montador já travou para impressão. O banco só mostra as
+       provas a quem pode vê-las (a gestão vê todas); a conta daqui é a mesma. */
+    async function listarProvasDoMontador() {
+        const c = obterCliente();
+        if (!c) throw new Error('Entre com a sua conta.');
+        const { data, error } = await c.from('montador_provas')
+            .select('id, titulo, componente, serie, bimestre, ano, situacao, atualizada_em')
+            .eq('situacao', 'travada')
+            .order('atualizada_em', { ascending: false });
+        if (error) throw new Error(error.message || 'Não consegui buscar as provas do Montador.');
+        return data || [];
+    }
+
     async function sair() {
         perfilLiberado = null;
         const c = obterCliente();
@@ -147,6 +160,7 @@
         autorizado: autorizado,
         perfil: function () { return perfilLiberado; },
         chamarPresente: chamarPresente,
+        listarProvasDoMontador: listarProvasDoMontador,
         cliente: obterCliente
     };
     if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', iniciar);

@@ -24,7 +24,20 @@
     var NOME = /^PROVA-(\d{4})-(B[1-4])-([123])([A-FS])-([A-Z0-9]+)/;
     var CHAVE = /(?:^|-)K([0-9A-F]{8})(?=-|$)/;
 
-    /* "PROVA-2026-B3-1S-LIN-K8F3A2C1D.pdf" → { chave, ano, bimestre, serie, componente } */
+    /* O que o Montador gera, pelo fim do nome:
+         PROVA-…-K8F3A2C1D                      a prova                       → 'prova'
+         PROVA-…-K8F3A2C1D-GABARITO             gabarito avulso, 1 por página → 'gabarito'
+         PROVA-…-K8F3A2C1D-GABARITOS-4-POR-FOLHA  4 por folha, para imprimir   → 'quatro'
+         PROVA-…-GABARITO-PROFESSOR             folha do professor            → 'professor'
+       Só os dois primeiros entram no Identificador. */
+    function tipoDoNome(t) {
+        if (/-GABARITO-PROFESSOR/.test(t)) return 'professor';
+        if (/-GABARITOS-4-POR-FOLHA/.test(t)) return 'quatro';
+        if (/-GABARITO(?:-|$)/.test(t)) return 'gabarito';
+        return 'prova';
+    }
+
+    /* "PROVA-2026-B3-1S-LIN-K8F3A2C1D.pdf" → { chave, ano, bimestre, serie, componente, tipo } */
     function doTexto(texto) {
         var t = String(texto || '').trim().toUpperCase().replace(/\.PDF$/, '');
         var chave = t.match(CHAVE);
@@ -35,7 +48,8 @@
             ano: nome ? nome[1] : '',
             bimestre: nome ? nome[2] : '',
             serie: nome ? nome[3] : '',
-            componente: nome ? nome[5] : ''
+            componente: nome ? nome[5] : '',
+            tipo: tipoDoNome(t)
         };
     }
 

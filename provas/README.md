@@ -59,17 +59,33 @@ Bimestral Malu sai de lá com um espaço em branco de 2,5 cm exatamente onde
 este app cola o cabeçalho com os valores padrão da tela (19 × 2,5 cm, a 0,6 cm
 do alto e 1 cm da esquerda), então basta subir o PDF.
 
-1. **A avaliação** — bimestre, ano e a *chave da escola*.
+1. **A avaliação** — bimestre, ano e a *chave da escola*. Aqui também dá para
+   **Trazer as provas do Montador**: o app busca as provas que o PCA já travou
+   para impressão, agrupadas por bimestre (o mais novo já vem marcado), e a
+   gestão marca as que quer usar. O bimestre, o ano e o nome da avaliação são
+   preenchidos. Tem de ser um bimestre só e uma prova por série e componente;
+   prova de formato livre não entra. Sem importar, tudo segue como sempre.
 2. **Os alunos** — cola-se tudo de uma vez, todas as turmas juntas. A turma pode
    vir como título de bloco (`TURMA 3B`) ou na própria linha (`3B; João da
    Silva`, `7;CARLA MENDES;1B`, `PEDRO ALVES - 3A`). Se a lista já vier
    numerada, é **esse** número que vale: é o mesmo que o aluno preenche em
    “Núm. da lista” na folha de respostas. Sem numeração, a ordem alfabética
-   manda — e aí a mesma turma gera sempre os mesmos códigos.
+   manda — e aí a mesma turma gera sempre os mesmos códigos. Além de **Puxar do
+   Malu Presente** (todas as turmas do ano), dá para **escolher só as turmas que
+   se quer puxar agora**: A a F das séries das provas importadas. Cada puxada
+   pede ao Malu Presente só as turmas marcadas e **junta** o resultado à lista,
+   no lugar das turmas de mesmo nome, sem apagar as outras nem as edições feitas
+   nelas.
 3. **As provas** — cada prova em PDF, uma por série e componente, e a escolha
    do que cada aluno recebe: **só a capa e o verso** (as duas primeiras
    páginas; o resto sai no xerox em massa) ou **a prova inteira**, pronta para
-   imprimir completa. JPG ou PNG servem, mas aí sai só a capa.
+   imprimir completa. JPG ou PNG servem, mas aí sai só a capa. Com provas
+   importadas, dá para **soltar todos os PDFs de uma vez**: cada um é reconhecido
+   pela chave da prova (gravada no título do PDF pelo Montador) e vai sozinho
+   para o espaço dele, prova ou gabarito avulso, sem importar o nome do arquivo.
+   Ficam de fora, com o motivo na tela: PDF sem chave (use o espaço, mais
+   abaixo), a folha do professor, o PDF com 4 gabaritos por folha (o de 1 por
+   página é o que o Identificador recebe) e PDF de prova que não foi importada.
 4. **O cabeçalho de identificação** — clica-se na prévia da própria prova para
    encostar ali o canto de cima do cabeçalho, e ajusta-se largura e altura até
    o retângulo cobrir a faixa deixada em branco.
@@ -316,8 +332,9 @@ leve. O SHA-256 é implementação própria em `js/sha256.js`, porque o
 
 ```bash
 node --test provas/test/provas.test.cjs   # código, lista, QR MLSPROVA1, posição e PDF
+node --test provas/test/chaveprova.test.cjs provas/test/importar.test.cjs  # a chave no PDF e no QR; a importação do Montador
 node --test gabaritos/test/qrprova.test.cjs  # o Gabaritos lê o QR novo e o antigo
-node provas/test/provas-browser.mjs       # 38 verificações na tela, com Chromium
+node provas/test/provas-browser.mjs       # 72 verificações na tela, com Chromium (inclui a importação do Montador)
 ```
 
 O teste de navegador precisa do `playwright` instalado (global serve), sobe um

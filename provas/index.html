@@ -7,7 +7,7 @@
     <meta name="description" content="Gera a primeira página de cada prova já identificada com o nome do aluno, a turma e um código único com QR Code. Funciona no navegador, sem internet e sem enviar nada para fora.">
     <meta name="robots" content="noindex">
     <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='24' fill='%23166534'/%3E%3Crect x='24' y='24' width='22' height='22' fill='white'/%3E%3Crect x='54' y='24' width='22' height='22' fill='white'/%3E%3Crect x='24' y='54' width='22' height='22' fill='white'/%3E%3Crect x='56' y='56' width='8' height='8' fill='white'/%3E%3Crect x='68' y='68' width='8' height='8' fill='white'/%3E%3C/svg%3E">
-    <link rel="stylesheet" href="app.css?v=3">
+    <link rel="stylesheet" href="app.css?v=4">
 </head>
 <body>
 
@@ -70,6 +70,16 @@
 
         <fieldset class="passo">
             <legend><span class="num">1</span> A avaliação</legend>
+            <div class="montador-importar" id="montador-importar">
+                <p class="dica">Traga as provas que o Montador já travou para impressão. O app preenche o bimestre, o ano e o nome da avaliação e, no passo 3, reconhece cada PDF pela chave da prova: ninguém escolhe o espaço na mão.</p>
+                <div class="acoes-lista">
+                    <button type="button" class="btn" id="buscar-provas-montador">Trazer as provas do Montador</button>
+                    <span class="contagem" id="contagem-montador"></span>
+                </div>
+                <p class="aviso" id="aviso-montador" hidden></p>
+                <div id="provas-montador" class="provas-montador"></div>
+                <div id="provas-importadas" class="provas-montador"></div>
+            </div>
             <div class="linha-campos">
                 <label class="campo-largo">Nome da avaliação
                     <input type="text" id="avaliacao" placeholder="Ex.: Avaliação Bimestral de Linguagens e Códigos">
@@ -103,6 +113,13 @@
                 <button type="button" class="btn" id="puxar-presente">Puxar do Malu Presente</button>
                 <button type="button" class="btn" id="limpar-lote">Limpar a lista</button>
                 <span class="contagem" id="contagem-lote">Nenhum aluno lido ainda.</span>
+            </div>
+            <div class="turmas-presente" id="turmas-presente">
+                <p class="dica">Ou escolha só as turmas que quer puxar agora. As que você puxar entram na lista sem apagar as que já estão aí.</p>
+                <div id="turmas-escolha" class="turmas"></div>
+                <div class="acoes-lista">
+                    <button type="button" class="btn" id="puxar-turmas-escolhidas" disabled>Puxar as turmas escolhidas</button>
+                </div>
             </div>
             <p class="aviso" id="aviso-presente" hidden></p>
             <button type="button" class="btn btn--primary" id="sugerir-presente" hidden>Enviar estas mudanças como sugestão para a secretaria</button>
@@ -143,6 +160,13 @@
                     <span class="modelo-titulo">A prova inteira</span>
                     <span class="modelo-texto">Cada aluno recebe todas as páginas do PDF enviado, com o cabeçalho na capa: o arquivo sai pronto para imprimir a prova completa.</span>
                 </label>
+            </div>
+
+            <div class="soltar-montador" id="soltar-montador" hidden>
+                <label class="campo-arquivo">Soltar de uma vez os PDFs que vieram do Montador (prova e gabarito)
+                    <input type="file" id="pdfs-montador" accept=".pdf,application/pdf" multiple>
+                </label>
+                <ul class="resultado-pdfs" id="resultado-pdfs-montador"></ul>
             </div>
 
             <div id="slots" class="slots"></div>
@@ -363,6 +387,9 @@
                 <li><strong>Imprimir por sala</strong>, no passo 5: usa o último mapa salvo pelo Randomizador (dá para escolher outro recente ou subir o <code>.json</code>). Sai um PDF único com as salas na ordem do mapa. Antes de cada sala, a folha de rosto com a lista dos alunos na ordem dos lugares; cada aluno recebe a prova da série dele, então uma sala com turmas misturadas sai com as provas certas intercaladas. A prova reserva das séries presentes na sala vem no fim daquele pacote. Dá para pedir também um PDF por sala. Os gabaritos identificados, se forem gerados com essa opção, seguem a mesma ordem. A página em branco de frente e verso continua valendo, inclusive depois da folha de rosto. Se a tabela de mapas ainda não existir, o app não quebra: vale o arquivo.</li>
             </ul>
 
+            <h3>Trazer as provas do Montador</h3>
+            <p>No passo 1, <strong>Trazer as provas do Montador</strong> mostra as provas que o PCA já travou para impressão. Marque as do bimestre (uma por série e componente) e use: o bimestre, o ano e o nome da avaliação são preenchidos. No passo 3, solte todos os PDFs de uma vez: cada um é reconhecido pela <strong>chave da prova</strong>, que o Montador grava no título do PDF, e vai para o espaço certo, mesmo que o nome do arquivo tenha mudado. A mesma chave vai no QR de cada aluno, e é ela que faz o Malu Gabaritos achar a prova sozinho. No passo 2, dá para escolher só as turmas que você quer puxar do Malu Presente, aos poucos.</p>
+
             <h3>O código</h3>
             <p><code>MLS-2026-B3-1A-007-LIN-DRYT</code> quer dizer: escola, ano, bimestre, turma, número da lista, componente e um verificador de quatro caracteres. O verificador sai de um cálculo com o nome do aluno e a chave da escola, então trocar o nome ou a turma na caneta derruba a conferência. Esse código continua impresso em letra legível. O QR leva o mesmo código dentro do formato <code>MLSPROVA1</code>, junto com a turma, o número, o nome e o título da avaliação. Prova já impressa, com o QR antigo em duas linhas, continua valendo na conferência.</p>
             <p>Os componentes entram no código como <code>RED</code> (Redação), <code>LIN</code> (Linguagens e Códigos), <code>NAT</code> (Ciências da Natureza), <code>HUM</code> (Ciências Humanas) e <code>MAT</code> (Matemática).</p>
@@ -388,13 +415,14 @@
 
 <script src="vendor/supabase.js"></script>
 <script src="js/config.js"></script>
-<script src="js/acesso.js"></script>
+<script src="js/acesso.js?v=2"></script>
 <script src="vendor/pdf-lib.min.js"></script>
 <script src="vendor/qrcode.js"></script>
 <script src="js/brasao.js"></script>
 <script src="js/sha256.js"></script>
 <script src="js/qrprova.js?v=2"></script>
 <script src="js/chaveprova.js?v=1"></script>
+<script src="js/importar.js?v=1"></script>
 <script src="js/identificacao.js?v=4"></script>
 <script src="js/lista.js"></script>
 <script src="js/listas.js"></script>
@@ -404,6 +432,6 @@
 <script src="js/saida.js"></script>
 <script src="js/historico.js"></script>
 <script src="js/previa.js"></script>
-<script src="js/app.js?v=5"></script>
+<script src="js/app.js?v=6"></script>
 </body>
 </html>
