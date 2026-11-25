@@ -363,19 +363,16 @@ try {
     await pagina.evaluate(() => { window.print = () => {}; });
     await pagina.click('#ed-imprimir');
     await pagina.waitForTimeout(300);
-
-    /* versão B */
-    await pagina.click('#ed-versaob');
-    await pagina.waitForFunction(() => /Tipo B/.test(document.getElementById('ed-titulo').textContent));
-    const b = await pagina.evaluate(() => window.MontadorProvas.estado().secoes[0].questoes.find((q) => q.fonte === 'Uece'));
-    conferir(b.alternativas[0] !== 'Possuem ciclo de vida assexuado e sexuado.' || b.correta !== 'D', 'a versão B abre com as alternativas em outra ordem');
-    conferir(b.alternativas['ABCDE'.indexOf(b.correta)].startsWith('Não possuem células'), 'na versão B a resposta certa acompanha a alternativa');
+    /* o bimestre e o ano da prova nova vêm da data de hoje: o nome esperado sai
+       do próprio app, em vez de ficar fixo num bimestre (o teste quebrava a cada virada) */
+    const nomeDaProva = await pagina.evaluate(() => window.MontarModelos.nomeArquivo(window.MontadorProvas.estado()));
 
     /* --- do zero: formato livre --- */
     await pagina.goto(`http://127.0.0.1:${PORTA}/montar/#/`);
     await pagina.waitForSelector('#tela-inicio:not([hidden]) .prova-linha');
     const arquivos = await pagina.$$eval('#lista-arquivos .prova-linha strong', (n) => n.map((x) => x.textContent));
-    conferir(arquivos.includes('PROVA-2026-B3-2S-NAT') && arquivos.includes('PROVA-2026-B3-2S-NAT-GABARITO-PROFESSOR'), 'a prova e o gabarito impressos ficam em "Últimos arquivos gerados"');
+    conferir(/^PROVA-\d{4}-B[1-4]-2S-NAT$/.test(nomeDaProva), 'o nome do PDF segue o padrão do Identificador: ' + nomeDaProva);
+    conferir(arquivos.includes(nomeDaProva) && arquivos.includes(nomeDaProva + '-GABARITO-PROFESSOR'), 'a prova e o gabarito impressos ficam em "Últimos arquivos gerados"');
     await pagina.click('[data-usar="do-zero"]');
     await pagina.waitForSelector('#tela-editor:not([hidden]) #formato select[data-l="cabecalho"]');
     await pagina.selectOption('#formato [data-l="colunas"]', '1');

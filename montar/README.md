@@ -259,10 +259,9 @@ enunciado, alternativas vazias e respostas não marcadas.
 
 ## Outras funções
 
-- **Versão B**: cópia da prova com as alternativas em outra ordem (a resposta
-  certa acompanha, e o gabarito do professor da versão B sai certo), para
-  turmas grandes. Questões com "todas as anteriores", "nenhuma das
-  alternativas", "a e b" ficam na ordem original — o app avisa quais.
+- **Não há versão B.** Uma prova tem uma só ordem de questões e de alternativas,
+  a mesma para todos os alunos: é o que permite ao Malu Gabaritos corrigir cada
+  folha com o gabarito da prova (o QR de cada aluno leva a chave da prova).
 - **Folha de correção (professor)**: uma folha com a resposta de cada questão.
 - **Exportar / Importar** (`.json`): leva a prova a outro computador ou à
   coordenação.
@@ -331,7 +330,7 @@ HTML, CSS e JavaScript sem framework, sem build e sem biblioteca de fora.
 | Arquivo | Para que |
 | --- | --- |
 | `js/texto.js` | marcação (negrito, itálico, índice, expoente) e divisão em palavras |
-| `js/modelos.js` | modelo fixo, modelos guardados (localStorage), fontes, prova, versão B |
+| `js/modelos.js` | modelo fixo, modelos guardados (localStorage), fontes, prova |
 | `js/icones.js` | ícones das disciplinas (SVG de traço) e detecção pelo título |
 | `js/gabarito.js` | a grade de respostas em SVG, em milímetros |
 | `js/importar.js` | leitura das várias questões coladas |
@@ -350,7 +349,7 @@ HTML, CSS e JavaScript sem framework, sem build e sem biblioteca de fora.
 ## Testes
 
 ```bash
-node --test montar/test/montar.test.cjs   # 24 testes: marcação, modelos, ícones, versão B, gabarito, colagem
+node --test montar/test/montar.test.cjs   # 24 testes: marcação, modelos, ícones, gabarito, colagem
 node --test montar/test/convite.test.mjs  # convite por link e os controles de admin, com servidor de mentira
 node montar/test/montar-browser.mjs        # 80 verificações na tela, com Chromium
 node montar/test/area-browser.mjs          # 76 verificações da prova da área e do convite, com Chromium
@@ -361,7 +360,7 @@ Avaliação Bimestral colando `test/questoes-exemplo.txt`, confere a faixa, o
 gabarito (e tirá-lo), a fonte padrão, os ícones, as alternativas lado a lado, a
 gabarito como imagem e à parte (4 por folha e 1 por página, no tamanho real),
 a linha entre as colunas, colagem de texto do Word e de imagem, tamanho e posição de imagem, texto de
-apoio, desfazer, economia de papel, versão B, os últimos arquivos gerados, gera
+apoio, desfazer, economia de papel, os últimos arquivos gerados, gera
 o PDF como a impressão do navegador gera e, por fim, **corta a internet e abre
 o app de novo**. Os PDFs e uma captura da tela ficam em `test/saida/`.
 

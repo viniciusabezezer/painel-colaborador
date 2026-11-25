@@ -187,7 +187,7 @@ test('questão sem alternativas vira discursiva; texto-base antes da questão en
     assert.equal(q2.tipo, 'objetiva');
 });
 
-/* ===== aparência, ícones, versão B, texto de apoio ===== */
+/* ===== aparência, ícones, texto de apoio ===== */
 
 test('Times New Roman 10 é o padrão, inclusive no modelo fixo', () => {
     const fixo = Modelos.obter(Modelos.FIXO_ID);
@@ -250,27 +250,6 @@ test('ícone da disciplina sai do título da seção', () => {
     Object.keys(Modelos.COMPONENTES).forEach((c) => Modelos.COMPONENTES[c].secoes.forEach((s) => {
         assert.ok(Icones.detectar(s), 'toda disciplina da escola tem ícone: ' + s);
     }));
-});
-
-test('versão B troca a ordem das alternativas e leva a resposta certa junto', () => {
-    const p = Modelos.criarProva(Modelos.obter(Modelos.FIXO_ID));
-    const q = Modelos.novaQuestao('objetiva', 5);
-    q.alternativas = ['um', 'dois', 'três', 'quatro', 'cinco'];
-    q.correta = 'C';
-    const presa = Modelos.novaQuestao('objetiva', 5);
-    presa.alternativas = ['x', 'y', 'z', 'w', 'todas as anteriores'];
-    p.secoes[0].questoes.push(q, presa);
-    let semente = 7;
-    const r = Modelos.versaoEmbaralhada(p, 'B', () => ((semente = (semente * 9301 + 49297) % 233280) / 233280));
-    const q2 = r.prova.secoes[0].questoes[0];
-    assert.notDeepEqual(q2.alternativas, q.alternativas);
-    assert.deepEqual([...q2.alternativas].sort(), [...q.alternativas].sort());
-    assert.equal(q2.alternativas['ABCDE'.indexOf(q2.correta)], 'três');
-    assert.deepEqual(r.prova.secoes[0].questoes[1].alternativas, presa.alternativas, '"todas as anteriores" fica na ordem');
-    assert.deepEqual(r.presas, [2]);
-    assert.match(r.prova.titulo, /Tipo B$/);
-    assert.notEqual(r.prova.id, p.id);
-    assert.deepEqual(q.alternativas, ['um', 'dois', 'três', 'quatro', 'cinco'], 'a original não muda');
 });
 
 test('as instruções são do professor também no modelo fixo; a faixa tem 2,5 cm', () => {

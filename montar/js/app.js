@@ -1721,21 +1721,6 @@
     $('ed-chave').onclick = function () { imprimir(true); };
     $('ed-exportar').onclick = function () { salvar.agora(); exportar(prova); };
 
-    /* ----- versão B ----- */
-
-    $('ed-versaob').onclick = async function () {
-        const objetivas = Modelos.questoesNumeradas(prova).filter(function (i) { return i.questao.tipo === 'objetiva'; }).length;
-        if (!objetivas) { alert('A versão B troca a ordem das alternativas, e esta prova ainda não tem questões objetivas.'); return; }
-        if (!confirm('Criar uma cópia desta prova com as alternativas em outra ordem (Tipo B)? A resposta certa acompanha, e o gabarito do professor da versão B sai certo. Esta prova não muda.')) return;
-        salvar.agora();
-        const r = Modelos.versaoEmbaralhada(prova, 'B');
-        delete r.prova.nuvem;
-        r.prova.id = Modelos.novoId('prova');
-        await Armazem.salvar(r.prova);
-        if (r.presas.length) alert('Ficaram na ordem original as questões ' + r.presas.join(', ') + ', porque têm alternativas como "todas as anteriores" ou "a e b".');
-        location.hash = '#/prova/' + encodeURIComponent(r.prova.id);
-    };
-
     /* ----- colar várias questões ----- */
 
     function abrirColar() {

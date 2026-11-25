@@ -384,50 +384,6 @@
         };
     }
 
-    /* ----- versão B ----- */
-
-    /* Alternativas que dependem da posição ("todas as anteriores", "nenhuma
-       das alternativas", "NDA", "a e b estão corretas") não podem trocar de
-       lugar: a questão fica na ordem original. */
-    const PRESA_A_ORDEM = /anterior|nenhuma d|todas as|\bnda\b|\b[a-e]\s*(,|e)\s*[a-e]\b|\b[a-e]\)\s*e\s*[a-e]\)|apenas\s+[a-e]\b/i;
-
-    function embaralhar(lista, aleatorio) {
-        const copia = lista.slice();
-        for (let i = copia.length - 1; i > 0; i--) {
-            const j = Math.floor(aleatorio() * (i + 1));
-            const t = copia[i]; copia[i] = copia[j]; copia[j] = t;
-        }
-        return copia;
-    }
-
-    /* Uma cópia da prova com as alternativas em outra ordem (a resposta certa
-       acompanha). As questões continuam na mesma ordem, para o texto de apoio
-       e o "Leia o texto para as questões 3 e 4" continuarem valendo. */
-    function versaoEmbaralhada(prova, rotulo, aleatorio) {
-        aleatorio = aleatorio || Math.random;
-        const nova = copiar(prova);
-        const n = layoutDaProva(prova).alternativas;
-        const presas = [];
-        nova.id = novoId('prova');
-        nova.titulo = (prova.titulo || 'Prova') + ' — Tipo ' + (rotulo || 'B');
-        nova.criadaEm = Date.now();
-        questoesNumeradas(nova).forEach(function (item) {
-            const q = item.questao;
-            if (q.tipo !== 'objetiva') return;
-            const textos = q.alternativas.slice(0, n);
-            if (textos.some(function (a) { return PRESA_A_ORDEM.test(a || ''); })) { presas.push(item.numero); return; }
-            const ordem = textos.map(function (_, i) { return i; });
-            let nova0 = embaralhar(ordem, aleatorio);
-            /* sem embaralhar de mentira: se saiu igual, gira uma casa */
-            if (nova0.every(function (v, i) { return v === i; })) nova0 = ordem.slice(1).concat(ordem[0]);
-            const certaAntes = q.correta ? 'ABCDE'.indexOf(q.correta) : -1;
-            q.alternativas = nova0.map(function (i) { return q.alternativas[i] || ''; }).concat(q.alternativas.slice(n));
-            q.altImagens = nova0.map(function (i) { return (q.altImagens || [])[i] || null; });
-            if (certaAntes >= 0) q.correta = 'ABCDE'[nova0.indexOf(certaAntes)];
-        });
-        return { prova: nova, presas: presas };
-    }
-
     /* ----- números e letras ----- */
 
     const LETRAS = 'ABCDE';
@@ -521,7 +477,6 @@
         INSTRUCOES_BIMESTRAL: INSTRUCOES_BIMESTRAL,
         normalizarQuestao: normalizarQuestao,
         normalizarProva: normalizarProva,
-        versaoEmbaralhada: versaoEmbaralhada,
         escolher: escolher,
         COMPONENTES: COMPONENTES,
         FIXO_ID: FIXO.id,
