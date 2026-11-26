@@ -27,12 +27,25 @@ cada um com o seu login.
 | **Professor** | Escreve as questões das seções atribuídas a ele; vê a prova inteira (as seções dos colegas ficam só para leitura); comenta; marca a sua seção como **pronta para revisão**. |
 
 **Código de verificação: só a Gestão (a coordenação).** Só ela liga a opção,
-cadastra as turmas, define o prazo e gera os códigos. O PCA e o professor não
+cadastra as turmas e gera os códigos. O PCA e o professor não
 veem onde ligar. Se a Gestão já gerou os códigos de uma prova, o PCA vê apenas
 os botões de imprimir as cópias e a folha de códigos. Isso vale no banco, não
 só na tela (`supabase/007_codigo_so_gestao.sql`): mesmo por fora do Montador, o
 PCA não liga, não desliga e não apaga o código, e continua salvando formato e
 instruções como sempre.
+
+**O código vale ponto de bônus.** Quem preenche o código certo ganha **+1 ponto**
+na nota (teto 10). Quem deixa em branco ou erra **não perde nada**: a nota fica só
+com as questões. Não há ponto a recuperar nem prazo para isso.
+
+**Como o código aparece na prova.** Ligar a opção não escreve nada na prova: a
+instrução (dentro do enunciado da primeira questão) e as pistas (nas questões
+seguintes) entram na **cópia de cada aluno**, depois de cadastrar turma, sala e
+quantidade e clicar em **Gerar os códigos**. Antes disso a prévia mostra uma
+**cópia de exemplo** (instrução e pistas, sem aluno), só para ver como fica; ela
+não é guardada e o botão de imprimir avisa que não é de aluno nenhum. A prova
+precisa de pelo menos 7 questões. Para imprimir as provas dos alunos, use
+**Imprimir todas as cópias**.
 
 **O caminho de uma prova da área**
 

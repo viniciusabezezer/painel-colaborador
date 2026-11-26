@@ -44,7 +44,7 @@
             'e o resultado dela (de 3 a 9) é um algarismo do código. ' +
             'Em cada grupo, siga a ordem das questões. ' +
             'Pinte uma bolha em cada uma das 6 colunas do quadro Código de verificação do cartão-resposta. ' +
-            'Código certo soma 1 ponto na nota; em branco ou errado, tira 1 ponto.';
+            'Código certo vale 1 ponto a mais na nota; quem deixar em branco ou errar não perde nada.';
     }
 
     /* O parágrafo é a instrução do código? (a diagramação usa isto) */
@@ -60,7 +60,7 @@
         '4º, 5º e 6º: em outras três questões há uma soma de dois números no meio da frase, escrita como o resto do texto, sem marca, sem caixa e sem sinal de igual. O algarismo do código é o resultado dessa soma, de 3 a 9.',
         'No cartão-resposta, pinte uma bolha em cada uma das 6 colunas do código.',
         'Código certo: +1 ponto, já contado na nota desta prova.',
-        'Código em branco ou errado: você fica devendo 1 ponto. Dá para recuperar até o fim do prazo de lançamento das notas no sistema oficial, de um jeito só, à escolha do professor: uma tarefa avulsa, uma medida restaurativa simples, ou um mini teste oral de 2 ou 3 perguntas corrigido pelo professor.'
+        'Código em branco ou errado: nada muda na sua nota. O ponto é um bônus de quem completa o código.'
     ];
 
     /* ---------- SHA-256 (navegador sem crypto.subtle no file://) ---------- */
@@ -389,11 +389,9 @@
         return texto === String(esperado || '') ? 'correto' : 'incorreto';
     }
 
-    /* Nota em 0–10. O ponto do código entra na nota registrada e fica lá:
-       certo soma 1 (teto 10); em branco ou errado tira 1 (piso 0).
-       Recuperar o ponto não muda este número. O professor ajusta a nota
-       no registro dele; o app só guarda a situação (aberto, recuperado
-       ou não recuperado). */
+    /* Nota em 0–10. O código é um bônus: certo soma 1 ponto (teto 10); em
+       branco ou errado não muda nada, a nota fica só com as questões.
+       Leitura duvidosa (`ambiguo`) fica sem nota até alguém revisar. */
     function notaDaProva(op) {
         op = op || {};
         const total = op.total || 0;
@@ -402,7 +400,7 @@
         if (!op.comCodigo) return { nota: arred(base), ponto: null, base: arred(base) };
         if (op.statusCodigo === 'correto') return { nota: arred(Math.min(10, base + 1)), ponto: 1, base: arred(base) };
         if (op.statusCodigo === 'ambiguo' || !op.statusCodigo) return { nota: null, ponto: null, base: arred(base), pendente: true };
-        return { nota: arred(Math.max(0, base - 1)), ponto: -1, base: arred(base) };
+        return { nota: arred(base), ponto: null, base: arred(base) };
     }
 
     /* ---------- pistas no enunciado (só na cópia impressa) ---------- */

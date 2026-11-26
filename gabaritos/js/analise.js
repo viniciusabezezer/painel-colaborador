@@ -10,17 +10,6 @@
         return { nota: null };
     }
 
-    /* Depois do prazo, o que estava aberto passa a não recuperado.
-       Isso não mexe na nota: ela continua com o +1 ou o −1. */
-    function recuperacaoEfetiva(rec, hoje) {
-        if (!rec) return null;
-        const dia = hoje || new Date().toISOString().slice(0, 10);
-        if (rec.status === 'aberta' && rec.prazo && rec.prazo < dia) {
-            return Object.assign({}, rec, { status: 'nao_recuperada', vencida: true });
-        }
-        return rec;
-    }
-
     function acertosDe(respostas, gabarito) {
         let acertos = 0;
         let total = 0;
@@ -34,8 +23,7 @@
         return { acertos: acertos, total: total };
     }
 
-    /* A nota não olha a recuperação. Aberto, recuperado ou não recuperado
-       é outra informação, mostrada ao lado. */
+    /* A nota é a das questões, mais 1 se o código estiver certo. */
     function notaLeitura(leitura, prova) {
         const g = prova.gabarito || {};
         const contagem = acertosDe(leitura.respostas || {}, g);
@@ -122,21 +110,12 @@
         return linhas.map(function (l) { return l.map(cel).join(';'); }).join('\r\n');
     }
 
-    function diasAte(prazo, hoje) {
-        if (!prazo) return null;
-        const a = new Date(hoje || new Date().toISOString().slice(0, 10) + 'T00:00:00');
-        const b = new Date(String(prazo).slice(0, 10) + 'T00:00:00');
-        return Math.round((b - a) / 86400000);
-    }
-
     const api = {
         nota: nota,
-        recuperacaoEfetiva: recuperacaoEfetiva,
         acertosDe: acertosDe,
         notaLeitura: notaLeitura,
         itens: itens,
         csv: csv,
-        diasAte: diasAte,
         arred: arred
     };
     global.MaluAnalise = api;

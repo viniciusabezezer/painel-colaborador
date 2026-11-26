@@ -21,7 +21,6 @@
             historicoChave: {},
             provas: [],
             leituras: [],
-            recuperacoes: {},
             envios: []
         };
         try {
@@ -48,7 +47,6 @@
         st.perfil = d.professor;
         st.provas = d.provas;
         st.leituras = d.leituras;
-        st.recuperacoes = d.recuperacoes;
         st.envios = d.envios || [];
         if (!st.provas.some(function (p) { return p.id === st.provaSel; })) st.provaSel = d.provas[0].id;
     }
@@ -100,29 +98,6 @@
         return MaluAnalise.notaLeitura(l, p);
     }
 
-    /* Quem errou ou deixou o código em branco deve 1 ponto. A nota registrada
-       continua com esse −1. A situação (aberto, recuperado, não recuperado)
-       só acompanha o que o professor já resolveu no registro dele. */
-    function devePonto(l) {
-        return l.statusCodigo === 'incorreto' || l.statusCodigo === 'em_branco';
-    }
-
-    function situacaoPonto(l, p) {
-        if (!devePonto(l)) return null;
-        var rec = MaluAnalise.recuperacaoEfetiva(st.recuperacoes[l.id], hoje()) || { status: 'aberta', prazo: p.prazoNotas };
-        return rec;
-    }
-
-    function rotuloPonto(rec) {
-        if (!rec || rec.status === 'aberta') return 'Aberto';
-        if (rec.status === 'recuperada') return 'Recuperado — ajuste a nota no seu registro';
-        return 'Não recuperado';
-    }
-
-    function nomeModalidade(id) {
-        return { a_tarefa: 'tarefa avulsa', b_restaurativa: 'medida restaurativa', c_oral: 'mini teste oral' }[id] || '';
-    }
-
     function alunoDe(p, l) {
         return (p.alunos || []).filter(function (a) { return a.id === l.alunoId || (a.copiaId === l.copiaId && a.turma === l.turma); })[0];
     }
@@ -159,18 +134,6 @@
         });
     }
 
-    function comDivida(p) {
-        if (!comCodigo(p)) return [];
-        return leiturasDa(p.id).filter(devePonto);
-    }
-
-    function emAberto(p) {
-        return comDivida(p).filter(function (l) {
-            var rec = situacaoPonto(l, p);
-            return !rec || rec.status === 'aberta';
-        });
-    }
-
     /* ---------- navegação ---------- */
 
     function rotear() {
@@ -204,7 +167,7 @@
             ['ajustes', 'ajustes', 'Ajustes']
         ];
         navEl.innerHTML = itens.map(function (it) {
-            var atual = (nome === it[0] || (it[0] === 'resultados' && (nome === 'aluno' || nome === 'itens' || nome === 'ponto' || nome === 'exportar'))) ? ' aria-current="page"' : '';
+            var atual = (nome === it[0] || (it[0] === 'resultados' && (nome === 'aluno' || nome === 'itens' || nome === 'exportar'))) ? ' aria-current="page"' : '';
             var badge = it[0] === 'revisar' && rev ? '<span class="badge">' + rev + '</span>' : '';
             return '<a href="#/' + it[0] + '"' + atual + '>' + ic(it[1], 22) + badge + it[2] + '</a>';
         }).join('');
@@ -248,7 +211,6 @@
                 '<h2>Suas provas</h2><div class="grade c2">' + (cards || '<p class="suave">Nenhuma prova travada para você.</p>') + '</div>' +
                 '<h2>Atalhos</h2><div class="atalhos">' +
                 '<a class="btn" href="#/enviar">' + ic('enviar', 20) + ' Enviar fotos</a>' +
-                (p && comCodigo(p) ? '<a class="btn" href="#/ponto">' + ic('alerta', 20) + ' Ponto devido</a>' : '') +
                 '<a class="btn" href="#/exportar">' + ic('baixar', 20) + ' Exportar CSV</a>' +
                 (p && podeEnviarPresente(p) ? '<a class="btn" href="#/presente">' + ic('enviar', 20) + ' Notas no Malu Presente</a>' : '') +
                 (st.modo === 'demo' ? '<a class="btn" href="#/entrar">' + ic('pessoa', 20) + ' Entrar</a>' : '<button class="btn" id="sair" type="button">' + ic('semrede', 20) + ' Sair</button>') +
@@ -646,9 +608,6 @@
         if (anterior && (anterior.confianca || 0) > item.confianca) return item;
         st.leituras = st.leituras.filter(function (l) { return !(l.provaId === p.id && l.copiaId && l.copiaId === item.copiaId); });
         st.leituras.push(item);
-        if (comCodigo(p) && status && status !== 'correto' && status !== 'ambiguo') {
-            st.recuperacoes[item.id] = { leituraId: item.id, provaId: p.id, status: 'aberta', modalidade: null, prazo: p.prazoNotas, obs: '' };
-        }
         if (st.modo !== 'demo') {
             MaluNuvem.salvarLeitura(item);
             if (jpeg) {
@@ -673,7 +632,7 @@
                 if (c.imagemLocal && c.imagemLocal.length > 200000) c.imagemLocal = null;
                 return c;
             });
-            sessionStorage.setItem('malu-gabaritos-leituras', JSON.stringify({ leituras: leves, recuperacoes: st.recuperacoes, provas: st.modo === 'demo' ? null : st.provas.map(function (p) { return p.id; }) }));
+            sessionStorage.setItem('malu-gabaritos-leituras', JSON.stringify({ leituras: leves, provas: st.modo === 'demo' ? null : st.provas.map(function (p) { return p.id; }) }));
         } catch (e) { /* sessão cheia: a leitura continua na memória */ }
     }
 
@@ -884,22 +843,16 @@
             if (comCodigo(p)) {
                 if (l.statusCodigo === 'correto') chip = '<span class="chip">código +1</span>';
                 else if (l.statusCodigo === 'ambiguo') chip = '<span class="chip laranja">código em revisão</span>';
-                else if (devePonto(l)) {
-                    var recLista = situacaoPonto(l, p);
-                    var cls = recLista && recLista.status === 'recuperada' ? 'chip laranja' : 'chip erro';
-                    chip = '<span class="' + cls + '">' + esc(rotuloPonto(recLista)) + '</span>';
-                }
+                else if (l.statusCodigo === 'incorreto' || l.statusCodigo === 'em_branco') chip = '<span class="chip">' + esc(rotuloStatus(l.statusCodigo)) + ' · sem bônus</span>';
             }
             return '<a class="aluno-item" href="#/aluno?id=' + encodeURIComponent(l.id) + '"><span><strong>' + esc(nomeVisivel(p, l)) + '</strong><br><span class="suave">lista ' + esc(l.lista) + ' · ' + esc(l.turma) + '</span></span><span class="nota">' + fmtNota(n) + '</span><span class="sub">' + chip + '</span></a>';
         }).join('');
-        var dias = MaluAnalise.diasAte(p.prazoNotas, hoje());
         return {
             html: '<div class="pilha">' + topo('Resultados', esc(p.titulo), '#/prova') +
                 '<div class="abas"><a href="#/resultados" aria-current="page">Alunos</a><a href="#/itens">Itens</a>' +
-                (comCodigo(p) ? '<a href="#/ponto">Ponto devido</a>' : '') + '<a href="#/exportar">Exportar</a></div>' +
-                (dias != null && dias <= 3 ? '<div class="aviso">' + ic('alerta') + '<span>Faltam ' + dias + ' dia(s) para o fim do prazo de lançamento das notas (' + U.dataBR(p.prazoNotas) + ').</span></div>' : '') +
+                '<a href="#/exportar">Exportar</a></div>' +
                 '<div class="cartao numeros"><span>Média <b>' + (media == null ? '—' : U.fmt(media)) + '</b></span><span>Lidos <b>' + ls.length + '</b></span>' +
-                (comCodigo(p) ? '<span>Em aberto <b>' + emAberto(p).length + '</b></span>' : '') + '</div>' +
+                (comCodigo(p) ? '<span>Código certo <b>' + leiturasDa(p.id).filter(function (l) { return l.statusCodigo === 'correto'; }).length + '</b></span>' : '') + '</div>' +
                 '<div class="lista">' + (linhas || '<p class="suave">Nenhum cartão lido ainda.</p>') + '</div></div>'
         };
     };
@@ -917,26 +870,20 @@
         }).join('');
         var foto = l.imagemExpira ? '<p class="suave">Foto disponível até ' + U.dataBR(l.imagemExpira) + '. Depois disso é preciso fotografar de novo para reler.</p>' : '<p class="suave">Sem foto guardada. Para reler, fotografe o cartão de novo.</p>';
         var cod = '';
-        var avisoNota = '';
         if (l.codigoProva) {
             cod = '<p>Código da prova: <span class="codigo-leitura">' + esc(l.codigoProva) + '</span></p>' + cod;
         }
         if (comCodigo(p)) {
-            var recAluno = situacaoPonto(l, p);
             cod += '<p>Código esperado: <span class="codigo-leitura">' + esc((alunoDe(p, l) || {}).codigo || '') + '</span></p>' +
                 '<p>Código lido: <span class="codigo-leitura">' + esc(l.codigoLido || '—') + '</span></p>';
             if (n.ponto === 1) cod += '<p class="suave">Código certo: +1 já está nesta nota (teto 10).</p>';
-            if (recAluno) {
-                var extra = recAluno.modalidade ? ' · ' + nomeModalidade(recAluno.modalidade) : '';
-                var prazo = recAluno.prazo ? ' · prazo ' + U.dataBR(recAluno.prazo) : '';
-                avisoNota = '<div class="aviso">' + ic('alerta') + '<span><strong>' + esc(rotuloPonto(recAluno)) + '</strong>' + esc(extra + prazo) + '. A nota acima continua com o −1. Este app não altera a nota quando o aluno recupera.</span></div>';
-            }
+            if (l.statusCodigo === 'incorreto' || l.statusCodigo === 'em_branco') cod += '<p class="suave">Código ' + (l.statusCodigo === 'em_branco' ? 'em branco' : 'errado') + ': sem o ponto de bônus, e a nota não perde nada.</p>';
         }
         return {
             html: '<div class="pilha">' + topo(esc(nomeVisivel(p, l)), esc(l.turma) + ' · lista ' + esc(l.lista), '#/resultados') +
                 '<div class="cartao"><p class="nota" style="font-size:2rem;color:var(--verde-esc)">' + fmtNota(n) + '</p>' +
-                '<p class="suave">Questões: ' + U.fmt(n.base == null ? 0 : n.base) + (n.ponto === 1 ? ' · código +1' : n.ponto === -1 ? ' · código −1, já na nota' : '') + '</p>' +
-                avisoNota + cod + foto + '<div class="q-grade">' + grade + '</div></div></div>'
+                '<p class="suave">Questões: ' + U.fmt(n.base == null ? 0 : n.base) + (n.ponto === 1 ? ' · código +1' : '') + '</p>' +
+                cod + foto + '<div class="q-grade">' + grade + '</div></div></div>'
         };
     };
 
@@ -957,70 +904,11 @@
         }).join('');
         return { html: '<div class="pilha">' + topo('Análise dos itens', esc(p.titulo), '#/resultados') +
             '<div class="abas"><a href="#/resultados">Alunos</a><a href="#/itens" aria-current="page">Itens</a>' +
-            (comCodigo(p) ? '<a href="#/ponto">Ponto devido</a>' : '') + '<a href="#/exportar">Exportar</a></div>' + cards + '</div>' };
-    };
-
-    telas.ponto = function () {
-        var p = provaAtual();
-        if (!comCodigo(p)) return { html: topo('Ponto devido', '', '#/prova') + '<p>Esta prova não tem código.</p>' };
-        var dias = MaluAnalise.diasAte(p.prazoNotas, hoje());
-        var lista = comDivida(p).map(function (l) {
-            var rec = situacaoPonto(l, p);
-            var chipCls = rec.status === 'recuperada' ? 'chip laranja' : 'chip erro';
-            var modo = rec.modalidade ? ' · ' + nomeModalidade(rec.modalidade) : '';
-            return '<article class="cartao"><div class="linha entre"><h3>' + esc(nomeVisivel(p, l)) + '</h3><span class="' + chipCls + '">' + esc(rotuloStatus(l.statusCodigo)) + '</span></div>' +
-                '<p><strong>' + esc(rotuloPonto(rec)) + '</strong></p>' +
-                '<p class="suave">' + esc(l.turma) + ' · lista ' + esc(l.lista) + esc(modo) + (rec.prazo ? ' · até ' + U.dataBR(rec.prazo) : '') + '</p>' +
-                '<p class="suave">Nota registrada: ' + fmtNota(notaDe(l, p)) + ' (o −1 continua aqui).</p>' +
-                (podeCorrigir(p) && rec.status === 'aberta' ? '<button class="btn mini" type="button" data-rec="' + esc(l.id) + '">Registrar recuperação</button>' : '') +
-                '</article>';
-        }).join('');
-        return {
-            html: '<div class="pilha">' + topo('Ponto devido', 'Prazo ' + U.dataBR(p.prazoNotas) + (dias != null ? ' · ' + dias + ' dia(s)' : ''), '#/resultados') +
-                '<div class="aviso">' + ic('alerta') + '<span>A nota registrada já está com o −1 (piso 0). Aberto, recuperado ou não recuperado só acompanha a situação. Quando o aluno recuperar, a nota daqui não muda: ajuste a nota no seu registro. Um jeito só: tarefa, medida restaurativa ou mini teste oral.</span></div>' +
-                (lista || '<p class="suave">Ninguém deve ponto nesta prova.</p>') + '</div>',
-            montar: function (el) {
-                el.querySelectorAll('[data-rec]').forEach(function (b) {
-                    b.onclick = function () { abrirRecuperacao(p, b.dataset.rec); };
-                });
-            }
-        };
+            '<a href="#/exportar">Exportar</a></div>' + cards + '</div>' };
     };
 
     function rotuloStatus(s) {
         return { incorreto: 'código errado', em_branco: 'código em branco', ambiguo: 'em revisão', correto: 'certo' }[s] || s || '';
-    }
-
-    function abrirRecuperacao(p, leituraId) {
-        var rec = st.recuperacoes[leituraId] || { leituraId: leituraId, provaId: p.id, status: 'aberta', prazo: p.prazoNotas };
-        U.folha('Recuperação',
-            '<label class="radio-cartao"><input type="radio" name="mod" value="a_tarefa"> Tarefa avulsa definida pelo professor</label>' +
-            '<label class="radio-cartao"><input type="radio" name="mod" value="b_restaurativa"> Medida restaurativa simples</label>' +
-            '<label class="radio-cartao"><input type="radio" name="mod" value="c_oral"> Mini teste oral de 2 ou 3 perguntas</label>' +
-            '<label class="rotulo" for="obs">O que foi feito e o resultado</label><textarea class="campo" id="obs"></textarea>' +
-            '<p class="suave">Isto não muda a nota registrada. Se marcar como recuperado, ajuste a nota no seu registro.</p>' +
-            '<button class="btn primario grande" type="button" id="aceitar">Marcar como recuperado</button>' +
-            '<button class="btn" type="button" id="nao">Não recuperou</button>',
-            function (f) {
-                f.querySelector('#aceitar').onclick = function () { fecharRec(f, rec, 'recuperada'); };
-                f.querySelector('#nao').onclick = function () { fecharRec(f, rec, 'nao_recuperada'); };
-            });
-    }
-
-    async function fecharRec(f, rec, status) {
-        var mod = (f.querySelector('input[name="mod"]:checked') || {}).value || null;
-        if (status === 'recuperada' && !mod) { U.toast('Escolha um jeito só de recuperar.'); return; }
-        rec.status = status;
-        rec.modalidade = mod;
-        rec.obs = f.querySelector('#obs').value;
-        rec.quando = hoje();
-        rec.prazo = provaAtual().prazoNotas;
-        st.recuperacoes[rec.leituraId] = rec;
-        if (st.modo !== 'demo') await MaluNuvem.salvarRecuperacao(rec);
-        guardarLocal();
-        U.fecharFolha();
-        U.toast(status === 'recuperada' ? 'Recuperado — ajuste a nota no seu registro.' : 'Não recuperado. A nota continua com o −1.');
-        rotear();
     }
 
     telas.lista = function () {
@@ -1155,7 +1043,7 @@
                     '<div class="aviso">' + ic('alerta') + '<span>' + esc(MaluPresente.mensagemRecusa(st.perfil, p)) + ' A administração do Malu Presente revisa e aprova antes de os pais verem.</span></div></div>'
             };
         }
-        var pacote = MaluPresente.resumo(p, leiturasDa(p.id), st.recuperacoes, hoje());
+        var pacote = MaluPresente.resumo(p, leiturasDa(p.id));
         var ultimo = enviosDa(p.id)[0];
         var motivo = MaluPresente.motivoReenvio(ultimo && ultimo.ok ? ultimo.assinatura : '', pacote.notas);
         var turmas = pacote.turmas.map(function (t) {
@@ -1164,12 +1052,10 @@
         var aviso = '';
         if (pacote.bloqueado) {
             aviso = '<div class="aviso erro">' + ic('alerta') + '<span>Há ' + pacote.pendentes + (pacote.pendentes === 1 ? ' leitura' : ' leituras') + ' na revisão. O envio fica bloqueado até você resolver essa fila.</span></div>';
-        } else if (motivo === 'recuperacao') {
-            aviso = '<div class="aviso">' + ic('alerta') + '<span>A recuperação de alguém mudou. Pode enviar de novo. O Malu Presente atualiza só o aviso; a nota no seu registro continua a que você ajusta.</span></div>';
         } else if (motivo === 'correcoes') {
             aviso = '<div class="aviso">' + ic('alerta') + '<span>Há correção desde o último envio. Pode enviar de novo.</span></div>';
         } else if (motivo === null) {
-            aviso = '<p class="suave">Estas notas já foram enviadas. Envie de novo se corrigir uma nota ou se mudar a recuperação de alguém.</p>';
+            aviso = '<p class="suave">Estas notas já foram enviadas. Envie de novo se corrigir uma nota.</p>';
         }
         var historico = enviosDa(p.id).map(function (e) {
             var fora = (e.semCorrespondencia || []).map(function (s) {
@@ -1185,7 +1071,7 @@
         var pode = !pacote.bloqueado && motivo !== null && pacote.quantidade > 0;
         return {
             html: '<div class="pilha">' + topo('Enviar notas para o Malu Presente', esc(p.titulo), '#/prova') +
-                '<p class="suave">Vão turma, número da lista e a nota já com o +1 ou o −1. Não vão nome, resposta, código nem foto. A administração do Malu Presente revisa e aprova antes de os pais verem.</p>' +
+                '<p class="suave">Vão turma, número da lista e a nota já com o +1 do código, quando há. Não vão nome, resposta, código nem foto. A administração do Malu Presente revisa e aprova antes de os pais verem.</p>' +
                 aviso +
                 '<section class="cartao"><h2>Resumo</h2><ul>' + (turmas || '<li>Nenhuma nota pronta.</li>') + '</ul>' +
                 '<p><strong>' + pacote.quantidade + '</strong> ' + (pacote.quantidade === 1 ? 'nota pronta' : 'notas prontas') + '.</p></section>' +
@@ -1197,14 +1083,14 @@
                 var botao = el.querySelector('#enviar-presente');
                 if (!botao) return;
                 botao.onclick = function () {
-                    var atual = MaluPresente.resumo(p, leiturasDa(p.id), st.recuperacoes, hoje());
+                    var atual = MaluPresente.resumo(p, leiturasDa(p.id));
                     if (atual.bloqueado || !atual.notas.length) return;
                     var linhas = atual.turmas.map(function (t) {
                         return '<li>' + esc(t.turma) + ' · ' + t.notas + (t.notas === 1 ? ' nota' : ' notas') + '</li>';
                     }).join('');
                     U.folha('Confirmar envio',
                         '<p>Enviar <strong>' + atual.quantidade + '</strong> ' + (atual.quantidade === 1 ? 'nota' : 'notas') + ' de ' + esc(p.titulo) + '?</p><ul>' + linhas + '</ul>' +
-                        '<p class="suave">A nota registrada segue com o +1 ou o −1. Recuperar um ponto não muda esse número aqui.</p>' +
+                        '<p class="suave">O código certo já está somado na nota (+1, teto 10). Código em branco ou errado não tira nada.</p>' +
                         '<button class="btn primario grande" type="button" id="confirmar-presente">Enviar agora</button>',
                         function (f) {
                             f.querySelector('#confirmar-presente').onclick = async function () {
@@ -1247,21 +1133,19 @@
         var p = provaAtual();
         return {
             html: '<div class="pilha">' + topo('Exportar', esc(p.titulo), '#/resultados') +
-                '<p class="suave">O arquivo traz turma, lista, nome e a nota já com o +1 ou o −1. A recuperação sai numa coluna à parte (aberto, recuperado ou não recuperado) e não altera essa nota. Não leva foto.</p>' +
+                '<p class="suave">O arquivo traz turma, lista, nome e a nota, já com o +1 do código certo (teto 10). Código em branco ou errado não tira ponto. Não leva foto.</p>' +
                 '<button class="btn primario grande" type="button" id="baixar">' + ic('baixar') + ' Baixar CSV</button></div>',
             montar: function (el) {
                 el.querySelector('#baixar').onclick = function () {
                     var cab = ['turma', 'sala', 'lista', 'nome', 'acertos', 'nota'];
-                    if (comCodigo(p)) cab.push('codigo', 'situacao_codigo', 'ponto', 'modalidade', 'prazo');
+                    if (comCodigo(p)) cab.push('codigo', 'situacao_codigo', 'bonus');
                     var linhas = [cab];
                     leiturasDa(p.id).forEach(function (l) {
                         var n = notaDe(l, p);
                         var cont = MaluAnalise.acertosDe(l.respostas, p.gabarito);
                         var row = [l.turma, l.sala, l.lista, nomeVisivel(p, l), cont.acertos, n.nota == null ? '' : String(n.nota).replace('.', ',')];
                         if (comCodigo(p)) {
-                            var recCsv = situacaoPonto(l, p);
-                            var ponto = !recCsv ? (l.statusCodigo === 'correto' ? 'certo' : '') : (recCsv.status === 'recuperada' ? 'recuperado' : recCsv.status === 'nao_recuperada' ? 'nao recuperado' : 'aberto');
-                            row.push(l.codigoLido || '', l.statusCodigo || '', ponto, recCsv && nomeModalidade(recCsv.modalidade) || '', (recCsv && recCsv.prazo) || p.prazoNotas || '');
+                            row.push(l.codigoLido || '', l.statusCodigo || '', l.statusCodigo === 'correto' ? 1 : 0);
                         }
                         linhas.push(row);
                     });
@@ -1285,7 +1169,6 @@
                 '<label class="opcao-linha"><span class="tx">Contraste alto</span><input class="chave-sw" type="checkbox" id="contraste"' + (st.ajustes.contraste ? ' checked' : '') + '></label></section>' +
                 '<section class="cartao"><h2>Fotos e LGPD</h2><p>Os alunos são menores. A foto do cartão serve só para revisar a leitura e fica 3 dias. Depois é apagada, e para reler é preciso fotografar de novo.</p>' +
                 '<p>O cartão é ligado ao aluno pelo QR da folha. A nota e as respostas ficam na escola, no mesmo lugar do Montador. Nada disso vai para uma inteligência artificial de fora.</p>' +
-                (p ? '<p class="suave">Prazo das notas desta prova: ' + (p.prazoNotas ? U.dataBR(p.prazoNotas) : 'ainda não informado no Montador') + '.</p>' : '') +
                 '</section></div>',
             montar: function (el) {
                 el.querySelector('#limiar').oninput = function (e) {
@@ -1318,14 +1201,6 @@
                     }
                 });
             }
-            var recs = await MaluNuvem.obter().from('corretor_recuperacoes').select('*').in('prova_id', ids);
-            st.recuperacoes = {};
-            if (!recs.error) (recs.data || []).forEach(function (r) {
-                st.recuperacoes[r.leitura_id] = {
-                    id: r.id, leituraId: r.leitura_id, provaId: r.prova_id, status: r.status,
-                    modalidade: r.modalidade, quando: r.quando, obs: r.obs, prazo: r.prazo
-                };
-            });
             st.envios = await MaluNuvem.enviosDasProvas(ids);
         }
     }

@@ -703,7 +703,7 @@
                 ? ' A explicação de como montar o código está escrita dentro do enunciado da questão ' + questoesInstrucao.sort(function (a, b) { return a - b; }).join(', ') + ' de cada cópia: não instrua a turma antes, o aluno descobre lendo a prova.'
                 : '';
             f.miolo.appendChild(el('p', 'chave-codigo',
-                'Código de verificação: certo = +1 ponto na nota registrada (teto 10). Em branco ou errado = −1 (piso 0). O aluno pode recuperar até o prazo de lançamento das notas, de um jeito só (tarefa, medida restaurativa ou mini teste oral). A nota registrada não muda sozinha: se ele recuperar, ajuste a nota no seu registro. A lista dos códigos por sala e turma está na folha de códigos.' + ondeEstaAInstrucao));
+                'Código de verificação: certo = +1 ponto na nota registrada (teto 10). Em branco ou errado = nada muda: o aluno não perde ponto. A lista dos códigos por sala e turma está na folha de códigos.' + ondeEstaAInstrucao));
         }
         return { paginas: 1 };
     }

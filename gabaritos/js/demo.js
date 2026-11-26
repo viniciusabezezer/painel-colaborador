@@ -114,13 +114,6 @@
             leitura(mat, mat.alunos[0], respostasDe(mat.gabarito, 8), null, null),
             leitura(mat, mat.alunos[1], respostasDe(mat.gabarito, 5), null, null)
         ];
-        const recuperacoes = {};
-        recuperacoes[leituras[1].id] = {
-            leituraId: leituras[1].id, provaId: cn.id, status: 'recuperada',
-            modalidade: 'a_tarefa', prazo: cn.prazoNotas, obs: 'Tarefa fictícia entregue. A nota do app continua com o −1.'
-        };
-        recuperacoes[leituras[2].id] = { leituraId: leituras[2].id, provaId: cn.id, status: 'aberta', modalidade: null, prazo: cn.prazoNotas, obs: '' };
-
         const envio = {
             id: 'demo-envio',
             titulo: 'Avaliação pronta para o Malu Presente',
@@ -144,19 +137,9 @@
         const l7 = leitura(envio, envio.alunos[0], respostasDe(envio.gabarito, 4), envio.alunos[0].codigo, 'incorreto');
         const l8 = leitura(envio, envio.alunos[1], respostasDe(envio.gabarito, 3), '______', 'em_branco');
         leituras.push(l7, l8);
-        recuperacoes[l7.id] = {
-            leituraId: l7.id, provaId: envio.id, status: 'recuperada',
-            modalidade: 'a_tarefa', prazo: envio.prazoNotas, obs: 'Tarefa fictícia. A nota do app continua com o −1.'
-        };
-        recuperacoes[l8.id] = { leituraId: l8.id, provaId: envio.id, status: 'aberta', modalidade: null, prazo: envio.prazoNotas, obs: '' };
         const assinaturaAntiga = global.MaluPresente.assinatura(global.MaluPresente.montarCorpo({
             prova: envio,
-            leituras: [l7, l8],
-            recuperacoes: {
-                [l7.id]: { status: 'aberta', prazo: envio.prazoNotas },
-                [l8.id]: { status: 'aberta', prazo: envio.prazoNotas }
-            },
-            hoje: '2026-12-02',
+            leituras: [Object.assign({}, l7, { respostas: respostasDe(envio.gabarito, 3) }), l8],
             loteId: 'antigo',
             nome: 'Coordenadora Fictícia'
         }).notas);
@@ -165,7 +148,6 @@
             professor: { id: 'pca-demo', nome: 'Coordenadora Fictícia', primeiro: 'Coordenadora', papel: 'pca', area: 'NAT', ativo: true },
             provas: [cn, envio, mat],
             leituras: leituras,
-            recuperacoes: recuperacoes,
             envios: [{
                 provaId: envio.id,
                 loteId: '66666666-6666-4666-8666-666666666666',

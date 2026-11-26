@@ -340,6 +340,46 @@ try {
     conferir(await p.isChecked('#codigo-ligado') && await p.isVisible('#codigo-config') && await p.isVisible('#codigo-gerar'),
         'a gestão vê o painel completo: liga, configura e gera');
 
+    /* com poucas questões a cópia de exemplo não se monta, e o painel diz por quê */
+    await p.waitForFunction(() => /Não consegui montar a cópia de exemplo/.test(document.querySelector('#codigo-erro').textContent), null, { timeout: 8000 })
+        .catch(() => {});
+    conferir(/pelo menos 7 questões/.test(await p.textContent('#codigo-erro')), 'com poucas questões, o painel explica por que não há cópia de exemplo');
+
+    /* sem códigos gerados ainda, a prévia já mostra uma cópia de exemplo com a instrução e as pistas */
+    await p.click('#add-colar');
+    await p.fill('#colar-texto', await readFile(join(APP, 'test', 'questoes-exemplo.txt'), 'utf8') +
+        '12. Quanto vale 2 + 2?\na) 1\nb) 2\nc) 3\nd) 4\ne) 5\nGabarito: D\n');
+    await p.waitForSelector('#colar-acrescentar:not([disabled])');
+    await p.click('#colar-acrescentar');
+    await p.waitForFunction(() => document.querySelectorAll('#secoes .questao').length >= 12);
+    await p.waitForTimeout(600);
+    await p.waitForFunction(() => /esta prova tem um código de verificação/.test(document.querySelector('#paginas').textContent), null, { timeout: 8000 })
+        .catch(() => {});
+    const exemplo = await p.evaluate(() => ({
+        texto: document.querySelector('#paginas').textContent,
+        escolhida: document.querySelector('#codigo-copia').value,
+        aviso: document.querySelector('#codigo-erro').textContent
+    }));
+    conferir(/Atenção: esta prova tem um código de verificação/.test(exemplo.texto), 'com o código ligado e sem códigos gerados, a prévia mostra a instrução dentro da prova');
+    conferir(exemplo.escolhida === '__exemplo__', 'a prévia abre na cópia de exemplo');
+    conferir(/EXEMPLO/.test(exemplo.aviso) && /Gerar os códigos/.test(exemplo.aviso), 'o painel avisa que é um exemplo e que falta gerar os códigos dos alunos');
+
+    /* gerar os códigos da turma: a prévia passa a mostrar a cópia de um aluno, com instrução e pistas */
+    await p.fill('[data-ct="turma"]', '1º A');
+    await p.fill('[data-ct="sala"]', '12');
+    await p.fill('[data-ct="quantidade"]', '3');
+    await p.click('#codigo-gerar');
+    await p.waitForFunction(() => document.querySelector('#codigo-copia').value === '1º A-01', null, { timeout: 8000 }).catch(() => {});
+    const aluno = await p.evaluate(() => ({
+        escolhida: document.querySelector('#codigo-copia').value,
+        opcoes: document.querySelector('#codigo-copia').options.length,
+        texto: document.querySelector('#paginas').textContent,
+        sublinhadas: document.querySelectorAll('#paginas .cod-letra').length
+    }));
+    conferir(aluno.escolhida === '1º A-01' && aluno.opcoes === 5, 'gerar os códigos cria 3 cópias e a prévia passa para a primeira');
+    conferir(/Atenção: esta prova tem um código de verificação/.test(aluno.texto) && aluno.sublinhadas >= 3,
+        'a cópia de um aluno mostra a instrução e as letras sublinhadas nos enunciados');
+
     /* a gestão já gerou os códigos (aqui entram direto no servidor) */
     provaCod.dados.codigos = [{ copiaId: '1º A-01', turma: '1º A', sala: '12', lista: 1, codigo: 'ACE345', seed: '1', instrucao: { questao: 1 }, letras: [], contas: [] }];
     provaCod.dados.turmasCodigo = [{ turma: '1º A', sala: '12', quantidade: 1 }];
