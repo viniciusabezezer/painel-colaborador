@@ -356,6 +356,20 @@ body[data-tela="editor"], body[data-tela="modelo"] { overflow: hidden; }
 .q-numero--texto { color: #8a7a45; }
 .q-tag.texto { background: #f4eedb; color: #6b5a22; }
 
+/* Redação no formato do ENEM */
+.questao--motivador { border-left: 4px solid #8fb3c9; }
+.questao--proposta { border-left: 4px solid #b98fc9; }
+.q-numero--motivador { color: #3d6a85; min-width: 2.2em; }
+.q-numero--proposta { color: #6f3f85; }
+.q-tag.motivador { background: #e3eef5; color: #2f5873; }
+.q-tag.proposta { background: #efe4f4; color: #5b2f70; }
+.red-dica { margin: 0 0 10px; }
+.red-opcoes { border: 1px solid #ddd8c8; border-radius: 8px; padding: 8px 12px 10px; margin: 10px 0 4px; display: grid; gap: 8px; min-width: 0; }
+.red-opcoes legend { font-weight: 600; font-size: 13px; padding: 0 4px; }
+.red-opcoes textarea { width: 100%; box-sizing: border-box; }
+.caixa-marcar { display: flex; align-items: center; gap: 6px; font-weight: 400; }
+.caixa-marcar input { width: auto; margin: 0; }
+
 /* ----- instruções ----- */
 
 .sugestoes { display: flex; flex-wrap: wrap; gap: 6px; }

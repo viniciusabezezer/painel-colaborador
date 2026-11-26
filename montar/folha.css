@@ -194,6 +194,36 @@
 .folha .q-linha { height: .78cm; border-bottom: .5pt solid #444; }
 .folha .q-linha-primeira { height: .95cm; }
 
+/* ----- Redação no formato do ENEM (largura inteira da folha) ----- */
+
+.folha .red-instrucoes { border: .8pt solid #000; padding: .2cm .35cm .25cm; margin-top: calc(var(--entre, .85em) * .8) !important; }
+.folha .red-instrucoes-titulo { font-weight: 700; text-align: center; padding-bottom: .2em; }
+.folha .red-instrucoes ol { margin: 0; padding-left: 1.4em; text-align: justify; }
+.folha .red-instrucoes li + li { margin-top: .12em; }
+.folha .mot-titulo { font-weight: 700; padding-top: calc(var(--entre, .85em) * 1.2); padding-bottom: .2em; }
+.folha .mot-titulo.item-inicio { padding-top: calc(var(--entre, .85em) * 1.2); }
+.folha .q-img-com-titulo { text-align: center; }
+.folha .q-img-com-titulo .mot-titulo { text-align: left; padding-top: calc(var(--entre, .85em) * 1.2); }
+.folha .texto-motivador + .texto-motivador { text-indent: 0; padding-top: .25em; }
+.folha .mot-fonte { text-align: right; font-size: .82em; padding-top: .2em; overflow-wrap: anywhere; }
+.folha .prop-titulo { font-weight: 700; text-align: center; padding-top: calc(var(--entre, .85em) * 1.6); padding-bottom: .3em; }
+.folha .prop-titulo.item-inicio { padding-top: calc(var(--entre, .85em) * 1.6); }
+.folha .prop-tema { text-align: center; padding-bottom: .2em; }
+.folha .prop-comando + .prop-comando { padding-top: .25em; }
+
+.folha .folha-redacao { display: flex; flex-direction: column; box-sizing: border-box; }
+.folha .fr-titulo { font-weight: 700; text-align: center; font-size: 1.15em; letter-spacing: .04em; }
+.folha .fr-dica { text-align: center; font-size: .85em; font-style: italic; padding-top: .1em; }
+.folha .fr-ident { display: flex; gap: .3em; align-items: baseline; padding-top: .35em; }
+.folha .fr-ident .linha-escrever { flex: 1 1 auto; }
+.folha .fr-ident .linha-escrever.curta { flex: 0 0 2cm; }
+.folha .fr-linhas { flex: 1 1 auto; min-height: 0; display: flex; flex-direction: column; justify-content: flex-start;
+    border: .8pt solid #000; margin-top: .35cm; padding: 0 .3cm 0 0; }
+.folha .fr-linha { flex: 1 1 0; max-height: .9cm; min-height: .55cm; border-bottom: .5pt solid #555; position: relative; padding-left: .9cm; }
+.folha .fr-linha:last-child { border-bottom: 0; }
+.folha .fr-n { position: absolute; left: 0; bottom: .08cm; width: .7cm; text-align: right; font-size: .8em; }
+.folha .folha-redacao--rascunho .fr-linha { border-bottom-style: dashed; }
+
 .folha .bloco-gabarito { padding-bottom: .2em; }
 .folha .gabarito-titulo { font-weight: 700; padding-bottom: .55em; }
 .folha .gabarito-svg { display: block; }

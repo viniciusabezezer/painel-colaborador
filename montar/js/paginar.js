@@ -232,24 +232,94 @@
         return [prova.serie ? prova.serie + 'º Ano' : '', comp ? comp.sigla : (prova.disciplina || '')].filter(Boolean);
     }
 
+    /* ----- a Redação no formato do ENEM ----- */
+
+    function temaNoComando(q) {
+        const tema = String(q.tema || '').trim().replace(/^["“”]+|["“”]+$/g, '');
+        const temaHtml = tema ? '“**' + tema + '**”' : '“________________”';
+        const comando = String(q.enunciado || '');
+        if (comando.indexOf('{tema}') !== -1) return { pars: Texto.paragrafos(comando.split('{tema}').join(temaHtml)), extra: null };
+        return { pars: Texto.paragrafos(comando), extra: tema ? '**' + tema.toUpperCase() + '**' : null };
+    }
+
+    /* Os blocos de uma seção de Redação: quadro de instruções, TEXTO I, II...
+       (texto, imagens e a fonte à direita), a proposta com o tema e, cada uma
+       numa página nova, o rascunho e a folha de redação com linhas numeradas.
+       Tudo na largura inteira da folha, como no caderno do ENEM. */
+    function blocosRedacao(secao, layout, fila) {
+        const propostas = secao.questoes.filter(function (q) { return q.tipo === 'proposta'; });
+        const comInstrucoes = propostas.filter(function (q) {
+            return q.instrucoesRedacao && (q.textoInstrucoesRedacao || []).some(function (l) { return String(l).trim(); });
+        })[0];
+        const meus = [];
+        if (comInstrucoes) {
+            meus.push({ tipo: 'redacao-instrucoes', linhas: comInstrucoes.textoInstrucoesRedacao.filter(function (l) { return String(l).trim(); }), inicio: true });
+        }
+        let t = 0;
+        secao.questoes.forEach(function (q) {
+            const doItem = [];
+            if (q.tipo === 'motivador') {
+                t++;
+                const tituloTexto = 'TEXTO ' + Modelos.numeroRomano(t);
+                const imagens = (q.imagens || []).filter(function (i) { return i && i.src; });
+                const acima = imagens.filter(function (i) { return i.posicao === 'acima'; });
+                const lado = imagens.filter(function (i) { return i.posicao === 'lado'; })[0] || null;
+                const abaixo = imagens.filter(function (i) { return i !== lado && i.posicao !== 'acima'; });
+                acima.forEach(function (img) { doItem.push({ tipo: 'img', imagem: img, manter: true }); });
+                const pars = Texto.paragrafos(q.enunciado);
+                if (lado) doItem.push({ tipo: 'lado', imagem: lado, prefixo: [], pars: pars, classe: 'q-par texto-motivador', manter: true });
+                else pars.forEach(function (p) { doItem.push({ tipo: 'par', classe: 'q-par texto-motivador', palavras: Texto.palavras(p), manter: true }); });
+                abaixo.forEach(function (img) { doItem.push({ tipo: 'img', imagem: img, manter: true }); });
+                /* o "TEXTO II" nunca fica sozinho no pé da página: quando abre com
+                   uma imagem, vai junto dela, no mesmo bloco */
+                if (doItem.length && doItem[0].tipo === 'img') doItem[0].titulo = tituloTexto;
+                else doItem.unshift({ tipo: 'mot-titulo', html: tituloTexto, manter: true });
+                if (String(q.fonte || '').trim()) doItem.push({ tipo: 'par', classe: 'mot-fonte', palavras: Texto.palavras(String(q.fonte).trim()) });
+            } else if (q.tipo === 'proposta') {
+                doItem.push({ tipo: 'prop-titulo', html: 'PROPOSTA DE REDAÇÃO', manter: true });
+                const c = temaNoComando(q);
+                if (c.extra) doItem.push({ tipo: 'par', classe: 'q-par prop-tema', palavras: Texto.palavras(c.extra), manter: true });
+                c.pars.forEach(function (p) { doItem.push({ tipo: 'par', classe: 'q-par prop-comando', palavras: Texto.palavras(p), manter: true }); });
+                (q.imagens || []).filter(function (i) { return i && i.src; }).forEach(function (img) { doItem.push({ tipo: 'img', imagem: img, manter: true }); });
+            } else {
+                return; /* outros tipos numa seção de redação seguem o caminho normal (abaixo) */
+            }
+            doItem[0].inicio = true;
+            doItem[doItem.length - 1].manter = false;
+            doItem.forEach(function (b) { meus.push(b); });
+        });
+        propostas.forEach(function (q) {
+            const linhas = Math.max(0, Math.min(40, q.linhas | 0));
+            if (!linhas) return;
+            if (q.rascunho) meus.push({ tipo: 'folha-redacao', titulo: 'RASCUNHO DA REDAÇÃO', linhas: linhas, rascunho: true, novaPagina: true });
+            meus.push({ tipo: 'folha-redacao', titulo: 'FOLHA DE REDAÇÃO', linhas: linhas, novaPagina: true });
+        });
+        meus.forEach(function (b) { b.larga = true; b.questao = null; fila.push(b); });
+    }
+
     function blocos(prova, layout, disposicaoDe) {
         const fila = [];
+        const soRedacao = !Modelos.questoesNumeradas(prova).length && prova.secoes.some(Modelos.secaoDeRedacao);
 
-        if (layout.gabarito && layout.gabaritoLocal !== 'separado') {
+        if (layout.gabarito && layout.gabaritoLocal !== 'separado' && !soRedacao) {
             fila.push({ tipo: 'gabarito', html: '<div class="gabarito-titulo">GABARITO (NÃO RASURE)</div>' + conteudoGabarito(prova, layout, 'prova') });
         }
 
         let n = 0;
         prova.secoes.forEach(function (secao) {
             if (!secao.questoes.length) return;
+            const redacao = Modelos.secaoDeRedacao(secao);
             if (String(secao.titulo || '').trim()) {
                 const icone = layout.icones ? Icones.resolver(secao.icone, secao.titulo) : null;
                 fila.push({
-                    tipo: 'titulo', manter: true,
+                    tipo: 'titulo', manter: true, larga: redacao,
                     html: (icone ? Icones.svg(icone) : '') + '<span>' + Texto.escapar(secao.titulo.trim().toUpperCase()) + '</span>'
                 });
             }
+            if (redacao) blocosRedacao(secao, layout, fila);
             secao.questoes.forEach(function (q) {
+                if (redacao && (q.tipo === 'motivador' || q.tipo === 'proposta')) return;
+                if (q.tipo === 'motivador' || q.tipo === 'proposta') q = Object.assign({}, q, { tipo: 'texto' });
                 const texto = q.tipo === 'texto';
                 if (!texto) n++;
                 const doItem = [];
@@ -321,7 +391,7 @@
                 doItem[0].inicio = true;
                 /* o último bloco do item nunca segura o seguinte */
                 doItem[doItem.length - 1].manter = false;
-                doItem.forEach(function (b) { b.questao = ref; fila.push(b); });
+                doItem.forEach(function (b) { b.questao = ref; if (redacao) b.larga = true; fila.push(b); });
             });
         });
         return fila;
@@ -335,8 +405,25 @@
         else if (bloco.tipo === 'titulo') e = el('div', 'secao-titulo', bloco.html);
         else if (bloco.tipo === 'questao-titulo') e = el('div', 'q-titulo', bloco.html);
         else if (bloco.tipo === 'linha') e = el('div', 'q-linha' + (bloco.primeira ? ' q-linha-primeira' : ''));
+        else if (bloco.tipo === 'mot-titulo') e = el('div', 'mot-titulo', bloco.html);
+        else if (bloco.tipo === 'prop-titulo') e = el('div', 'prop-titulo', bloco.html);
+        else if (bloco.tipo === 'redacao-instrucoes') {
+            e = el('div', 'red-instrucoes', '<div class="red-instrucoes-titulo">INSTRUÇÕES PARA A REDAÇÃO</div><ol>' +
+                bloco.linhas.map(function (l) { return '<li>' + Texto.html(l) + '</li>'; }).join('') + '</ol>');
+        } else if (bloco.tipo === 'folha-redacao') {
+            /* ocupa a coluna inteira: as linhas se repartem pela altura que sobra */
+            let linhas = '';
+            for (let i = 1; i <= bloco.linhas; i++) linhas += '<div class="fr-linha"><span class="fr-n">' + i + '</span></div>';
+            e = el('div', 'folha-redacao' + (bloco.rascunho ? ' folha-redacao--rascunho' : ''),
+                '<div class="fr-titulo">' + bloco.titulo + '</div>' +
+                (bloco.rascunho ? '<div class="fr-dica">Este rascunho não vale para a correção.</div>'
+                    : '<div class="fr-ident">Nome: <span class="linha-escrever"></span> Nº <span class="linha-escrever curta"></span> Turma <span class="linha-escrever curta"></span></div>') +
+                '<div class="fr-linhas">' + linhas + '</div>');
+            e.style.height = Math.max(0, coluna.clientHeight - fimDoConteudo(coluna) - 1) + 'px';
+        }
         else if (bloco.tipo === 'img') {
-            e = el('figure', 'q-img', imgHtml(bloco.imagem, tamanho(bloco.imagem, larguraCol, alturaMax)));
+            e = el('figure', 'q-img' + (bloco.titulo ? ' q-img-com-titulo' : ''),
+                (bloco.titulo ? '<div class="mot-titulo">' + bloco.titulo + '</div>' : '') + imgHtml(bloco.imagem, tamanho(bloco.imagem, larguraCol, alturaMax)));
         } else if (bloco.tipo === 'lado') {
             const t = tamanho(Object.assign({}, bloco.imagem, { largura: Math.min(60, bloco.imagem.largura || 40) }), larguraCol, alturaMax);
             let html = imgHtml(bloco.imagem, t, 'q-foto-lado');
@@ -401,10 +488,11 @@
         return { folha: folha, miolo: miolo };
     }
 
-    function abrirColunas(miolo, layout) {
-        const grade = el('div', 'colunas' + (layout.colunas === 2 ? ' duas' : '') + (layout.linhaColunas ? ' com-linha' : ''));
+    function abrirColunas(miolo, layout, quantas) {
+        quantas = quantas || layout.colunas;
+        const grade = el('div', 'colunas' + (quantas === 2 ? ' duas' : '') + (layout.linhaColunas && quantas > 1 ? ' com-linha' : ''));
         const lista = [];
-        for (let i = 0; i < layout.colunas; i++) {
+        for (let i = 0; i < quantas; i++) {
             const c = el('div', 'coluna');
             grade.appendChild(c);
             lista.push(c);
@@ -478,6 +566,10 @@
         const folhas = [];
         let colunas = [];
         let indice = 0;
+        let mioloAtual = null;
+        let larga = false; /* seção de Redação: uma coluna só, na largura inteira */
+
+        function quantasColunas() { return larga ? 1 : layout.colunas; }
 
         function abrirFolha() {
             const f = novaFolha(destino, layout, folhas.length + 1);
@@ -491,7 +583,21 @@
                 }
                 if (topo.childNodes.length) f.miolo.appendChild(topo);
             }
-            colunas = abrirColunas(f.miolo, layout);
+            mioloAtual = f.miolo;
+            colunas = abrirColunas(f.miolo, layout, quantasColunas());
+            indice = 0;
+        }
+
+        function folhaTemConteudo() {
+            return colunas.some(function (c) { return !!c.firstElementChild; });
+        }
+
+        /* muda o número de colunas: na mesma folha, se ainda está vazia; senão, numa nova */
+        function trocarColunas() {
+            if (folhaTemConteudo()) { abrirFolha(); return; }
+            const grade = colunas[0] && colunas[0].parentNode;
+            if (grade) grade.remove();
+            colunas = abrirColunas(mioloAtual, layout, quantasColunas());
             indice = 0;
         }
 
@@ -511,6 +617,9 @@
 
         for (let i = 0; i < fila.length; i++) {
             let bloco = fila[i];
+            const querLarga = !!bloco.larga && layout.colunas > 1;
+            if (querLarga !== larga) { larga = querLarga; trocarColunas(); }
+            if (bloco.novaPagina && folhaTemConteudo()) abrirFolha();
             for (let tentativas = 0; tentativas < 400; tentativas++) {
                 const coluna = colunas[indice];
                 const vazia = !coluna.firstElementChild;

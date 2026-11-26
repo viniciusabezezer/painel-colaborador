@@ -436,10 +436,17 @@
         $('ed-desfazer').disabled = true;
         $('proposta').hidden = true;
         if (!p.nuvem && !Modelos.questoesNumeradas(p).length && !p.secoes.some(function (s) { return s.questoes.length; })) {
-            /* prova nova: a primeira seção já ganha uma questão aberta */
-            const q = Modelos.novaQuestao('objetiva', 5);
-            p.secoes[0].questoes.push(q);
-            abertas.add(q.id);
+            /* prova nova: a primeira seção já ganha uma questão aberta
+               (na Redação, o TEXTO I e a proposta, no formato do ENEM) */
+            if (Modelos.secaoDeRedacao(p.secoes[0])) {
+                const t1 = Modelos.novaQuestao('motivador');
+                p.secoes[0].questoes.push(t1, Modelos.novaQuestao('proposta'));
+                abertas.add(t1.id);
+            } else {
+                const q = Modelos.novaQuestao('objetiva', 5);
+                p.secoes[0].questoes.push(q);
+                abertas.add(q.id);
+            }
         }
         mostrar('editor');
         $('ed-modelo').textContent = (p.fixo ? '🔒 ' : '') + p.modeloNome;
@@ -711,6 +718,15 @@
     }
 
     function resumo(q) {
+        if (q.tipo === 'proposta') {
+            const tema = String(q.tema || '').trim();
+            return { texto: tema ? 'Tema: ' + tema : 'proposta ainda sem tema', vazio: !tema };
+        }
+        if (q.tipo === 'motivador') {
+            const p1 = Texto.paragrafos(q.enunciado)[0];
+            if (p1) return { texto: Texto.semMarcas(p1), vazio: false };
+            return { texto: (q.imagens || []).length ? '(imagem)' : 'texto motivador vazio', vazio: !(q.imagens || []).length };
+        }
         const primeiro = Texto.paragrafos(q.enunciado)[0];
         if (primeiro) return { texto: (q.fonte ? '(' + q.fonte + ') ' : '') + Texto.semMarcas(primeiro), vazio: false };
         return { texto: (q.imagens || []).length ? '(só imagem)' : (q.tipo === 'texto' ? 'texto de apoio vazio' : 'enunciado ainda vazio'), vazio: !(q.imagens || []).length };
@@ -718,6 +734,8 @@
 
     function etiqueta(q) {
         if (q.tipo === 'texto') return '<span class="q-tag texto">texto de apoio</span>';
+        if (q.tipo === 'motivador') return '<span class="q-tag motivador">texto motivador</span>';
+        if (q.tipo === 'proposta') return '<span class="q-tag proposta">proposta</span>';
         if (q.tipo === 'discursiva') return '<span class="q-tag">discursiva</span>';
         return q.correta ? '<span class="q-tag certa">' + q.correta + '</span>' : '<span class="q-tag falta">sem resposta</span>';
     }
@@ -747,6 +765,51 @@
             '<div class="zona-linha"><div class="zona-colar" contenteditable="true" spellcheck="false" data-zona ' +
             'title="Clique aqui e cole (Ctrl+V), ou arraste uma imagem" aria-label="Área para colar imagem ou texto"></div>' +
             '<button type="button" class="btn btn--pequeno" data-acao="img-escolher">Escolher imagem…</button></div>';
+    }
+
+    /* Item de uma seção de Redação, no formato do ENEM: texto motivador
+       (texto e imagens, com a fonte à direita) ou proposta de redação. */
+    function itemRedacaoHtml(q, numeroTexto, leitura) {
+        const r = resumo(q);
+        const tipos = [['motivador', 'Texto motivador'], ['proposta', 'Proposta de redação']];
+        if (q.tipo !== 'motivador' && q.tipo !== 'proposta') tipos.push([q.tipo, q.tipo === 'texto' ? 'Texto de apoio' : q.tipo === 'discursiva' ? 'Discursiva' : 'Objetiva']);
+        let corpo = '<div class="linha-campos"><label>Tipo<select data-campo="tipo">' + opcoesHtml(tipos, q.tipo) + '</select></label></div>';
+        let rotulo;
+        if (q.tipo === 'motivador') {
+            const nome = 'TEXTO ' + Modelos.numeroRomano(numeroTexto);
+            rotulo = '<span class="q-numero q-numero--motivador">' + Modelos.numeroRomano(numeroTexto) + '</span>';
+            corpo += '<p class="dica dica--pequena">Sai na prova como <strong>' + nome + '</strong>, na largura inteira da folha. Pode ser só texto, só imagem (charge, infográfico, gráfico, foto) ou os dois.</p>' +
+                '<div class="campo-texto"><div class="campo-texto-cab"><span>Texto</span>' + ferramentasTexto() + '</div>' +
+                '<textarea data-campo="enunciado" rows="7" placeholder="Cole ou escreva o texto motivador. Cada linha é um parágrafo. Se for só imagem, deixe em branco.">' + esc(q.enunciado || '') + '</textarea></div>' +
+                imagensHtml(q) +
+                '<div class="linha-campos"><label class="campo-largo">Fonte <small>(sai à direita, em letra menor)</small><input type="text" data-campo="fonte" value="' + esc(q.fonte || '') + '" placeholder="Ex.: Disponível em: www.ibge.gov.br. Acesso em: 10 jun. 2026 (adaptado)."></label></div>';
+        } else if (q.tipo === 'proposta') {
+            rotulo = '<span class="q-numero q-numero--proposta">P</span>';
+            const instrucoes = (q.textoInstrucoesRedacao || []).join('\n');
+            corpo += '<div class="linha-campos"><label class="campo-largo">Tema da redação<input type="text" data-campo="tema" value="' + esc(q.tema || '') + '" placeholder="Ex.: Desafios para a valorização da herança africana no Brasil"></label></div>' +
+                '<div class="campo-texto"><div class="campo-texto-cab"><span>Comando da proposta <small>({tema} vira o tema, em negrito e entre aspas)</small></span>' + ferramentasTexto() + '</div>' +
+                '<textarea data-campo="enunciado" rows="5">' + esc(q.enunciado || '') + '</textarea></div>' +
+                '<div class="linha-campos"><button type="button" class="btn btn--pequeno" data-acao="red-comando-padrao">Voltar ao comando do ENEM</button></div>' +
+                '<fieldset class="red-opcoes"><legend>Caderno de redação</legend>' +
+                '<label class="caixa-marcar"><input type="checkbox" data-campo="instrucoesRedacao"' + (q.instrucoesRedacao ? ' checked' : '') + '> Quadro <strong>Instruções para a redação</strong> antes dos textos</label>' +
+                '<textarea data-campo="textoInstrucoesRedacao" rows="5"' + (q.instrucoesRedacao ? '' : ' hidden') + ' placeholder="Uma instrução por linha.">' + esc(instrucoes) + '</textarea>' +
+                (q.instrucoesRedacao ? '<div><button type="button" class="btn btn--pequeno" data-acao="red-instrucoes-padrao">Voltar às instruções do ENEM</button></div>' : '') +
+                '<div class="linha-campos"><label>Linhas da folha de redação<input type="number" min="0" max="40" data-campo="linhas" value="' + (q.linhas | 0) + '"></label>' +
+                '<label class="caixa-marcar"><input type="checkbox" data-campo="rascunho"' + (q.rascunho ? ' checked' : '') + '> Página de rascunho antes da folha</label></div>' +
+                '<small>A folha de redação sai numa página própria, com as linhas numeradas, como no ENEM (30 linhas). 0 tira a folha.</small></fieldset>';
+        } else {
+            return null;
+        }
+        corpo += '<div class="q-acoes">' +
+            '<button type="button" class="icone" data-acao="q-subir" title="Subir">↑ Subir</button>' +
+            '<button type="button" class="icone" data-acao="q-descer" title="Descer">↓ Descer</button>' +
+            '<button type="button" class="btn btn--pequeno icone-txt" data-acao="q-duplicar">Duplicar</button>' +
+            '<button type="button" class="btn btn--pequeno btn--perigo" data-acao="q-apagar">✕ Apagar</button></div>';
+        if (leitura) corpo = '<fieldset disabled>' + corpo.replace(/contenteditable="true"/g, 'contenteditable="false"') + '</fieldset>';
+        return '<details class="questao questao--' + q.tipo + '" data-q="' + q.id + '"' + (abertas.has(q.id) ? ' open' : '') + '>' +
+            '<summary>' + rotulo +
+            '<span class="q-resumo' + (r.vazio ? ' vazio-q' : '') + '">' + esc(r.texto) + '</span>' + etiqueta(q) + '</summary>' +
+            '<div class="q-corpo">' + corpo + '</div></details>';
     }
 
     function questaoHtml(q, numero, layout, leitura) {
@@ -815,11 +878,14 @@
         const rolagem = $('editor').scrollTop;
         let n = 0;
         const formata = Nuvem.podeFormatar(prova);
+        let nTexto = 0;
         caixa.innerHTML = prova.secoes.map(function (s, i) {
             const icone = Icones.resolver(s.icone, s.titulo);
             const escreve = Nuvem.podeEscrever(prova, s);
+            const redacao = Modelos.secaoDeRedacao(s);
+            nTexto = 0;
             const travaSecao = formata ? '' : ' disabled';
-            return '<div class="secao' + (escreve ? '' : ' secao--leitura') + '" data-s="' + s.id + '">' +
+            return '<div class="secao' + (escreve ? '' : ' secao--leitura') + (redacao ? ' secao--redacao' : '') + '" data-s="' + s.id + '">' +
                 '<div class="secao-cab"><span class="secao-icone">' + (icone ? Icones.svg(icone, 'icone-ui') : '') + '</span>' +
                 '<input type="text" data-campo="secao-titulo" value="' + esc(s.titulo || '') + '" placeholder="Título da seção (ex.: BIOLOGIA) — opcional"' + travaSecao + '>' +
                 (formata ?
@@ -828,11 +894,17 @@
                     '<button type="button" class="icone icone--perigo" data-acao="secao-apagar" title="Apagar a seção">✕ Apagar</button>' : '') + '</div>' +
                 '<div class="secao-icone-escolha"><select data-campo="secao-icone" aria-label="Ícone da seção"' + travaSecao + '>' + opcoesIcone(s) + '</select></div>' +
                 (prova.nuvem ? donoDaSecao(s, escreve) : '') +
+                (redacao ? '<p class="dica dica--pequena red-dica">Seção de <strong>Redação no formato do ENEM</strong>: acrescente os textos motivadores (TEXTO I, II, III…, com texto e imagens) e a proposta com o tema. A folha de redação com as linhas numeradas sai sozinha, numa página própria.</p>' : '') +
                 s.questoes.map(function (q) {
-                    if (q.tipo !== 'texto') n++;
+                    if (redacao && q.tipo === 'motivador') { nTexto++; return itemRedacaoHtml(q, nTexto, !escreve); }
+                    if (redacao && q.tipo === 'proposta') return itemRedacaoHtml(q, 0, !escreve);
+                    if (!Modelos.semNumero(q)) n++;
                     return questaoHtml(q, n, layout, !escreve);
                 }).join('') +
-                (escreve ?
+                (escreve && redacao ?
+                    '<div class="secao-acoes"><button type="button" class="btn btn--azul" data-acao="add-motivador">+ Texto motivador</button>' +
+                    (s.questoes.some(function (q) { return q.tipo === 'proposta'; }) ? '' : '<button type="button" class="btn btn--azul" data-acao="add-proposta">+ Proposta de redação</button>') + '</div>' :
+                escreve ?
                     '<div class="secao-acoes"><button type="button" class="btn btn--azul" data-acao="add-objetiva">+ Objetiva</button>' +
                     '<button type="button" class="btn btn--azul" data-acao="add-discursiva">+ Discursiva</button>' +
                     '<button type="button" class="btn btn--azul" data-acao="add-texto">+ Texto de apoio</button></div>' : '') +
@@ -896,13 +968,16 @@
         if (campo === 'secao-titulo' || campo === 'secao-icone') {
             const s = prova.secoes.find(function (x) { return x.id === secaoEl.dataset.s; });
             if (campo === 'secao-titulo') {
+                /* se virar (ou deixar de ser) Redação, o editor se redesenha ao sair do campo */
                 s.titulo = e.target.value;
                 const icone = Icones.resolver(s.icone, s.titulo);
                 secaoEl.querySelector('.secao-icone').innerHTML = icone ? Icones.svg(icone, 'icone-ui') : '';
                 secaoEl.querySelector('[data-campo="secao-icone"]').innerHTML = opcoesIcone(s);
             } else {
                 if (e.type !== 'change') return;
+                const antesIcone = Modelos.secaoDeRedacao(s);
                 s.icone = e.target.value;
+                if (antesIcone !== Modelos.secaoDeRedacao(s)) { mudou(); desenharSecoes(); return; }
                 const icone = Icones.resolver(s.icone, s.titulo);
                 secaoEl.querySelector('.secao-icone').innerHTML = icone ? Icones.svg(icone, 'icone-ui') : '';
             }
@@ -917,6 +992,11 @@
             if (e.type !== 'change') return;
             q.tipo = e.target.value;
             if (q.tipo === 'objetiva') while (q.alternativas.length < 5) q.alternativas.push('');
+            if (q.tipo === 'proposta') {
+                if (!String(q.enunciado || '').trim()) q.enunciado = Modelos.COMANDO_REDACAO;
+                if (q.linhas === 6) q.linhas = 30;
+                Modelos.normalizarQuestao(q);
+            }
             desenharSecoes();
         } else if (campo === 'disposicao') {
             if (e.type !== 'change') return;
@@ -927,6 +1007,12 @@
         } else if (campo === 'correta') {
             q.correta = e.target.value;
             atualizarResumo(qel, q);
+        } else if (campo === 'instrucoesRedacao' || campo === 'rascunho') {
+            if (e.type !== 'change') return;
+            q[campo] = e.target.checked;
+            if (campo === 'instrucoesRedacao') desenharSecoes();
+        } else if (campo === 'textoInstrucoesRedacao') {
+            q.textoInstrucoesRedacao = e.target.value.split('\n');
         } else if (campo === 'linhas') {
             q.linhas = Math.max(0, Math.min(40, parseInt(e.target.value, 10) || 0));
         } else if (campo === 'img-largura' || campo === 'img-posicao') {
@@ -947,7 +1033,13 @@
     caixaSecoes.addEventListener('input', aoEditarQuestao);
     caixaSecoes.addEventListener('change', function (e) {
         const campo = e.target.dataset.campo;
-        if (['tipo', 'correta', 'img-posicao', 'disposicao', 'secao-icone'].indexOf(campo) !== -1) aoEditarQuestao(e);
+        if (campo === 'secao-titulo') {
+            const secaoEl = e.target.closest('[data-s]');
+            const s = prova.secoes.find(function (x) { return x.id === secaoEl.dataset.s; });
+            if (s && Modelos.secaoDeRedacao(s) !== secaoEl.classList.contains('secao--redacao')) desenharSecoes();
+            return;
+        }
+        if (['tipo', 'correta', 'img-posicao', 'disposicao', 'secao-icone', 'instrucoesRedacao', 'rascunho'].indexOf(campo) !== -1) aoEditarQuestao(e);
     });
 
     /* ----- formatação: botões e atalhos ----- */
@@ -1034,6 +1126,10 @@
                     imagem.largura = 40;
                     achado.questao.altImagens[alvo.alt] = imagem;
                     break; /* uma por alternativa */
+                }
+                if (Modelos.secaoDeRedacao(achado.secao) && (achado.questao.tipo === 'motivador' || achado.questao.tipo === 'proposta')) {
+                    /* na Redação a coluna é a folha inteira: a figura começa em até 70% dela */
+                    imagem.largura = Math.round(Math.min(70, Math.max(25, (imagem.w / 700) * 100)) / 5) * 5;
                 }
                 achado.questao.imagens.push(imagem);
             }
@@ -1147,9 +1243,16 @@
         if (acao === 'alt-img') { escolherImagem({ qid: qel.dataset.q, alt: Number(botao.closest('[data-i]').dataset.i) }); return; }
 
         marcar();
-        if (acao === 'add-objetiva' || acao === 'add-discursiva' || acao === 'add-texto') {
+        if (acao === 'red-comando-padrao' || acao === 'red-instrucoes-padrao') {
+            if (acao === 'red-comando-padrao') achado.questao.enunciado = Modelos.COMANDO_REDACAO;
+            else achado.questao.textoInstrucoesRedacao = Modelos.INSTRUCOES_REDACAO.slice();
+            desenharSecoes();
+        } else if (acao === 'add-objetiva' || acao === 'add-discursiva' || acao === 'add-texto' || acao === 'add-motivador' || acao === 'add-proposta') {
             const q = Modelos.novaQuestao(acao.slice(4), 5);
-            secao.questoes.push(q);
+            const proposta = secao.questoes.findIndex(function (x) { return x.tipo === 'proposta'; });
+            /* na Redação, um texto motivador novo entra antes da proposta, como no ENEM */
+            if (acao === 'add-motivador' && proposta !== -1) secao.questoes.splice(proposta, 0, q);
+            else secao.questoes.push(q);
             abertas.add(q.id);
             desenharSecoes();
             const novo = caixaSecoes.querySelector('[data-q="' + q.id + '"] textarea[data-campo="enunciado"]');

@@ -238,6 +238,25 @@ arquivo: a chave continua no título do PDF. O gabarito do professor sai sem a c
 - **Desfazer** (↶, ou Ctrl+Z fora das caixas de texto) volta as últimas 30
   alterações: questão apagada, colagem, mudança de formato.
 
+### Redação no formato do ENEM
+
+Numa seção de **Redação** (título REDAÇÃO, PRODUÇÃO TEXTUAL ou ícone de
+redação) o espaço das questões vira o caderno de redação do ENEM, e só ela
+muda — as outras seções seguem como acima:
+
+- **+ Texto motivador**: sai como TEXTO I, II, III… (numerados sozinhos), com
+  texto, imagens (charge, infográfico, gráfico, foto — com posição e tamanho)
+  ou os dois, e a **fonte** à direita, em letra menor.
+- **Proposta de redação**: o **tema** e o comando do ENEM ("redija texto
+  dissertativo-argumentativo… sobre o tema {tema}…"), editável; `{tema}` vira
+  o tema em negrito e entre aspas. Junto dela, o quadro **Instruções para a
+  redação** (as do ENEM, editáveis ou desligadas), o número de linhas da
+  **folha de redação** (30 por padrão) e uma **página de rascunho** opcional.
+- Na folha, a Redação ocupa a **largura inteira** (uma coluna), e a folha de
+  redação sai numa página própria, com as linhas numeradas e Nome/Nº/Turma.
+- Esses itens não levam número nem entram no gabarito; prova só de Redação
+  sai sem a grade de respostas.
+
 Antes de imprimir, o painel *Antes de imprimir, confira* aponta questões sem
 enunciado, alternativas vazias e respostas não marcadas.
 
