@@ -1,8 +1,9 @@
 // Envia as notas de uma prova fechada para o Malu Presente.
 //
-// NÃO está publicada. Quando for publicar, no projeto MapaDeAulas:
+// Publicada no projeto MapaDeAulas. Para publicar de novo (index.ts e lote.js
+// juntos; lote.js é cópia exata de gabaritos/js/presente.js):
 //   supabase functions deploy gabaritos-enviar-presente
-// e crie os segredos MALU_PRESENTE_URL e MALU_PRESENTE_TOKEN
+// Segredos: MALU_PRESENTE_URL e MALU_PRESENTE_TOKEN
 // (a URL é a origem do portal, sem caminho; o token não vai para o navegador).
 //
 // Quem chama precisa ser o PCA ativo da área da prova. Gestão e professor
