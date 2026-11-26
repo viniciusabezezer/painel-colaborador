@@ -59,17 +59,33 @@ Bimestral Malu sai de lá com um espaço em branco de 2,5 cm exatamente onde
 este app cola o cabeçalho com os valores padrão da tela (19 × 2,5 cm, a 0,6 cm
 do alto e 1 cm da esquerda), então basta subir o PDF.
 
-1. **A avaliação** — bimestre, ano e a *chave da escola*.
+1. **A avaliação** — bimestre, ano e a *chave da escola*. Aqui também dá para
+   **Trazer as provas do Montador**: o app busca as provas que o PCA já travou
+   para impressão, agrupadas por bimestre (o mais novo já vem marcado), e a
+   gestão marca as que quer usar. O bimestre, o ano e o nome da avaliação são
+   preenchidos. Tem de ser um bimestre só e uma prova por série e componente;
+   prova de formato livre não entra. Sem importar, tudo segue como sempre.
 2. **Os alunos** — cola-se tudo de uma vez, todas as turmas juntas. A turma pode
    vir como título de bloco (`TURMA 3B`) ou na própria linha (`3B; João da
    Silva`, `7;CARLA MENDES;1B`, `PEDRO ALVES - 3A`). Se a lista já vier
-   numerada, é **esse** número que vale: é o mesmo que o aluno preenche em
-   “Núm. da lista” na folha de respostas. Sem numeração, a ordem alfabética
-   manda — e aí a mesma turma gera sempre os mesmos códigos.
+   numerada, é **esse** número que vale: é o número da lista (chamada) da
+   escola, o mesmo que vai no QR. Sem numeração, a ordem alfabética
+   manda — e aí a mesma turma gera sempre os mesmos códigos. Além de **Puxar do
+   Malu Presente** (todas as turmas do ano), dá para **escolher só as turmas que
+   se quer puxar agora**: A a F das séries das provas importadas. Cada puxada
+   pede ao Malu Presente só as turmas marcadas e **junta** o resultado à lista,
+   no lugar das turmas de mesmo nome, sem apagar as outras nem as edições feitas
+   nelas.
 3. **As provas** — cada prova em PDF, uma por série e componente, e a escolha
    do que cada aluno recebe: **só a capa e o verso** (as duas primeiras
    páginas; o resto sai no xerox em massa) ou **a prova inteira**, pronta para
-   imprimir completa. JPG ou PNG servem, mas aí sai só a capa.
+   imprimir completa. JPG ou PNG servem, mas aí sai só a capa. Com provas
+   importadas, dá para **soltar todos os PDFs de uma vez**: cada um é reconhecido
+   pela chave da prova (gravada no título do PDF pelo Montador) e vai sozinho
+   para o espaço dele, prova ou gabarito avulso, sem importar o nome do arquivo.
+   Ficam de fora, com o motivo na tela: PDF sem chave (use o espaço, mais
+   abaixo), a folha do professor, o PDF com 4 gabaritos por folha (o de 1 por
+   página é o que o Identificador recebe) e PDF de prova que não foi importada.
 4. **O cabeçalho de identificação** — clica-se na prévia da própria prova para
    encostar ali o canto de cima do cabeçalho, e ajusta-se largura e altura até
    o retângulo cobrir a faixa deixada em branco.
@@ -125,6 +141,7 @@ Versão `MLSPROVA1`, campos separados por `|`:
 ```
 MLSPROVA1|<codigo>|<turma>|<numero>|<nome>|<titulo>
 MLSPROVA1|<codigo>|<turma>|<numero>|<nome>|<titulo>|<matricula>
+MLSPROVA1|<codigo>|<turma>|<numero>|<nome>|<titulo>|<matricula>|<chave>
 ```
 
 | Campo | O que é |
@@ -134,7 +151,8 @@ MLSPROVA1|<codigo>|<turma>|<numero>|<nome>|<titulo>|<matricula>
 | `numero` | Número da lista com 3 dígitos, o mesmo do código (`007`) |
 | `nome` | Nome sem acento, em maiúsculas. Espaço vira `+`. No máximo 28 caracteres, cortado no fim de uma palavra |
 | `titulo` | Nome da avaliação, com as mesmas regras, no máximo 19 caracteres. O campo fica presente mesmo vazio |
-| `matricula` | Só dígitos, de 4 a 12, e só quando a lista traz matrícula. Sem matrícula, este campo não aparece |
+| `matricula` | Só dígitos, de 4 a 12, e só quando a lista traz matrícula. Sem matrícula, este campo não aparece (a não ser que haja `chave`: aí fica vazio, para a chave continuar no oitavo lugar) |
+| `chave` | A chave da prova no Montador: 8 caracteres de `0-9` e `A-F` (`8F3A2C1D`), os primeiros do id da prova na nuvem. Só aparece em prova da área que veio do Montador com a chave. Quem não conhece o campo lê o resto normalmente |
 
 Exemplo com dados fictícios. Os quatro caracteres finais ilustram o verificador; na prova gerada eles saem do cálculo com o nome e a chave da escola:
 
@@ -144,7 +162,7 @@ MLSPROVA1|MLS-2026-B3-1A-007-LIN-DRYT|1A|007|ESTUDANTE+FICTICIO+07|AVALIACAO+BIM
 
 Quem lê troca cada `+` por espaço. Fora o `|`, o texto só tem letras, dígitos, `+` e `-`. Para colocar num endereço, troque cada `|` por `%7C`.
 
-A matrícula entra quando a lista tem o campo `matricula` — é o caso de **Puxar do Malu Presente**, que traz `numero`, `nome`, `matricula` e `ativo`. Aluno com `ativo: false` não recebe prova. Coluna de 4 a 12 dígitos na lista colada também vale como matrícula. Um valor que não seja só dígitos nesse tamanho é ignorado, para a credencial do cartão não caber nesse campo.
+A matrícula entra quando a lista tem o campo `matricula` — é o caso de **Puxar do Malu Presente**, que traz `numero`, `nome`, `matricula` e `ativo`. Na caixa de alunos ela aparece no fim de cada linha, depois de um traço (`07 - Estudante Fictício 07 - 20260007`), e é daí que chega ao QR; só o Identificador a mostra, o Montador e o Malu Gabaritos continuam com `07 - Nome`. Aluno com `ativo: false` não recebe prova. Coluna de 4 a 12 dígitos na lista colada também vale como matrícula. Um valor que não seja só dígitos nesse tamanho é ignorado, para a credencial do cartão não caber nesse campo.
 
 Provas já impressas usam o formato antigo, em duas linhas, e continuam válidas:
 
@@ -157,6 +175,54 @@ A aba Conferir e o Malu Gabaritos leem os dois. O verificador do código usa o n
 
 Guarde a chave: sem ela nem a conferência funciona, nem os mesmos alunos geram
 os mesmos códigos numa segunda rodada.
+
+### De onde vem a chave da prova
+
+A chave liga a prova ao QR de cada aluno sem ninguém escolher nada:
+
+1. **Montador.** Ao imprimir uma prova da área, o PDF recebe o nome
+   `PROVA-2026-B3-1S-LIN-K8F3A2C1D` (o de sempre mais `-K` e a chave). O
+   navegador grava o mesmo nome como título do PDF. Prova só do navegador não
+   tem chave e sai com o nome de sempre.
+2. **Identificador.** Ao receber o PDF (prova ou gabarito), lê a chave do título
+   do PDF e, se o título faltar, do nome do arquivo. O título vale mais porque
+   sobrevive a quem renomeia o arquivo. A chave vai para o QR de cada aluno. O
+   Identificador também compara o que o nome diz (série, componente, bimestre,
+   ano) com o espaço em que o arquivo foi solto e avisa se não bate. JPG, PNG e
+   PDF de outra origem não têm chave e seguem como sempre.
+3. **Malu Gabaritos.** Acha a prova pela chave do QR (ver abaixo).
+
+### Como o Malu Gabaritos usa o QR
+
+O QR é o que diz de quem é a folha. Na correção, em cada folha, primeiro o QR e
+depois o gabarito:
+
+1. **O QR vira a identidade.** Sem QR lido, a leitura do gabarito nem começa. A
+   chave do QR acha a prova: se a folha é de outra prova que a pessoa corrige, a
+   tela troca de prova sozinha (nas fotos enviadas, cada folha vai para a prova
+   dela). Chave que nenhuma prova do aparelho tem, ou prova que a pessoa não
+   corrige, o app avisa e não registra. A chave é o que separa duas provas com os
+   mesmos ano, bimestre, série e componente (uma segunda chamada, por exemplo).
+   QR sem chave (de antes dela) vale pelo ano, bimestre, série e componente do
+   código `MLS-2026-B3-1A-007-LIN-…`, mas, se a prova tem chave, a leitura fica
+   marcada para revisão.
+2. **A identidade vale para uma leitura só.** Ao registrar, ela é apagada, então
+   o QR de um aluno nunca vai parar na folha do seguinte. Sem o QR aparecer por
+   6 segundos, ela também some.
+3. **O aluno sai da turma e do número do QR.** A folha de respostas não tem
+   mais o "Núm. da lista" para o aluno marcar: só o QR diz quem é. Foto sem QR
+   não é registrada (no envio de fotos) e a câmera nem começa a ler sem ele.
+
+O QR é lido pelo navegador (BarcodeDetector, no Chrome do Android e do
+computador) e, onde ele não existe, pelo leitor embutido jsQR
+(`gabaritos/vendor/`, Apache-2.0). É o caso do Safari e do Chrome no iPhone. O QR
+precisa de pelo menos 3 pixels por módulo: com a câmera, mostre o QR de perto
+antes do gabarito; nas fotos enviadas, vale a foto inteira do celular, não uma
+imagem reduzida.
+
+```bash
+node --test gabaritos/test/identificar.test.cjs   # o passo do QR primeiro, a conferência da prova, o jsQR com o QR real
+```
 
 Componentes: `RED` redação, `LIN` linguagens e códigos, `NAT` ciências da
 natureza, `HUM` ciências humanas, `MAT` matemática.
@@ -264,8 +330,9 @@ leve. O SHA-256 é implementação própria em `js/sha256.js`, porque o
 
 ```bash
 node --test provas/test/provas.test.cjs   # código, lista, QR MLSPROVA1, posição e PDF
+node --test provas/test/chaveprova.test.cjs provas/test/importar.test.cjs  # a chave no PDF e no QR; a importação do Montador
 node --test gabaritos/test/qrprova.test.cjs  # o Gabaritos lê o QR novo e o antigo
-node provas/test/provas-browser.mjs       # 38 verificações na tela, com Chromium
+node provas/test/provas-browser.mjs       # 72 verificações na tela, com Chromium (inclui a importação do Montador)
 ```
 
 O teste de navegador precisa do `playwright` instalado (global serve), sobe um

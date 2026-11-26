@@ -4,14 +4,18 @@
 -- da prova da área e, no fim, desfaz tudo com um erro proposital — que traz
 -- na mensagem a lista de verificações. Nada fica gravado.
 --
--- Esperado: 28 linhas terminando em "ok", nenhuma "FALHA".
--- Rode depois de 004_montador_convites.sql (a tabela de convites precisa existir).
+-- Esperado: 36 linhas, todas com "ok", nenhuma "FALHA".
+-- Rode depois de 004_montador_convites.sql (a tabela de convites precisa existir)
+-- e de 007_codigo_so_gestao.sql (o código de verificação é só da Gestão).
+-- Se 005 não estiver aplicada, as 3 verificações dos códigos gerados viram uma
+-- só linha "pulado ... ok": o total fica em 34 linhas.
 
 do $teste$
 declare
   g uuid := gen_random_uuid(); p uuid := gen_random_uuid(); b uuid := gen_random_uuid();
   f uuid := gen_random_uuid(); h uuid := gen_random_uuid();
   prova uuid; sbio uuid; sfis uuid; squi uuid; n int; ok boolean; erro text;
+  pcod uuid; ppca uuid; txt text;
   resultados text[] := '{}';
 begin
   insert into auth.users (id, instance_id, aud, role, email, encrypted_password, email_confirmed_at, raw_app_meta_data, raw_user_meta_data, created_at, updated_at)
@@ -148,6 +152,66 @@ begin
     resultados := resultados || ('Anon não lê convites: ' || case when n = 0 then 'ok' else 'FALHA' end);
   exception when others then resultados := resultados || 'Anon não lê convites: ok (sem permissão)'::text; end;
   execute 'reset role';
+
+  -- código de verificação: só a Gestão liga, configura e gera
+  perform set_config('request.jwt.claims', json_build_object('sub', g, 'role','authenticated')::text, true);
+  execute 'set local role authenticated';
+  insert into public.montador_provas (titulo, componente, dados)
+    values ('Prova com código', 'NAT', '{"codigoVerificacao":true,"codigos":[{"copiaId":"1A-01"}],"turmasCodigo":[{"turma":"1A"}],"prazoNotas":"2026-12-01"}')
+    returning id into pcod;
+  select dados ->> 'codigoVerificacao' into txt from public.montador_provas where id = pcod;
+  resultados := resultados || ('Gestão liga o código na prova: ' || case when txt = 'true' then 'ok' else 'FALHA' end);
+  execute 'reset role';
+
+  perform set_config('request.jwt.claims', json_build_object('sub', p, 'role','authenticated')::text, true);
+  execute 'set local role authenticated';
+  insert into public.montador_provas (titulo, componente, dados)
+    values ('Prova da PCA', 'NAT', '{"formato":"a4","codigoVerificacao":true,"codigos":[{"copiaId":"x"}],"turmasCodigo":[{"turma":"x"}],"prazoNotas":"2026-12-01"}')
+    returning id into ppca;
+  select count(*) into n from public.montador_provas
+    where id = ppca and not (dados ? 'codigoVerificacao' or dados ? 'codigos' or dados ? 'turmasCodigo' or dados ? 'prazoNotas')
+      and dados ->> 'formato' = 'a4';
+  resultados := resultados || ('PCA não liga o código ao criar a prova (o resto fica): ' || case when n = 1 then 'ok' else 'FALHA' end);
+  update public.montador_provas
+    set dados = dados || '{"formato":"b5","codigoVerificacao":false,"codigos":[],"turmasCodigo":[],"prazoNotas":""}'
+    where id = pcod;
+  select count(*) into n from public.montador_provas
+    where id = pcod and dados ->> 'formato' = 'b5' and dados ->> 'codigoVerificacao' = 'true'
+      and jsonb_array_length(dados -> 'codigos') = 1 and jsonb_array_length(dados -> 'turmasCodigo') = 1
+      and dados ->> 'prazoNotas' = '2026-12-01';
+  resultados := resultados || ('PCA muda o formato, mas não desliga nem apaga o código da Gestão: ' || case when n = 1 then 'ok' else 'FALHA' end);
+  update public.montador_provas set dados = dados || '{"codigoVerificacao":true,"codigos":[{"copiaId":"y"}]}' where id = ppca;
+  select count(*) into n from public.montador_provas where id = ppca and not (dados ? 'codigoVerificacao' or dados ? 'codigos');
+  resultados := resultados || ('PCA não liga o código numa prova que não tinha: ' || case when n = 1 then 'ok' else 'FALHA' end);
+  execute 'reset role';
+
+  -- SQL Editor e chave de serviço (sem pessoa logada) não são alterados
+  perform set_config('request.jwt.claims', '', true);
+  update public.montador_provas set dados = dados || '{"codigoVerificacao":true}' where id = ppca;
+  select dados ->> 'codigoVerificacao' into txt from public.montador_provas where id = ppca;
+  resultados := resultados || ('Sem pessoa logada (SQL Editor) mexe no código: ' || case when txt = 'true' then 'ok' else 'FALHA' end);
+
+  if to_regclass('public.corretor_copias') is null then
+    resultados := resultados || 'Códigos gerados: pulado (005 não aplicada): ok'::text;
+  else
+    perform set_config('request.jwt.claims', json_build_object('sub', p, 'role','authenticated')::text, true);
+    execute 'set local role authenticated';
+    begin
+      insert into public.corretor_copias (prova_id, copia_id, codigo, semente) values (pcod, '1A-01', 'ACE345', '1');
+      resultados := resultados || 'FALHA: PCA gravou os códigos gerados'::text;
+    exception when others then resultados := resultados || 'PCA não grava os códigos gerados: ok'::text; end;
+    execute 'reset role';
+    perform set_config('request.jwt.claims', json_build_object('sub', g, 'role','authenticated')::text, true);
+    execute 'set local role authenticated';
+    insert into public.corretor_copias (prova_id, copia_id, codigo, semente) values (pcod, '1A-02', 'PRC456', '2');
+    resultados := resultados || 'Gestão grava os códigos gerados: ok'::text;
+    execute 'reset role';
+    perform set_config('request.jwt.claims', json_build_object('sub', p, 'role','authenticated')::text, true);
+    execute 'set local role authenticated';
+    select count(*) into n from public.corretor_copias where prova_id = pcod;
+    resultados := resultados || ('PCA lê os códigos gerados (para corrigir): ' || case when n >= 1 then 'ok' else 'FALHA' end);
+    execute 'reset role';
+  end if;
 
   raise exception 'RESULTADO|%', array_to_string(resultados, ' || ');
 end

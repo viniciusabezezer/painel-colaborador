@@ -191,6 +191,14 @@
         return !!p && (p.papel === 'gestao' || (p.papel === 'pca' && p.area === componente));
     }
 
+    /* O código de verificação é só da coordenação (papel Gestão). A tela
+       esconde a opção de quem não é; quem decide de verdade é o banco
+       (supabase/007_codigo_so_gestao.sql). */
+    function podeCodigo() {
+        const p = perfilAtual;
+        return !!p && p.papel === 'gestao';
+    }
+
     async function listarProvas() {
         const c = obterCliente();
         const provas = (await exigir(c.from('montador_provas').select('*').order('atualizada_em', { ascending: false }))) || [];
@@ -233,7 +241,7 @@
     async function criarProva(opcoes) {
         const modelo = Modelos.obter(opcoes.modeloId) || Modelos.obter(Modelos.FIXO_ID);
         const local = Modelos.criarProva(modelo, { serie: opcoes.serie, componente: opcoes.componente, bimestre: opcoes.bimestre, ano: opcoes.ano });
-        local.codigoVerificacao = !!opcoes.codigoVerificacao;
+        local.codigoVerificacao = !!opcoes.codigoVerificacao && podeCodigo();
         local.turmasCodigo = [];
         local.codigos = [];
         local.prazoNotas = '';
@@ -734,6 +742,7 @@
         acessos: acessos,
         perfis: perfis,
         coordena: coordena,
+        podeCodigo: podeCodigo,
         listarProvas: listarProvas,
         criarProva: criarProva,
         apagarProva: apagarProva,

@@ -26,6 +26,14 @@ cada um com o seu login.
 | **PCA** | Cria as provas da sua área e distribui as seções; mexe no formato, nas instruções e no gabarito; escreve as suas questões; **edita qualquer questão** da área; **comenta, devolve e aprova** cada seção; **trava** a prova para impressão. |
 | **Professor** | Escreve as questões das seções atribuídas a ele; vê a prova inteira (as seções dos colegas ficam só para leitura); comenta; marca a sua seção como **pronta para revisão**. |
 
+**Código de verificação: só a Gestão (a coordenação).** Só ela liga a opção,
+cadastra as turmas, define o prazo e gera os códigos. O PCA e o professor não
+veem onde ligar. Se a Gestão já gerou os códigos de uma prova, o PCA vê apenas
+os botões de imprimir as cópias e a folha de códigos. Isso vale no banco, não
+só na tela (`supabase/007_codigo_so_gestao.sql`): mesmo por fora do Montador, o
+PCA não liga, não desliga e não apaga o código, e continua salvando formato e
+instruções como sempre.
+
 **O caminho de uma prova da área**
 
 1. O PCA clica em **+ Nova prova da área**: escolhe o modelo, a série, o
@@ -81,9 +89,10 @@ a função que cria as contas estão em `supabase/`:
 | `supabase/002_funcoes_privadas.sql` | as funções das regras fora da API |
 | `supabase/003_ver_prova_pela_linha.sql` | ajuste da regra de leitura das provas |
 | `supabase/004_montador_convites.sql` | convites por link (tabela com RLS fechada; não mexe no Auth) |
+| `supabase/007_codigo_so_gestao.sql` | o código de verificação é só da Gestão: o PCA não liga nem altera, e só a Gestão grava os códigos gerados (se a 005 estiver aplicada) |
 | `supabase/functions/montador-usuarios/` | a função que cria e altera contas (só a gestão a usa) |
 | `supabase/functions/montador-convites/` | gera o link, confere o token e grava a senha (só a gestão gera) |
-| `supabase/teste_permissoes.sql` | 28 verificações das regras, para rodar no SQL Editor (não grava nada) |
+| `supabase/teste_permissoes.sql` | 36 verificações das regras (34 se a 005 não estiver aplicada), para rodar no SQL Editor (não grava nada) |
 
 O endereço e a chave publicável do Supabase estão em `js/config.js` — a chave
 publicável é feita para ir no navegador; os dados ficam protegidos pelas regras.
@@ -152,11 +161,12 @@ está embutido no app, para sair sempre, até sem internet.)
 Logo abaixo vem o quadro de **Instruções** e as duas colunas. Com o gabarito
 ligado, a primeira coluna abre com o **GABARITO (NÃO RASURE)**:
 
-- o *Núm. da lista* com dois dígitos para marcar;
-- o rótulo da série e da área (`2º Ano` / `C.N.`);
-- as questões em blocos de cinco, com `A B C D E` em cima, de 1 a 14 na
-  primeira coluna, de 15 a 40 na segunda e de 41 em diante na terceira, como na
-  prova impressa da escola (até 65 questões);
+- o rótulo da série e da área (`2º Ano` / `C.N.`) nas duas primeiras linhas.
+  **Não há "Núm. da lista" para marcar**: quem é o aluno vem do QR da folha
+  (Identificador) e qual é a prova vem da chave dentro dele;
+- as questões em blocos de cinco, com `A B C D E` em cima, enchendo a primeira
+  coluna logo abaixo do rótulo, depois a segunda e a terceira (até
+  `Gabarito.capacidade()` questões);
 - as marcas quadradas de alinhamento em quatro fileiras verticais, de cinco em
   cinco linhas, sempre no mesmo lugar, qualquer que seja o número de questões.
 
@@ -182,6 +192,11 @@ ligado, a primeira coluna abre com o **GABARITO (NÃO RASURE)**:
 
 O PDF sai com o nome `PROVA-2026-B3-2S-NAT.pdf` (ano, bimestre, série e área),
 pronto para subir no Identificador.
+Se a prova é da área (está na nuvem), o nome leva a chave da prova no fim:
+`PROVA-2026-B3-2S-NAT-K8F3A2C1D.pdf`. O navegador grava o mesmo nome como título do
+PDF e o Identificador lê a chave de lá, para pôr no QR de cada aluno e o Malu
+Gabaritos achar a prova sozinho (veja `provas/README.md`). Pode renomear o
+arquivo: a chave continua no título do PDF. O gabarito do professor sai sem a chave.
 
 ## Escrevendo as questões
 
@@ -264,10 +279,9 @@ enunciado, alternativas vazias e respostas não marcadas.
 
 ## Outras funções
 
-- **Versão B**: cópia da prova com as alternativas em outra ordem (a resposta
-  certa acompanha, e o gabarito do professor da versão B sai certo), para
-  turmas grandes. Questões com "todas as anteriores", "nenhuma das
-  alternativas", "a e b" ficam na ordem original — o app avisa quais.
+- **Não há versão B.** Uma prova tem uma só ordem de questões e de alternativas,
+  a mesma para todos os alunos: é o que permite ao Malu Gabaritos corrigir cada
+  folha com o gabarito da prova (o QR de cada aluno leva a chave da prova).
 - **Folha de correção (professor)**: uma folha com a resposta de cada questão.
 - **Exportar / Importar** (`.json`): leva a prova a outro computador ou à
   coordenação.
@@ -336,7 +350,7 @@ HTML, CSS e JavaScript sem framework, sem build e sem biblioteca de fora.
 | Arquivo | Para que |
 | --- | --- |
 | `js/texto.js` | marcação (negrito, itálico, índice, expoente) e divisão em palavras |
-| `js/modelos.js` | modelo fixo, modelos guardados (localStorage), fontes, prova, versão B |
+| `js/modelos.js` | modelo fixo, modelos guardados (localStorage), fontes, prova |
 | `js/icones.js` | ícones das disciplinas (SVG de traço) e detecção pelo título |
 | `js/gabarito.js` | a grade de respostas em SVG, em milímetros |
 | `js/importar.js` | leitura das várias questões coladas |
@@ -355,7 +369,7 @@ HTML, CSS e JavaScript sem framework, sem build e sem biblioteca de fora.
 ## Testes
 
 ```bash
-node --test montar/test/montar.test.cjs   # 24 testes: marcação, modelos, ícones, versão B, gabarito, colagem
+node --test montar/test/montar.test.cjs   # 24 testes: marcação, modelos, ícones, gabarito, colagem
 node --test montar/test/convite.test.mjs  # convite por link e os controles de admin, com servidor de mentira
 node montar/test/montar-browser.mjs        # 80 verificações na tela, com Chromium
 node montar/test/area-browser.mjs          # 76 verificações da prova da área e do convite, com Chromium
@@ -366,7 +380,7 @@ Avaliação Bimestral colando `test/questoes-exemplo.txt`, confere a faixa, o
 gabarito (e tirá-lo), a fonte padrão, os ícones, as alternativas lado a lado, a
 gabarito como imagem e à parte (4 por folha e 1 por página, no tamanho real),
 a linha entre as colunas, colagem de texto do Word e de imagem, tamanho e posição de imagem, texto de
-apoio, desfazer, economia de papel, versão B, os últimos arquivos gerados, gera
+apoio, desfazer, economia de papel, os últimos arquivos gerados, gera
 o PDF como a impressão do navegador gera e, por fim, **corta a internet e abre
 o app de novo**. Os PDFs e uma captura da tela ficam em `test/saida/`.
 

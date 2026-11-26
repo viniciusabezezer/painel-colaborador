@@ -252,7 +252,7 @@
     var comps = componentes(g, w, h, tOtsu);
     var cands = candidatosMarca(comps);
     var res = { ok: false, largura: w, altura: h, limiarOtsu: tOtsu, marcas: [], cantos: [], bolhas: [],
-                lista: null, respostas: {}, codigo: null, alertas: [], erroPx: null, ms: 0 };
+                respostas: {}, codigo: null, alertas: [], erroPx: null, ms: 0 };
 
     var anc = cands.length >= 4 ? ancorar(cands, geo, Math.max(w, h), comCodigo) : null;
     if (!anc || anc.pares.length < 8) {
@@ -308,15 +308,6 @@
       pintar(grp, cls);
       return cls;
     }
-
-    // Núm. da lista: duas casas (dezena, unidade)
-    var casas = agrupar(geo.bolhas_lista, function (b) { return b.casa; }, 'lista');
-    var cd = classificar(casas.filter(function (c) { return c.chave === 'dezena'; })[0]);
-    var cu = classificar(casas.filter(function (c) { return c.chave === 'unidade'; })[0]);
-    var okLista = cd.status === 'marcada' && cu.status === 'marcada';
-    res.lista = { valor: okLista ? cd.valor + cu.valor : null, numero: okLista ? parseInt(cd.valor + cu.valor, 10) : null,
-                  dezena: cd, unidade: cu, status: okLista ? 'marcada' : 'duvidosa' };
-    if (!okLista) res.alertas.push({ tipo: 'lista', campo: 'lista', detalhe: 'Não consegui ler o número da lista com segurança.' });
 
     // Questões
     agrupar(geo.bolhas_questoes, function (b) { return b.questao; }, 'q').forEach(function (grp) {

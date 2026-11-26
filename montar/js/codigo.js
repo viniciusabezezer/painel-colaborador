@@ -8,9 +8,15 @@
    frase, sem marca nenhuma. Letras primeiro, depois algarismos, cada grupo
    na ordem das questões.
 
-   O sorteio replica o gerador do Python (random.Random com semente de 64
-   bits vinda do SHA-256), para a mesma prova e a mesma cópia darem o mesmo
-   código. Não usa modelo de linguagem. */
+   O aluno não é instruído antes da prova. A explicação de como montar o
+   código vai escrita dentro da prova, no enunciado da primeira questão
+   (sempre na primeira metade), e as seis pistas ficam só nas questões
+   seguintes, uma em cada sexto do restante da prova. Quem lê a prova até o
+   fim encontra a instrução primeiro e as pistas depois.
+
+   O sorteio usa o mesmo gerador do Python (random.Random com semente de 64
+   bits vinda do SHA-256): a mesma prova e a mesma cópia dão o mesmo código.
+   Não usa modelo de linguagem. */
 (function (global) {
     'use strict';
 
@@ -25,6 +31,29 @@
     };
     const PALAVRA = /[A-Za-zÀ-ÿÁáÂâÃãÀàÉéÊêÍíÓóÔôÕõÚúÜüÇç]+/g;
 
+    /* A instrução que o aluno lê dentro da prova, no começo do enunciado da
+       questão escolhida (a diagramação a põe antes do número e da fonte).
+       Sem marcação (nada de * _ ~ ^), sem soma, sem sublinhado. */
+    const INICIO_INSTRUCAO = 'Atenção: esta prova tem um código de verificação';
+
+    function textoInstrucao(questaoDaInstrucao) {
+        return INICIO_INSTRUCAO + ' de 6 caracteres, escondido nos enunciados das questões seguintes, a partir da questão ' + (Number(questaoDaInstrucao) + 1) + '. ' +
+            'Os 3 primeiros são letras: em três enunciados, a primeira letra de uma palavra está sublinhada, no mesmo preto do texto, ' +
+            'e essa letra (uma entre A, C, E, F, P, R, T e V) entra no código. ' +
+            'Os 3 últimos são algarismos: em outros três enunciados há uma soma de dois números no meio da frase, sem marca e sem sinal de igual, ' +
+            'e o resultado dela (de 3 a 9) é um algarismo do código. ' +
+            'Em cada grupo, siga a ordem das questões. ' +
+            'Pinte uma bolha em cada uma das 6 colunas do quadro Código de verificação do cartão-resposta. ' +
+            'Código certo soma 1 ponto na nota; em branco ou errado, tira 1 ponto.';
+    }
+
+    /* O parágrafo é a instrução do código? (a diagramação usa isto) */
+    function ehInstrucao(paragrafo) {
+        return String(paragrafo || '').indexOf(INICIO_INSTRUCAO) === 0;
+    }
+
+    /* Quadro do topo da primeira folha: só para as cópias geradas antes de a
+       instrução ir dentro do enunciado (elas não têm `instrucao`). */
     const TEXTO_INSTRUCOES = [
         'Código de verificação. O código tem 6 caracteres e segue a ordem das questões, da primeira até a última.',
         '1º, 2º e 3º: em três questões, a primeira letra de uma palavra do enunciado está sublinhada, no mesmo preto do texto. Essa letra entra no código. As letras possíveis são A, C, E, F, P, R, T e V, e as três são diferentes.',
@@ -207,45 +236,85 @@
         return valor;
     }
 
+    /* A primeira questão leva a instrução; seis das seguintes levam as pistas. */
+    const MIN_QUESTOES = 7;
+    const PISTAS = 6;
+    const TENTATIVAS_POR_FAIXA = 50;
+
+    /* Parte a lista em `partes` fatias seguidas, de tamanho quase igual. */
+    function fatias(lista, partes) {
+        const out = [];
+        for (let i = 0; i < partes; i++) {
+            out.push(lista.slice(Math.floor(i * lista.length / partes), Math.floor((i + 1) * lista.length / partes)));
+        }
+        return out;
+    }
+
     /* questoes: [{ numero, enunciado }] na ordem da prova. */
     function gerarCopia(provaId, copiaId, questoes) {
         const lista = (questoes || []).map(function (q, i) {
             return { numero: q.numero || (i + 1), enunciado: String(q.enunciado || '') };
         });
-        if (lista.length < 6) {
-            throw new Error('O código precisa de pelo menos 6 questões com enunciado.');
+        if (lista.length < MIN_QUESTOES) {
+            throw new Error('O código precisa de pelo menos ' + MIN_QUESTOES + ' questões com enunciado: a primeira leva a instrução e seis das seguintes levam as pistas.');
         }
         const seed = semente(provaId, copiaId);
         const rng = rngDaSemente(seed);
         const porNumero = {};
         lista.forEach(function (q) { porNumero[q.numero] = q; });
-        const qs = lista.map(function (q) { return q.numero; });
-        rng.shuffle(qs);
 
-        const marcasL = [];
-        const usadas = {};
-        const resto = [];
-        qs.forEach(function (qn) {
-            if (marcasL.length < 3) {
-                const cands = palavrasCandidatas(porNumero[qn].enunciado).filter(function (c) { return !usadas[c.letra]; });
-                if (cands.length) {
-                    const c = rng.choice(cands);
-                    usadas[c.letra] = 1;
-                    marcasL.push({
-                        posicao: 0, questao: qn, letra: c.letra, palavra: c.palavra, start: c.start, end: c.end
-                    });
-                    return;
+        /* A instrução fica no enunciado da primeira questão, sempre dentro da
+           primeira metade. As pistas só podem estar nas questões seguintes. */
+        const instrucao = lista[0].numero;
+        const depois = lista.slice(1).map(function (q) { return q.numero; });
+        const candidatas = {};
+        depois.forEach(function (qn) { candidatas[qn] = palavrasCandidatas(porNumero[qn].enunciado); });
+
+        /* Nas questões sorteadas, as três primeiras com uma palavra de letra
+           ainda livre levam letras; as outras levam somas. */
+        function repartir(ordem) {
+            const letras = [];
+            const usadas = {};
+            const somas = [];
+            ordem.forEach(function (qn) {
+                if (letras.length < 3) {
+                    const cands = candidatas[qn].filter(function (c) { return !usadas[c.letra]; });
+                    if (cands.length) {
+                        const c = rng.choice(cands);
+                        usadas[c.letra] = 1;
+                        letras.push({
+                            posicao: 0, questao: qn, letra: c.letra, palavra: c.palavra, start: c.start, end: c.end
+                        });
+                        return;
+                    }
                 }
-            }
-            resto.push(qn);
-        });
-        if (marcasL.length < 3) throw new Error('Não há 3 palavras com iniciais diferentes no conjunto A C E F P R T V.');
-        if (resto.length < 3) throw new Error('Não restaram 3 questões para as somas.');
+                somas.push(qn);
+            });
+            return letras.length === 3 && somas.length >= 3 ? { letras: letras, somas: somas.slice(0, 3) } : null;
+        }
 
+        /* Espalhadas: o restante da prova é cortado em 6 faixas seguidas e cada
+           faixa leva uma pista. Se as palavras não permitem, sorteia entre todas
+           as questões seguintes (as pistas continuam depois da instrução). */
+        const faixas = fatias(depois, PISTAS);
+        let divisao = null;
+        for (let t = 0; t < TENTATIVAS_POR_FAIXA && !divisao; t++) {
+            const escolhidas = faixas.map(function (f) { return rng.choice(f); });
+            rng.shuffle(escolhidas);
+            divisao = repartir(escolhidas);
+        }
+        if (!divisao) {
+            const todas = depois.slice();
+            rng.shuffle(todas);
+            divisao = repartir(todas);
+        }
+        if (!divisao) throw new Error('Não há 3 palavras com iniciais diferentes no conjunto A C E F P R T V nas questões depois da primeira.');
+
+        const marcasL = divisao.letras;
         marcasL.sort(function (a, b) { return a.questao - b.questao || a.start - b.start; });
         marcasL.forEach(function (m, i) { m.posicao = i + 1; });
 
-        const somasQs = resto.slice(0, 3).slice().sort(function (a, b) { return a - b; });
+        const somasQs = divisao.somas.slice().sort(function (a, b) { return a - b; });
         const contas = somasQs.map(function (qn, i) {
             const digito = rng.choice(DIGITOS_OK);
             const expr = montarSoma(rng, digito);
@@ -260,6 +329,7 @@
             copiaId: String(copiaId),
             seed: seed.toString(),
             codigo: codigo,
+            instrucao: { questao: instrucao },
             letras: marcasL,
             contas: contas
         };
@@ -288,6 +358,17 @@
             usados[m.questao] = 1;
         });
         if (Object.keys(usados).length !== 6) throw new Error('faltam questões');
+        /* Cópias antigas não têm `instrucao`: o quadro delas fica no topo. */
+        if (copia.instrucao) {
+            const numeros = (questoes || []).map(function (q) { return q.numero; }).sort(function (a, b) { return a - b; });
+            const qi = copia.instrucao.questao;
+            const posicao = numeros.indexOf(qi) + 1;
+            if (!posicao) throw new Error('a questão da instrução não existe');
+            if (posicao > Math.max(1, Math.floor(numeros.length / 2))) throw new Error('a instrução está fora da primeira metade da prova');
+            letras.concat(contas).forEach(function (m) {
+                if (m.questao <= qi) throw new Error('pista antes da instrução');
+            });
+        }
         return true;
     }
 
@@ -358,14 +439,23 @@
         return antes + ' ' + expr + ' ' + sentenca.slice(alvo) + cauda + depoisPar;
     }
 
-    /* Devolve uma prova nova, com as pistas só nos enunciados desta cópia.
-       A prova guardada não muda. */
+    /* A instrução abre o enunciado, num parágrafo próprio, antes do texto da
+       questão. No fim ela atrapalharia os enunciados que terminam numa frase
+       a completar pelas alternativas. */
+    function comInstrucao(enunciado, questaoDaInstrucao) {
+        const texto = String(enunciado || '');
+        return textoInstrucao(questaoDaInstrucao) + (texto ? '\n' + texto : '');
+    }
+
+    /* Devolve uma prova nova, com a instrução e as pistas só nos enunciados
+       desta cópia. A prova guardada não muda. */
     function aplicar(prova, copia) {
         const clone = JSON.parse(JSON.stringify(prova));
         const letras = {};
         const contas = {};
         (copia.letras || []).forEach(function (m) { letras[m.questao] = m; });
         (copia.contas || []).forEach(function (m) { contas[m.questao] = m; });
+        const alvoInstrucao = copia.instrucao ? copia.instrucao.questao : null;
         let n = 0;
         (clone.secoes || []).forEach(function (s) {
             (s.questoes || []).forEach(function (q) {
@@ -373,11 +463,13 @@
                 n++;
                 if (letras[n]) q.enunciado = sublinhar(q.enunciado, letras[n]);
                 if (contas[n]) q.enunciado = inserirSoma(q.enunciado, contas[n].expressao);
+                if (alvoInstrucao === n) q.enunciado = comInstrucao(q.enunciado, n);
             });
         });
         clone.copiaImpressa = {
             copiaId: copia.copiaId, codigo: copia.codigo, turma: copia.turma || '',
-            sala: copia.sala || '', lista: copia.lista || null
+            sala: copia.sala || '', lista: copia.lista || null,
+            instrucaoNoEnunciado: !!copia.instrucao
         };
         return clone;
     }
@@ -430,6 +522,9 @@
     const api = {
         LETRAS_OK: LETRAS_OK,
         DIGITOS_OK: DIGITOS_OK,
+        MIN_QUESTOES: MIN_QUESTOES,
+        textoInstrucao: textoInstrucao,
+        ehInstrucao: ehInstrucao,
         TEXTO_INSTRUCOES: TEXTO_INSTRUCOES,
         semente: semente,
         rngDaSemente: rngDaSemente,

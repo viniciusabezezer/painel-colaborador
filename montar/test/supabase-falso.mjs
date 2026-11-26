@@ -44,6 +44,18 @@ export function criarServidorFalso() {
         const p = prova(s.prova_id);
         return p.situacao === 'aberta' && (coordena(uid, p.id) || (s.responsavel === uid && s.situacao !== 'aprovada' && !!papel(uid)));
     }
+    /* Espelho de 007_codigo_so_gestao.sql: quando quem grava não é Gestão, as
+       chaves do código voltam ao que já estava gravado (ou somem). */
+    const CHAVES_CODIGO = ['codigoVerificacao', 'codigos', 'turmasCodigo', 'prazoNotas'];
+    function guardarCodigo(uid, nova, antiga) {
+        if (!uid || papel(uid) === 'gestao') return;
+        const dados = Object.assign({}, nova.dados || {});
+        CHAVES_CODIGO.forEach((k) => {
+            delete dados[k];
+            if (antiga && antiga.dados && k in antiga.dados) dados[k] = JSON.parse(JSON.stringify(antiga.dados[k]));
+        });
+        nova.dados = dados;
+    }
     const regras = {
         montador_perfis: {
             ver: (uid, r) => !!papel(uid) || r.id === uid,
@@ -127,6 +139,7 @@ export function criarServidorFalso() {
                 const existente = q.acao === 'upsert' ? tabela.find((x) => x.id === linha.id) : null;
                 if (existente) {
                     const nova = Object.assign({}, existente, linha);
+                    if (q.tabela === 'montador_provas') guardarCodigo(uid, nova, existente);
                     if (q.tabela === 'montador_questoes') carimbarQuestao(uid, nova, existente);
                     if (!r.alterar(uid, existente) || !r.alterar(uid, nova)) return recusa();
                     Object.assign(existente, nova);
@@ -138,6 +151,7 @@ export function criarServidorFalso() {
                 if (q.tabela === 'montador_secoes') Object.assign(linha, { situacao: linha.situacao || 'rascunho', atualizada_em: agora(), icone: linha.icone || 'auto' });
                 if (q.tabela === 'montador_comentarios') Object.assign(linha, { autor: linha.autor || uid, criado_em: agora(), resolvido: false, tipo: linha.tipo || 'comentario' });
                 if (q.tabela === 'montador_questoes') carimbarQuestao(uid, linha, null);
+                if (q.tabela === 'montador_provas') guardarCodigo(uid, linha, null);
                 if (!r.criar || !r.criar(uid, linha)) return recusa();
                 tabela.push(linha);
                 feitas.push(linha);
@@ -150,6 +164,7 @@ export function criarServidorFalso() {
             for (const x of alvos) {
                 const nova = Object.assign({}, x, q.dados);
                 if (q.tabela === 'montador_provas' && !(papel(uid) === 'gestao' || (papel(uid) === 'pca' && perfil(uid).area === nova.componente))) return recusa();
+                if (q.tabela === 'montador_provas') guardarCodigo(uid, nova, x);
                 if (q.tabela === 'montador_questoes') carimbarQuestao(uid, nova, x);
                 if (q.tabela === 'montador_secoes' || q.tabela === 'montador_provas') nova.atualizada_em = agora();
                 Object.assign(x, nova);

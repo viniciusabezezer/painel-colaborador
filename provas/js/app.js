@@ -26,6 +26,8 @@
         /* 'serie|COMPONENTE' -> arquivo do gabarito, quando a coordenação
            quiser identificar também a folha de respostas separada */
         gabaritos: Object.create(null),
+        /* 'serie|COMPONENTE' -> prova trazida do Montador (id, chave, título, bimestre, ano) */
+        importadas: Object.create(null),
         previaGabarito: { chave: null, medidas: null, medidasTocadas: false },
         previa: { chave: null, medidas: null },
         resultados: [],
@@ -100,7 +102,8 @@
 
     function aplicarListaOficial(resposta, aviso) {
         listaOficial = MaluListas.pacoteAtivo(resposta);
-        $('lote').value = MaluListas.textoDaLista(resposta);
+        /* com a matrícula ("07 - Nome - 20260007"): é por aqui que ela chega ao QR */
+        $('lote').value = MaluListas.textoDaLista(resposta, undefined, { matricula: true });
         lerLote();
         const caixa = $('aviso-presente');
         caixa.hidden = false;
@@ -395,6 +398,299 @@
         mostrarResumoMapa();
     }
 
+    /* A chave da prova no Montador, lida do PDF (ver chaveprova.js). A prova e o
+       gabarito do mesmo espaço vêm da mesma prova: qualquer um dos dois serve. */
+    function chaveDaProvaDoSlot(chaveSlot, origem) {
+        const principal = (origem === 'gabaritos' ? estado.gabaritos : estado.arquivos)[chaveSlot];
+        const outro = (origem === 'gabaritos' ? estado.arquivos : estado.gabaritos)[chaveSlot];
+        return (principal && principal.chaveProva) || (outro && outro.chaveProva) || '';
+    }
+
+    /* Lê a chave do PDF que acabou de entrar e avisa se o arquivo está no espaço
+       errado (série, componente) ou fora do bimestre e do ano do passo 1. */
+    function lerChaveDoArquivo(guardado, chaveSlot, origem, alvoTexto, nome, sufixo) {
+        if (!window.ProvasChaveProva) return;
+        ProvasChaveProva.doArquivo(guardado).then(function (info) {
+            const guardados = origem === 'gabaritos' ? estado.gabaritos : estado.arquivos;
+            if (guardados[chaveSlot] !== guardado) return;
+            guardado.chaveProva = (info && info.chave) || '';
+            const partes = chaveSlot.split('|');
+            const problemas = [ProvasChaveProva.conferir(info, {
+                ano: $('ano').value, bimestre: $('bimestre').value, serie: partes[0], componente: partes[1]
+            })].filter(Boolean);
+            /* o espaço é de uma prova trazida do Montador: o arquivo tem de ser dela */
+            const importada = estado.importadas[chaveSlot];
+            if (importada && guardado.chaveProva && guardado.chaveProva !== importada.chave) {
+                problemas.push('o arquivo é de outra prova (chave ' + guardado.chaveProva + '); este espaço é da prova importada ' + importada.chave);
+            } else if (importada && !guardado.chaveProva) {
+                problemas.push('o arquivo não tem a chave da prova importada (' + importada.chave + '): o QR sairá sem chave');
+            }
+            alvoTexto.textContent = nome + (sufixo || '') + (guardado.chaveProva ? ' · prova ' + guardado.chaveProva : '') + (problemas.length ? ' · ⚠ ' + problemas.join('; ') : '');
+        });
+    }
+
+    /* ===================== provas do Montador ===================== */
+
+    /* A gestão traz as provas que o Montador já travou, marca as do bimestre e
+       solta os PDFs de uma vez: cada PDF é reconhecido pela chave da prova e vai
+       sozinho para o espaço dele. A lógica está em importar.js. */
+
+    let provasDoMontador = [];
+    const marcadasDoMontador = new Set();
+    const turmasEscolhidas = new Set();
+
+    function importadasEmLista() {
+        return Object.keys(estado.importadas).map(function (k) { return estado.importadas[k]; });
+    }
+
+    function avisoMontador(texto, erro) {
+        const caixa = $('aviso-montador');
+        caixa.hidden = !texto;
+        caixa.textContent = texto || '';
+        caixa.className = 'aviso' + (erro ? ' aviso--erro' : '');
+    }
+
+    $('buscar-provas-montador').addEventListener('click', async function () {
+        const botao = $('buscar-provas-montador');
+        const perfil = window.IdentificadorAcesso && IdentificadorAcesso.perfil && IdentificadorAcesso.perfil();
+        if (!perfil) { avisoMontador('Entre com a conta da gestão para trazer as provas do Montador.', true); return; }
+        botao.disabled = true;
+        avisoMontador('');
+        try {
+            const resultado = ProvasImportar.normalizarTodas(await IdentificadorAcesso.listarProvasDoMontador());
+            provasDoMontador = resultado.provas;
+            marcadasDoMontador.clear();
+            /* de saída, as provas do bimestre mais novo já vêm marcadas */
+            const grupos = ProvasImportar.agrupar(provasDoMontador);
+            if (grupos.length) grupos[0].provas.forEach(function (p) { marcadasDoMontador.add(p.id); });
+            $('contagem-montador').textContent = provasDoMontador.length + ' prova(s) travada(s)' +
+                (resultado.descartadas ? ' · ' + resultado.descartadas + ' de formato livre ficaram de fora' : '');
+            desenharProvasDoMontador();
+            if (!provasDoMontador.length) {
+                avisoMontador('O Montador ainda não tem prova travada para impressão. O PCA trava a prova depois de aprovar todas as seções.');
+            }
+        } catch (erro) {
+            avisoMontador(erro.message || 'Não consegui buscar as provas do Montador.', true);
+        } finally {
+            botao.disabled = false;
+        }
+    });
+
+    function desenharProvasDoMontador() {
+        const alvo = $('provas-montador');
+        limpar(alvo);
+        const grupos = ProvasImportar.agrupar(provasDoMontador);
+        grupos.forEach(function (grupo) {
+            const caixa = criar('div', 'grupo-montador');
+            caixa.appendChild(criar('h4', null, grupo.rotulo));
+            grupo.provas.forEach(function (prova) {
+                const linha = criar('label', 'prova-montador');
+                const marca = criar('input');
+                marca.type = 'checkbox';
+                marca.checked = marcadasDoMontador.has(prova.id);
+                marca.addEventListener('change', function () {
+                    if (marca.checked) marcadasDoMontador.add(prova.id); else marcadasDoMontador.delete(prova.id);
+                });
+                linha.appendChild(marca);
+                linha.appendChild(criar('span', null, ProvasImportar.rotulo(prova).split(' · ').slice(0, 2).join(' · ')));
+                if (prova.titulo) linha.appendChild(criar('small', null, prova.titulo));
+                linha.appendChild(criar('span', 'chave', prova.chave));
+                caixa.appendChild(linha);
+            });
+            alvo.appendChild(caixa);
+        });
+        if (grupos.length) {
+            const acoes = criar('div', 'acoes-lista');
+            const usar = criar('button', 'btn btn--primary', 'Usar as provas marcadas');
+            usar.type = 'button';
+            usar.addEventListener('click', usarProvasMarcadas);
+            acoes.appendChild(usar);
+            alvo.appendChild(acoes);
+        }
+    }
+
+    function usarProvasMarcadas() {
+        const escolhidas = provasDoMontador.filter(function (p) { return marcadasDoMontador.has(p.id); });
+        const validacao = ProvasImportar.validarSelecao(escolhidas);
+        if (!validacao.ok) { avisoMontador(validacao.erro, true); return; }
+        estado.importadas = Object.create(null);
+        escolhidas.forEach(function (p) { estado.importadas[ProvasImportar.chaveSlot(p)] = p; });
+        $('ano').value = validacao.ano;
+        $('bimestre').value = validacao.bimestre;
+        if (!$('avaliacao').value.trim()) $('avaliacao').value = validacao.titulo;
+        avisoMontador(escolhidas.length + ' prova(s) importada(s). Agora puxe as turmas (passo 2) e solte os PDFs (passo 3).');
+        $('soltar-montador').hidden = false;
+        desenharImportadas();
+        desenharTurmasEscolha();
+    }
+
+    /* As provas importadas e o que já chegou de cada uma. */
+    function desenharImportadas() {
+        const alvo = $('provas-importadas');
+        limpar(alvo);
+        const lista = importadasEmLista().sort(function (a, b) { return a.serie.localeCompare(b.serie) || a.componente.localeCompare(b.componente); });
+        if (!lista.length) return;
+        const divergencia = lista.filter(function (p) { return p.ano !== $('ano').value || p.bimestre !== $('bimestre').value; })[0];
+        if (divergencia) {
+            alvo.appendChild(criar('p', 'aviso aviso--erro',
+                'Atenção: as provas importadas são do ' + ProvasImportar.rotulo(divergencia).split(' · ')[2] +
+                ', mas aqui em cima está ' + $('bimestre').value.replace('B', '') + 'º bimestre de ' + $('ano').value +
+                '. O código e o QR de cada aluno usam o que está aqui em cima: corrija.'));
+        }
+        lista.forEach(function (prova) {
+            const slot = ProvasImportar.chaveSlot(prova);
+            const arquivo = estado.arquivos[slot];
+            const gabarito = estado.gabaritos[slot];
+            const situacao = function (g, nome) {
+                if (!g) return nome + ': falta';
+                if (g.chaveProva === prova.chave) return nome + ': ✔ ' + g.nome;
+                return nome + ': ⚠ ' + g.nome + (g.chaveProva ? ' é de outra prova' : ' sem a chave da prova');
+            };
+            const ok = arquivo && arquivo.chaveProva === prova.chave;
+            const linha = criar('div', 'prova-importada' + (ok ? '' : ' falta'));
+            linha.appendChild(criar('strong', null, ProvasImportar.rotulo(prova).split(' · ').slice(0, 2).join(' · ')));
+            linha.appendChild(criar('small', null, 'chave ' + prova.chave));
+            linha.appendChild(criar('small', null, situacao(arquivo, 'prova')));
+            linha.appendChild(criar('small', null, gabarito ? situacao(gabarito, 'gabarito avulso') : 'gabarito avulso: opcional'));
+            alvo.appendChild(linha);
+        });
+    }
+
+    $('ano').addEventListener('input', desenharImportadas);
+    $('bimestre').addEventListener('change', desenharImportadas);
+
+    /* Os PDFs soltos de uma vez: cada um vai para a prova da chave dele. */
+    $('pdfs-montador').addEventListener('change', async function () {
+        const arquivos = Array.prototype.slice.call(this.files || []);
+        this.value = '';
+        await receberPdfsDoMontador(arquivos);
+    });
+
+    async function receberPdfsDoMontador(arquivos) {
+        const lista = $('resultado-pdfs-montador');
+        const importadas = importadasEmLista();
+        for (let i = 0; i < arquivos.length; i++) {
+            const arquivo = arquivos[i];
+            const li = criar('li', null, arquivo.name + ' — lendo…');
+            lista.appendChild(li);
+            const extensao = (arquivo.name.split('.').pop() || '').toLowerCase();
+            if (extensao !== 'pdf') {
+                li.className = 'erro';
+                li.textContent = arquivo.name + ' — só PDF entra por aqui. Imagens entram pelos espaços logo abaixo.';
+                continue;
+            }
+            try {
+                const guardado = { nome: arquivo.name, tipo: 'pdf', bytes: new Uint8Array(await arquivo.arrayBuffer()), paginas: null };
+                const info = await ProvasChaveProva.doArquivo(guardado);
+                const pareado = ProvasImportar.parear(info, importadas);
+                if (!pareado.prova) {
+                    li.className = 'erro';
+                    li.textContent = arquivo.name + ' — ' + ProvasImportar.mensagem(pareado, info);
+                    continue;
+                }
+                guardado.chaveProva = pareado.prova.chave;
+                const slot = ProvasImportar.chaveSlot(pareado.prova);
+                if (pareado.tipo === 'gabarito') estado.gabaritos[slot] = guardado; else estado.arquivos[slot] = guardado;
+                li.textContent = arquivo.name + ' — ' + ProvasImportar.mensagem(pareado, info);
+            } catch (erro) {
+                li.className = 'erro';
+                li.textContent = arquivo.name + ' — não consegui ler este PDF.';
+            }
+        }
+        depoisDosPdfsDoMontador();
+    }
+
+    /* Põe na tela o que chegou: os espaços, a prévia e a lista de gabaritos. */
+    function depoisDosPdfsDoMontador() {
+        montarSlots();
+        atualizarListaDePrevia();
+        const primeira = Object.keys(estado.arquivos)[0];
+        if (primeira && !estado.previa.chave) {
+            $('previa-arquivo').value = primeira;
+            atualizarPrevia();
+        }
+        mostrarResumoMapa();
+        if ($('slots-gabarito')) {
+            montarSlotsDeGabarito();
+            atualizarListaDePreviaGabarito();
+            const primeiroGabarito = Object.keys(estado.gabaritos)[0];
+            if (primeiroGabarito && !estado.previaGabarito.chave) $('previa-gabarito-arquivo').value = primeiroGabarito;
+            if (primeiroGabarito) atualizarPreviaGabarito();
+        }
+        desenharImportadas();
+    }
+
+    /* ----- as turmas: escolher quais puxar do Malu Presente ----- */
+
+    function desenharTurmasEscolha() {
+        const alvo = $('turmas-escolha');
+        limpar(alvo);
+        const validas = ProvasImportar.turmasDasSeries(importadasEmLista());
+        Array.from(turmasEscolhidas).forEach(function (t) { if (validas.indexOf(t) === -1) turmasEscolhidas.delete(t); });
+        validas.forEach(function (turma) {
+            const botao = criar('button', 'turma-escolha', turma);
+            botao.type = 'button';
+            botao.setAttribute('aria-pressed', turmasEscolhidas.has(turma) ? 'true' : 'false');
+            botao.addEventListener('click', function () {
+                if (turmasEscolhidas.has(turma)) turmasEscolhidas.delete(turma); else turmasEscolhidas.add(turma);
+                botao.setAttribute('aria-pressed', turmasEscolhidas.has(turma) ? 'true' : 'false');
+                $('puxar-turmas-escolhidas').disabled = !turmasEscolhidas.size;
+            });
+            alvo.appendChild(botao);
+        });
+        $('puxar-turmas-escolhidas').disabled = !turmasEscolhidas.size;
+    }
+
+    $('puxar-turmas-escolhidas').addEventListener('click', async function () {
+        const botao = $('puxar-turmas-escolhidas');
+        const perfil = window.IdentificadorAcesso && IdentificadorAcesso.perfil && IdentificadorAcesso.perfil();
+        const caixa = $('aviso-presente');
+        if (!perfil) {
+            caixa.hidden = false;
+            caixa.textContent = 'Entre com a conta da gestão para puxar as turmas.';
+            return;
+        }
+        botao.disabled = true;
+        try {
+            const ano = $('ano').value;
+            const pacote = { ano: ano, turmas: [] };
+            const semAlunos = [];
+            const pedidas = Array.from(turmasEscolhidas).sort();
+            for (let i = 0; i < pedidas.length; i++) {
+                const resposta = await IdentificadorAcesso.chamarPresente({ acao: 'listas', ano: ano, turma: MaluListas.turmaPresente(pedidas[i]) });
+                const achadas = (resposta.turmas || []).filter(function (t) { return MaluListas.turmaCurta(t.turma) === pedidas[i]; });
+                if (!achadas.length) semAlunos.push(pedidas[i]);
+                achadas.forEach(function (t) { pacote.turmas.push(t); });
+            }
+            juntarTurmasPuxadas(pacote, pedidas, semAlunos);
+        } catch (erro) {
+            caixa.hidden = false;
+            caixa.textContent = erro.message || 'Não consegui puxar as turmas.';
+        } finally {
+            botao.disabled = !turmasEscolhidas.size;
+        }
+    });
+
+    /* As turmas puxadas entram na caixa no lugar das de mesmo nome, e as que já
+       estavam (com as edições) ficam. A lista oficial, base das sugestões para a
+       secretaria, acumula só o que veio do Malu Presente. */
+    function juntarTurmasPuxadas(pacote, pedidas, semAlunos) {
+        const novas = MaluListas.pacoteAtivo(pacote).turmas;
+        const atuais = MaluListas.lerTexto($('lote').value).turmas;
+        $('lote').value = MaluListas.textoDaLista({ turmas: ProvasImportar.juntarTurmas(atuais, novas) }, undefined, { matricula: true });
+        listaOficial = { ano: pacote.ano, turmas: ProvasImportar.juntarTurmas((listaOficial && listaOficial.turmas) || [], novas) };
+        lerLote();
+        const caixa = $('aviso-presente');
+        caixa.hidden = false;
+        const vieram = novas.map(function (t) { return t.turma; });
+        caixa.textContent = (vieram.length ? 'Puxei ' + vieram.join(', ') + ' e juntei às turmas que já estavam na lista. ' : 'Nenhuma turma trouxe alunos. ') +
+            (semAlunos.length ? 'Sem alunos no Malu Presente em ' + pacote.ano + ': ' + semAlunos.join(', ') + '. ' : '') +
+            'Os nomes ficam só neste navegador.';
+        mostrarSugestao();
+    }
+
+    desenharTurmasEscolha();
+
     function chavesDe(origem) {
         const guardados = origem === 'gabaritos' ? estado.gabaritos : estado.arquivos;
         return Object.keys(guardados).map(function (chave) {
@@ -427,7 +723,8 @@
                     nome: via.nome,
                     chave: $('chave').value,
                     titulo: $('avaliacao').value,
-                    matricula: via.matricula || ''
+                    matricula: via.matricula || '',
+                    chaveProva: chaveDaProvaDoSlot(via.chave, origem)
                 });
                 identificacao.sala = sala.sala;
                 identificacao.posicao = via.posicao;
@@ -788,6 +1085,7 @@
             };
             slot.classList.add('cheio');
             estadoTexto.textContent = arquivo.name;
+            lerChaveDoArquivo(estado.arquivos[chave], chave, 'arquivos', estadoTexto, arquivo.name, '');
             atualizarListaDePrevia();
             if (!estado.previa.chave) {
                 $('previa-arquivo').value = chave;
@@ -912,6 +1210,7 @@
                 paginas: null
             };
             aviso.textContent = arquivo.name + ' carregado.';
+            lerChaveDoArquivo(estado.gabaritos[chave], chave, 'gabaritos', aviso, arquivo.name, ' carregado.');
             montarSlotsDeGabarito();
             atualizarListaDePreviaGabarito();
             if (!estado.previaGabarito.chave) $('previa-gabarito-arquivo').value = chave;
@@ -1032,7 +1331,8 @@
                     componente: tarefa.componente.codigo,
                     alunos: tarefa.turma.alunos,
                     chave: $('chave').value,
-                    titulo: $('avaliacao').value
+                    titulo: $('avaliacao').value,
+                    chaveProva: chaveDaProvaDoSlot(tarefa.chave, 'gabaritos')
                 });
 
                 const dados = {
@@ -1274,7 +1574,8 @@
                 componente: chave.split('|')[1],
                 alunos: turma.alunos.slice(0, 1),
                 chave: $('chave').value,
-                titulo: $('avaliacao').value
+                titulo: $('avaliacao').value,
+                chaveProva: chaveDaProvaDoSlot(chave, 'gabaritos')
             });
             const configuracao = montarConfiguracaoGabarito();
             const comum = {
@@ -1514,7 +1815,8 @@
                 componente: componente,
                 alunos: turma.alunos.slice(0, 1),
                 chave: $('chave').value,
-                titulo: $('avaliacao').value
+                titulo: $('avaliacao').value,
+                chaveProva: chaveDaProvaDoSlot(chave, 'arquivos')
             });
             const configuracao = montarConfiguracao();
             const bytes = await Pdf.montarPrimeirasPaginas({
@@ -1742,7 +2044,8 @@
                     componente: tarefa.componente.codigo,
                     alunos: tarefa.turma.alunos,
                     chave: $('chave').value,
-                    titulo: $('avaliacao').value
+                    titulo: $('avaliacao').value,
+                    chaveProva: chaveDaProvaDoSlot(tarefa.chave, 'arquivos')
                 });
 
                 const dados = {

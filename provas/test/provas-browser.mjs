@@ -133,10 +133,31 @@ try {
     const slots = await pagina.$$('#slots .slot-serie');
     conferir(slots.length === 2, 'aparecem os espaços das duas séries presentes');
 
-    const prova = join(APP, 'test', 'prova-exemplo.pdf');
+    /* A prova de exemplo, com o título que o Montador grava ao imprimir uma
+       prova da área: o nome do arquivo mais a chave da prova (-K + 8 caracteres). */
+    const PDFLib = exigir('../vendor/pdf-lib.min.js');
+    const prova = join(SAIDA, 'prova-com-chave.pdf');
+    {
+        const doc = await PDFLib.PDFDocument.load(await readFile(join(APP, 'test', 'prova-exemplo.pdf')));
+        doc.setTitle('PROVA-2026-B3-1S-LIN-K8F3A2C1D');
+        await writeFile(prova, await doc.save());
+    }
     const gabaritoQuarto = join(APP, 'test', 'gabarito-exemplo.pdf');
     await pagina.setInputFiles('#slots .slot-serie >> nth=0 >> .slot >> nth=1 >> input[type=file]', prova);
     await pagina.waitForSelector('.slot.cheio');
+    await pagina.waitForFunction(() => /prova 8F3A2C1D/.test(document.querySelector('.slot.cheio .slot-estado').textContent), null, { timeout: 10000 });
+    conferir(!(await pagina.textContent('.slot.cheio .slot-estado')).includes('⚠'),
+        'o espaço mostra a chave da prova lida do título do PDF, sem aviso quando o arquivo está no lugar certo');
+    /* o mesmo arquivo no espaço de outro componente: aviso, e depois o espaço é esvaziado */
+    const espacoNat = '#slots .slot-serie >> nth=0 >> .slot:has(label:text-is("Ciências da Natureza")) >> input[type=file]';
+    await pagina.setInputFiles(espacoNat, prova);
+    await pagina.waitForFunction(() => /⚠/.test(document.querySelector('.slot:has(label)')?.parentElement?.textContent || ''), null, { timeout: 10000 });
+    const avisoEspaco = await pagina.$eval('#slots .slot-serie >> nth=0', (n) => Array.from(n.querySelectorAll('.slot-estado')).map((x) => x.textContent).join(' || '));
+    conferir(/o arquivo é de Linguagens e Códigos, mas está no espaço de Ciências da Natureza/.test(avisoEspaco),
+        'PDF de Linguagens solto no espaço de Ciências da Natureza gera aviso: ' + avisoEspaco);
+    await pagina.setInputFiles(espacoNat, []);
+    await pagina.waitForFunction(() => !/Ciências da Natureza/.test(Array.from(document.querySelectorAll('.slot.cheio')).map((n) => n.textContent).join('')), null, { timeout: 10000 });
+    conferir(true, 'e o espaço errado é esvaziado de novo');
     conferir(await pagina.isVisible('#previa-canvas'), 'a prévia da página aparece na tela');
     await pagina.waitForFunction(() => document.getElementById('previa-canvas').width >= 400, null, { timeout: 20000 })
         .catch(() => { throw new Error('a prévia não desenhou: ' + document.title); });
@@ -194,6 +215,27 @@ try {
     await download[0].saveAs(caminhoPdf);
     const tamanho = (await readFile(caminhoPdf)).length;
     conferir(tamanho > 5000, 'o PDF das primeiras páginas baixa com conteúdo (' + tamanho + ' bytes)');
+
+    /* O QR do PDF gerado, lido como o Malu Gabaritos lê (jsQR, página em escala 3),
+       leva a chave da prova que veio no título do PDF. */
+    await pagina.addScriptTag({ path: join(RAIZ, 'provas', 'vendor', 'pdf.min.js') });
+    await pagina.addScriptTag({ path: join(RAIZ, 'gabaritos', 'vendor', 'jsQR.js') });
+    const qrDoPdf = await pagina.evaluate(async (b64) => {
+        pdfjsLib.GlobalWorkerOptions.workerSrc = '/provas/vendor/pdf.worker.min.js';
+        const pdf = await pdfjsLib.getDocument({ data: Uint8Array.from(atob(b64), (c) => c.charCodeAt(0)) }).promise;
+        const pg = await pdf.getPage(1);
+        const vp = pg.getViewport({ scale: 3 });
+        const c = document.createElement('canvas');
+        c.width = vp.width; c.height = vp.height;
+        await pg.render({ canvasContext: c.getContext('2d'), viewport: vp }).promise;
+        const img = c.getContext('2d').getImageData(0, 0, c.width, c.height);
+        const r = jsQR(img.data, img.width, img.height, { inversionAttempts: 'dontInvert' });
+        return r ? { texto: r.data, lido: ProvasQrProva.ler(r.data), comprimento: r.data.length } : null;
+    }, (await readFile(caminhoPdf)).toString('base64'));
+    conferir(qrDoPdf && qrDoPdf.lido, 'o QR impresso na primeira página do PDF gerado é lido pelo jsQR');
+    conferir(qrDoPdf.lido.chave === '8F3A2C1D' && qrDoPdf.lido.turma === '1A' && qrDoPdf.lido.numero === '001',
+        'e leva a chave da prova (' + qrDoPdf.lido.chave + ') junto com a turma e o número: ' + qrDoPdf.texto);
+    conferir(qrDoPdf.comprimento <= 106, 'sem passar de 106 caracteres (' + qrDoPdf.comprimento + ')');
 
     const csv = await Promise.all([
         pagina.waitForEvent('download'),
@@ -281,6 +323,151 @@ try {
     conferir((await readFile(caminhoGabarito)).length > 5000, 'e com conteúdo');
 
     await pagina.click('.aba[data-aba="gerar"]');
+
+    /* --- importar do Montador: as provas travadas, as turmas escolhidas e os PDFs pela chave --- */
+    const importa = await navegador.newPage({ viewport: { width: 1280, height: 1000 } });
+    const errosImporta = [];
+    importa.on('pageerror', (e) => errosImporta.push(String(e)));
+    await importa.addInitScript(() => { window.ACESSO_SESSAO_INICIAL = 'gestao'; });
+    await importa.addInitScript({ path: CLIENTE_FALSO });
+    await importa.goto(`http://127.0.0.1:${PORTA}/provas/`);
+    await importa.waitForSelector('.wrap', { state: 'visible' });
+
+    await importa.click('#buscar-provas-montador');
+    await importa.waitForSelector('.grupo-montador');
+    const gruposMontador = await importa.$$eval('.grupo-montador h4', (n) => n.map((x) => x.textContent));
+    conferir(gruposMontador.join(' | ') === '3º bimestre de 2026 | 2º bimestre de 2026',
+        'as provas travadas do Montador vêm agrupadas por bimestre, a mais nova primeiro: ' + gruposMontador.join(' | '));
+    const contagemMontador = await importa.textContent('#contagem-montador');
+    conferir(contagemMontador.includes('4 prova(s) travada(s)') && contagemMontador.includes('1 de formato livre'),
+        'a prova ainda aberta não vem e a de formato livre fica de fora: ' + contagemMontador);
+    conferir((await importa.$$eval('.grupo-montador:nth-of-type(1) input[type=checkbox]', (n) => n.map((x) => x.checked))).join() === 'true,true,true' &&
+        (await importa.$$eval('.grupo-montador:nth-of-type(2) input[type=checkbox]', (n) => n.map((x) => x.checked))).join() === 'false',
+        'as provas do bimestre mais novo já vêm marcadas');
+
+    /* marcar o bimestre velho junto com o novo não vale */
+    await importa.check('.grupo-montador:nth-of-type(2) input[type=checkbox]');
+    await importa.click('#provas-montador .btn--primary');
+    conferir((await importa.textContent('#aviso-montador')).includes('bimestre só'), 'provas de bimestres diferentes não passam: ' + await importa.textContent('#aviso-montador'));
+    await importa.uncheck('.grupo-montador:nth-of-type(2) input[type=checkbox]');
+
+    await importa.click('#provas-montador .btn--primary');
+    await importa.waitForSelector('.prova-importada');
+    conferir(await importa.inputValue('#ano') === '2026' && await importa.inputValue('#bimestre') === 'B3',
+        'o ano e o bimestre do passo 1 vêm das provas importadas');
+    conferir(await importa.inputValue('#avaliacao') === 'Avaliação Bimestral de Linguagens e Códigos',
+        'o nome da avaliação, vazio, é preenchido com o da prova');
+    conferir(await importa.isVisible('#soltar-montador') && (await importa.$$('.prova-importada')).length === 3 &&
+        (await importa.$$('.prova-importada.falta')).length === 3, 'aparecem as três provas importadas, todas esperando o PDF');
+
+    /* as turmas: só as escolhidas, juntando às que já estão na lista */
+    conferir((await importa.$$('#turmas-escolha .turma-escolha')).length === 12, 'as turmas para escolher são A a F das duas séries das provas (12)');
+    conferir(await importa.isDisabled('#puxar-turmas-escolhidas'), 'sem turma marcada, o botão de puxar fica desligado');
+    await importa.click('#turmas-escolha .turma-escolha:text-is("1A")');
+    await importa.click('#turmas-escolha .turma-escolha:text-is("2A")');
+    await importa.click('#puxar-turmas-escolhidas');
+    await importa.waitForFunction(() => document.querySelectorAll('#resumo-turmas .turma-chip').length === 2);
+    const pedidos1 = await importa.evaluate(() => window.PEDIDOS_AO_PRESENTE.map((p) => p.turma));
+    conferir(pedidos1.join() === '1ºA,2ºA', 'só as turmas escolhidas foram pedidas ao Malu Presente: ' + pedidos1.join());
+    conferir((await importa.textContent('#aviso-presente')).includes('Puxei 1A, 2A'), 'o aviso diz quais turmas vieram');
+    await importa.fill('#lote', (await importa.inputValue('#lote')).replace('Bruno Dias', 'Bruno Dias Editado'));
+    await importa.waitForTimeout(400);
+    await importa.click('#turmas-escolha .turma-escolha:text-is("1A")');
+    await importa.click('#turmas-escolha .turma-escolha:text-is("2A")');
+    await importa.click('#turmas-escolha .turma-escolha:text-is("1B")');
+    await importa.click('#puxar-turmas-escolhidas');
+    await importa.waitForFunction(() => document.querySelectorAll('#resumo-turmas .turma-chip').length === 3);
+    const pedidos2 = await importa.evaluate(() => window.PEDIDOS_AO_PRESENTE.map((p) => p.turma));
+    conferir(pedidos2.join() === '1ºA,2ºA,1ºB', 'a segunda puxada pediu só a 1B: ' + pedidos2.join());
+    conferir((await importa.inputValue('#lote')).includes('Bruno Dias Editado'), 'puxar mais uma turma não apaga a edição feita nas que já estavam');
+    const textoDaCaixa = await importa.inputValue('#lote');
+    conferir(textoDaCaixa.includes('01 - Ana Beatriz Lima de Souza - 20260001') && textoDaCaixa.includes('02 - Bruno Dias Editado - 20260002') &&
+        textoDaCaixa.includes('01 - Carla Mendes - 20260011'),
+        'a matrícula vem junto de cada aluno puxado (e sobrevive à edição do nome) na caixa de alunos');
+    conferir((await importa.$$eval('#resumo-turmas .turma-chip', (n) => n.map((x) => x.textContent.slice(0, 2)))).sort().join() === '1A,1B,2A',
+        'a lista fica com as três turmas, 1A, 1B e 2A');
+
+    /* os PDFs soltos de uma vez, com nomes que não dizem nada: vale a chave do título */
+    async function pdfComTitulo(nomeArquivo, titulo) {
+        const doc = await PDFLib.PDFDocument.load(await readFile(join(APP, 'test', 'prova-exemplo.pdf')));
+        doc.setTitle(titulo);
+        const caminho = join(SAIDA, nomeArquivo);
+        await writeFile(caminho, await doc.save());
+        return caminho;
+    }
+    const soltos = [
+        await pdfComTitulo('montador-1.pdf', 'PROVA-2026-B3-1S-LIN-K8F3A2C1D'),
+        await pdfComTitulo('montador-2.pdf', 'PROVA-2026-B3-1S-LIN-K8F3A2C1D-GABARITO'),
+        await pdfComTitulo('montador-3.pdf', 'PROVA-2026-B3-1S-NAT-K11112222'),
+        await pdfComTitulo('montador-4.pdf', 'PROVA-2026-B3-1S-LIN'),
+        await pdfComTitulo('montador-5.pdf', 'PROVA-2026-B3-1S-LIN-GABARITO-PROFESSOR'),
+        await pdfComTitulo('montador-6.pdf', 'PROVA-2026-B3-1S-HUM-KDEADBEEF'),
+        await pdfComTitulo('montador-7.pdf', 'PROVA-2026-B3-1S-LIN-K8F3A2C1D-GABARITOS-4-POR-FOLHA')
+    ];
+    await importa.setInputFiles('#pdfs-montador', soltos);
+    await importa.waitForFunction(() => {
+        const li = document.querySelectorAll('#resultado-pdfs-montador li');
+        return li.length === 7 && !Array.from(li).some((x) => /lendo…$/.test(x.textContent));
+    }, null, { timeout: 30000 });
+    const resultadosPdf = await importa.$$eval('#resultado-pdfs-montador li', (n) => n.map((x) => ({ erro: x.classList.contains('erro'), texto: x.textContent })));
+    conferir(resultadosPdf.filter((r) => !r.erro).length === 3 && resultadosPdf.filter((r) => r.erro).length === 4,
+        'três PDFs foram reconhecidos pela chave e quatro foram recusados: ' + resultadosPdf.map((r) => (r.erro ? '✗' : '✓')).join(''));
+    conferir(resultadosPdf[0].texto.includes('Prova de Linguagens e Códigos · 1ª série · 3º bimestre de 2026 (chave 8F3A2C1D)') &&
+        resultadosPdf[1].texto.includes('Gabarito de Linguagens e Códigos') && resultadosPdf[2].texto.includes('Prova de Ciências da Natureza'),
+        'cada PDF diz de qual prova é: ' + resultadosPdf[0].texto);
+    conferir(resultadosPdf[3].texto.includes('não tem a chave da prova') && resultadosPdf[4].texto.includes('folha do professor') &&
+        resultadosPdf[5].texto.includes('chave DEADBEEF não é de nenhuma') && resultadosPdf[6].texto.includes('4 gabaritos por folha'),
+        'sem chave, folha do professor, prova que não foi importada e 4 por folha são recusados com o motivo');
+    const espacosCheios = await importa.$$eval('#slots .slot.cheio', (n) => n.map((x) => x.textContent));
+    conferir(espacosCheios.length === 2 && espacosCheios.some((t) => t.includes('Linguagens') && t.includes('montador-1.pdf')) &&
+        espacosCheios.some((t) => t.includes('Natureza') && t.includes('montador-3.pdf')),
+        'os PDFs foram sozinhos para os espaços de Linguagens e de Ciências da Natureza da 1ª série');
+    conferir((await importa.$$('.prova-importada.falta')).length === 1 && (await importa.textContent('#provas-importadas')).includes('prova: ✔ montador-1.pdf'),
+        'a lista das importadas mostra o que chegou e o que falta (a 2ª série)');
+    await importa.click('.aba[data-aba="gabaritos"]');
+    conferir((await importa.$$('#slots-gabarito .gabarito-carregado')).length === 1, 'o gabarito avulso foi para a aba de gabaritos');
+    await importa.click('.aba[data-aba="gerar"]');
+
+    /* um PDF sem a chave solto à mão no espaço de uma prova importada gera aviso */
+    await importa.setInputFiles('#slots .slot-serie >> nth=1 >> .slot:has(label:text-is("Linguagens e Códigos")) >> input[type=file]', soltos[3]);
+    await importa.waitForFunction(() => /não tem a chave da prova importada/.test(document.getElementById('slots').textContent), null, { timeout: 10000 });
+    conferir(true, 'PDF sem chave solto à mão no espaço de uma prova importada avisa que o QR sairá sem chave');
+    await importa.setInputFiles('#slots .slot-serie >> nth=1 >> .slot:has(label:text-is("Linguagens e Códigos")) >> input[type=file]', []);
+
+    /* gerar: o QR do PDF leva a chave da prova que o PDF trouxe, sem escolha de espaço */
+    await importa.click('#gerar');
+    await importa.waitForFunction(() => document.getElementById('estado-geracao').textContent.startsWith('pronto'), null, { timeout: 90000 });
+    const baixado = await Promise.all([importa.waitForEvent('download'), importa.click('.resultado >> nth=0 >> button >> nth=0')]);
+    const caminhoImportado = join(SAIDA, 'PROVA-importada.pdf');
+    await baixado[0].saveAs(caminhoImportado);
+    await importa.addScriptTag({ path: join(RAIZ, 'provas', 'vendor', 'pdf.min.js') });
+    await importa.addScriptTag({ path: join(RAIZ, 'gabaritos', 'vendor', 'jsQR.js') });
+    const qrImportado = await importa.evaluate(async (b64) => {
+        pdfjsLib.GlobalWorkerOptions.workerSrc = '/provas/vendor/pdf.worker.min.js';
+        const pdf = await pdfjsLib.getDocument({ data: Uint8Array.from(atob(b64), (c) => c.charCodeAt(0)) }).promise;
+        const pg = await pdf.getPage(1);
+        const vp = pg.getViewport({ scale: 3 });
+        const c = document.createElement('canvas');
+        c.width = vp.width; c.height = vp.height;
+        await pg.render({ canvasContext: c.getContext('2d'), viewport: vp }).promise;
+        const img = c.getContext('2d').getImageData(0, 0, c.width, c.height);
+        const r = jsQR(img.data, img.width, img.height, { inversionAttempts: 'dontInvert' });
+        return r ? ProvasQrProva.ler(r.data) : null;
+    }, (await readFile(caminhoImportado)).toString('base64'));
+    conferir(qrImportado && ['8F3A2C1D', '11112222'].includes(qrImportado.chave) && /^1[AB]$/.test(qrImportado.turma),
+        'o QR do PDF gerado a partir da importação leva a chave da prova (' + (qrImportado && qrImportado.chave) + ') e a turma ' + (qrImportado && qrImportado.turma));
+    conferir(qrImportado.matricula === (qrImportado.turma === '1A' ? '20260001' : '20260011'),
+        'e a matrícula do aluno puxado do Malu Presente chega ao QR: ' + qrImportado.matricula);
+
+    /* o botão que puxa todas as turmas também leva a matrícula */
+    await importa.click('#limpar-lote');
+    await importa.click('#puxar-presente');
+    await importa.waitForFunction(() => document.querySelectorAll('#resumo-turmas .turma-chip').length === 3);
+    const todasAsTurmas = await importa.inputValue('#lote');
+    conferir(todasAsTurmas.includes('01 - Eva Prado - 20260021') && todasAsTurmas.includes('02 - Daniel Souza - 20260012'),
+        '"Puxar do Malu Presente" (todas as turmas) também traz a matrícula de cada aluno');
+    conferir(errosImporta.length === 0, 'nenhum erro de JavaScript na importação' + (errosImporta.length ? ': ' + errosImporta.join(' | ') : ''));
+    await importa.close();
 
     /* --- o mesmo app servido como site próprio (Root Directory = provas) --- */
     const servidorProprio = await servir(APP, PORTA + 1, 'index.html');

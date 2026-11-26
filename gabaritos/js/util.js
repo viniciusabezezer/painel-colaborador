@@ -98,7 +98,6 @@
   U.cartaoSVG = function (aluno, opc) {
     opc = opc || {};
     var G = global.MALU_GEOMETRIA, p = [], i;
-    var lista = ('0' + aluno.lista).slice(-2);
     var cod = (aluno.codigo_lido || '').split('');
     function bol(cx, cy, cheio, texto, fraca) {
       p.push('<circle cx="' + cx + '" cy="' + cy + '" r="' + G.raio + '" fill="' + (cheio ? '#111' : fraca ? '#bbb' : 'none') + '" stroke="#000" stroke-width=".22"/>');
@@ -107,7 +106,6 @@
     (com ? G.marcas_grade.concat(G.marcas_codigo) : G.marcas_grade).forEach(function (m) {
       p.push('<rect x="' + (m.cx - G.marca / 2) + '" y="' + (m.cy - G.marca / 2) + '" width="' + G.marca + '" height="' + G.marca + '"/>');
     });
-    G.bolhas_lista.forEach(function (b) { bol(b.cx, b.cy, b.valor === lista.charAt(b.casa === 'dezena' ? 0 : 1)); });
     G.bolhas_questoes.forEach(function (b) {
       var r = aluno.respostas[b.questao] || '';
       bol(b.cx, b.cy, r.indexOf(b.valor) >= 0, '', opc.fracas && opc.fracas.indexOf(b.questao) >= 0 && r.indexOf(b.valor) >= 0);

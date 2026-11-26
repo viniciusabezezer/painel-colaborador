@@ -311,6 +311,69 @@ try {
     await helena.pagina.waitForTimeout(600);
     conferir(await helena.pagina.$$eval('#lista-area .prova-linha', (n) => n.length) === 0, 'a professora de História não vê a prova de Ciências da Natureza');
 
+    /* ===== o código de verificação é só da coordenação (Gestão) ===== */
+    p = pca.pagina;
+    await p.goto(`http://127.0.0.1:${PORTA}/montar/#/`);
+    await p.waitForSelector('#lista-area .prova-linha');
+    await p.click('#nova-prova-area');
+    await p.waitForSelector('#dialogo-area[open]');
+    conferir(!(await p.isVisible('#area-codigo')) && !(await p.isVisible('#area-codigo-rotulo')),
+        'a PCA não vê a opção de código de verificação ao criar a prova da área');
+    await p.keyboard.press('Escape');
+    await p.goto(`http://127.0.0.1:${PORTA}/montar/#/area/${provaId}`);
+    await p.waitForSelector('#tela-editor:not([hidden]) .folha');
+    conferir(!(await p.isVisible('#codigo-painel')), 'a PCA não vê o painel do código de verificação no editor');
+
+    p = gestao.pagina;
+    await p.goto(`http://127.0.0.1:${PORTA}/montar/#/`);
+    await p.waitForSelector('#bloco-area:not([hidden])');
+    await p.click('#nova-prova-area');
+    await p.waitForSelector('#dialogo-area[open]');
+    conferir(await p.isVisible('#area-codigo'), 'a gestão vê a opção de código de verificação ao criar a prova da área');
+    await p.check('#area-codigo');
+    await p.click('#area-criar');
+    await p.waitForSelector('#tela-editor:not([hidden]) .folha');
+    await esperarServidor(() => falso.db.montador_provas.length === 2, 'a prova da gestão chega ao servidor');
+    const provaCod = falso.db.montador_provas.find((x) => x.id !== provaId);
+    conferir(provaCod.dados.codigoVerificacao === true, 'a prova criada pela gestão nasce com o código de verificação ligado');
+    await p.waitForSelector('#codigo-painel:not([hidden])');
+    conferir(await p.isChecked('#codigo-ligado') && await p.isVisible('#codigo-config') && await p.isVisible('#codigo-gerar'),
+        'a gestão vê o painel completo: liga, configura e gera');
+
+    /* a gestão já gerou os códigos (aqui entram direto no servidor) */
+    provaCod.dados.codigos = [{ copiaId: '1º A-01', turma: '1º A', sala: '12', lista: 1, codigo: 'ACE345', seed: '1', instrucao: { questao: 1 }, letras: [], contas: [] }];
+    provaCod.dados.turmasCodigo = [{ turma: '1º A', sala: '12', quantidade: 1 }];
+    provaCod.dados.prazoNotas = '2026-12-01';
+
+    p = pca.pagina;
+    await p.goto(`http://127.0.0.1:${PORTA}/montar/#/area/${provaCod.id}`);
+    await p.reload();
+    await p.waitForSelector('#tela-editor:not([hidden]) .folha');
+    await p.waitForSelector('#codigo-painel:not([hidden])');
+    conferir(await p.isVisible('#codigo-so-coordenacao') && await p.isVisible('#codigo-folha') && await p.isVisible('#codigo-todas'),
+        'com os códigos já gerados, a PCA vê só a impressão das cópias');
+    conferir(!(await p.isVisible('#codigo-config')) && !(await p.isVisible('#codigo-gerar')) && !(await p.isVisible('#codigo-ligado-rotulo')),
+        'e não vê onde ligar, configurar ou gerar o código');
+
+    /* a PCA mexe no banco por fora da tela: nada do código muda, o resto vale */
+    const mexida = await p.evaluate(async (id) => {
+        const chamar = async (q) => (await (await fetch('/__falso', { method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ token: localStorage.getItem('falso-token'), op: 'consulta', q }) })).json());
+        const upd = await chamar({ tabela: 'montador_provas', acao: 'update', filtros: [{ tipo: 'eq', col: 'id', val: id }],
+            dados: { dados: { formato: 'mexido-pela-pca', codigoVerificacao: false, codigos: [], turmasCodigo: [], prazoNotas: '' } } });
+        const ins = await chamar({ tabela: 'montador_provas', acao: 'insert', unico: 'single',
+            dados: { titulo: 'Tentativa', componente: 'NAT', dados: { formato: 'novo', codigoVerificacao: true, codigos: [{ copiaId: 'x' }], turmasCodigo: [{ turma: 'x' }], prazoNotas: '2026-12-01' } } });
+        return { upd: !!(upd.data && upd.data.length), ins: !!(ins.data && ins.data.id) };
+    }, provaCod.id);
+    conferir(mexida.upd && mexida.ins, 'a PCA consegue salvar formato e criar prova pela API (o resto do trabalho dela segue igual)');
+    conferir(provaCod.dados.formato === 'mexido-pela-pca' && provaCod.dados.codigoVerificacao === true
+        && provaCod.dados.codigos.length === 1 && provaCod.dados.turmasCodigo.length === 1 && provaCod.dados.prazoNotas === '2026-12-01',
+    'a PCA não desliga nem apaga o código da gestão, nem por fora da tela');
+    const tentativa = falso.db.montador_provas.find((x) => x.titulo === 'Tentativa');
+    conferir(tentativa.dados.formato === 'novo' && !('codigoVerificacao' in tentativa.dados) && !('codigos' in tentativa.dados)
+        && !('turmasCodigo' in tentativa.dados) && !('prazoNotas' in tentativa.dados),
+    'a PCA não consegue criar uma prova já com código, nem por fora da tela');
+
     /* ===== a gestão desativa e o acesso some ===== */
     p = gestao.pagina;
     await p.goto(`http://127.0.0.1:${PORTA}/montar/#/admin`);

@@ -247,7 +247,6 @@
                 <button type="button" class="btn" id="ed-desfazer" title="Desfazer (Ctrl+Z fora das caixas de texto)" disabled>↶ Desfazer</button>
             </div>
             <div class="grupo-barra">
-                <button type="button" class="btn" id="ed-versaob" title="Cópia da prova com as alternativas em outra ordem, para turmas grandes">Versão B</button>
                 <button type="button" class="btn btn--laranja" id="ed-chave" title="Folha só para o professor, com a resposta de cada questão">Folha de correção (professor)</button>
                 <button type="button" class="btn" id="ed-exportar">Exportar</button>
             </div>
@@ -377,9 +376,11 @@
                         <p class="dica dica--pequena" data-se-gabarito-imagem>Foto, print ou digitalização da folha de respostas que você já usa. Para a leitura óptica, prefira o arquivo digital ao celular.</p>
                         <div id="codigo-painel" class="codigo-painel" hidden>
                             <h3>Código de verificação</h3>
-                            <label class="opcao"><input type="checkbox" id="codigo-ligado"> Esta prova tem código de verificação</label>
+                            <label class="opcao" id="codigo-ligado-rotulo"><input type="checkbox" id="codigo-ligado"> Esta prova tem código de verificação <small>(só a coordenação liga)</small></label>
+                            <p class="dica dica--pequena" id="codigo-so-coordenacao" hidden>O código de verificação é da coordenação: só ela liga, gera e muda os códigos. Aqui você imprime as cópias que ela já gerou.</p>
                             <div id="codigo-corpo" hidden>
-                                <p class="dica dica--pequena">Cada aluno recebe um código diferente, escondido no enunciado. O cartão traz um bloco de bolhas para o código. Sem esta opção, a prova sai como antes.</p>
+                                <div id="codigo-config">
+                                <p class="dica dica--pequena">Cada aluno recebe um código diferente, escondido nos enunciados. A explicação de como montar o código vai escrita dentro da primeira questão da prova e as pistas ficam nas questões seguintes: o professor não precisa instruir a turma antes, o aluno descobre lendo. O cartão traz um bloco de bolhas para o código. Para ver, escolha uma cópia na prévia. Sem esta opção, a prova sai como antes.</p>
                                 <label>Prazo de lançamento das notas no sistema oficial
                                     <input type="date" id="codigo-prazo">
                                 </label>
@@ -395,6 +396,9 @@
                                 <button type="button" class="btn btn--pequeno" id="codigo-sugerir" hidden>Enviar estas mudanças como sugestão para a secretaria</button>
                                 <div class="acoes-lista">
                                     <button type="button" class="btn btn--laranja btn--pequeno" id="codigo-gerar">Gerar os códigos</button>
+                                </div>
+                                </div>
+                                <div class="acoes-lista">
                                     <button type="button" class="btn btn--pequeno" id="codigo-folha">Folha de códigos do professor</button>
                                     <button type="button" class="btn btn--pequeno" id="codigo-todas">Imprimir todas as cópias</button>
                                 </div>
@@ -592,7 +596,7 @@
             <label>Ano<input type="number" id="area-ano" min="2020" max="2100"></label>
             <label>Prazo para os professores<input type="date" id="area-prazo"></label>
         </div>
-        <label class="opcao"><input type="checkbox" id="area-codigo"> Incluir código de verificação nesta prova <small>(desligado por padrão; cada cópia impressa ganha um código de 6 caracteres)</small></label>
+        <label class="opcao" id="area-codigo-rotulo"><input type="checkbox" id="area-codigo"> Incluir código de verificação nesta prova <small>(só a coordenação; desligado por padrão; cada cópia impressa ganha um código de 6 caracteres, e a explicação vai escondida no enunciado da primeira questão, sem o professor instruir a turma)</small></label>
         <h3>Seções e responsáveis</h3>
         <div id="area-secoes" class="area-secoes"></div>
         <button type="button" class="btn btn--pequeno" id="area-mais">+ Seção</button>

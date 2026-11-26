@@ -1520,8 +1520,16 @@
     function desenharCodigo() {
         const painel = $('codigo-painel');
         if (!painel || !prova) return;
-        painel.hidden = false;
+        /* Só a coordenação (Gestão) liga, configura e gera o código. Quem só
+           coordena a prova (o PCA) ou escreve nela vê, no máximo, o painel de
+           impressão das cópias que a coordenação já gerou. */
+        const coordenacao = Nuvem.podeCodigo();
         const ligado = !!prova.codigoVerificacao;
+        painel.hidden = !coordenacao && !(ligado && (prova.codigos || []).length);
+        $('codigo-ligado-rotulo').hidden = !coordenacao;
+        $('codigo-config').hidden = !coordenacao;
+        $('codigo-so-coordenacao').hidden = coordenacao;
+        if (painel.hidden) return;
         $('codigo-ligado').checked = ligado;
         $('codigo-corpo').hidden = !ligado;
         $('codigo-prazo').value = prova.prazoNotas || '';
@@ -1545,14 +1553,18 @@
         const erro = $('codigo-erro');
         erro.className = 'aviso aviso--erro';
         erro.hidden = true;
-        if (ligado && !(prova.codigos || []).length) {
+        if (coordenacao && ligado && !(prova.codigos || []).length) {
             erro.hidden = false;
             erro.textContent = 'Ainda não há códigos. Cadastre sala, turma e a quantidade de alunos e clique em Gerar os códigos.';
+        } else if (coordenacao && ligado && (prova.codigos || []).some(function (c) { return !c.instrucao; })) {
+            erro.hidden = false;
+            erro.className = 'aviso';
+            erro.textContent = 'Estes códigos foram gerados antes de a explicação ir dentro da prova: as cópias saem com a explicação no quadro de instruções do topo. Para a explicação ficar escondida no enunciado, clique em Gerar os códigos de novo. Os códigos mudam, então não misture com cópias já impressas.';
         }
     }
 
     $('codigo-ligado').addEventListener('change', function () {
-        if (!prova) return;
+        if (!prova || !Nuvem.podeCodigo()) return;
         prova.codigoVerificacao = this.checked;
         if (!this.checked) prova.copiaPrevia = '';
         mudou();
@@ -1560,11 +1572,12 @@
         repaginar();
     });
     $('codigo-prazo').addEventListener('change', function () {
-        if (!prova) return;
+        if (!prova || !Nuvem.podeCodigo()) return;
         prova.prazoNotas = this.value;
         mudou();
     });
     $('codigo-mais-turma').onclick = function () {
+        if (!Nuvem.podeCodigo()) return;
         $('codigo-turmas').insertAdjacentHTML('beforeend', htmlTurma({ turma: '', sala: '', quantidade: 30 }));
     };
 
@@ -1610,7 +1623,7 @@
 
     $('codigo-lista').addEventListener('input', atualizarSugestaoMontador);
     $('codigo-puxar').onclick = async function () {
-        if (!prova || !window.MaluListas) return;
+        if (!prova || !window.MaluListas || !Nuvem.podeCodigo()) return;
         const perfil = Nuvem.perfil();
         if (!perfil) {
             avisoLista('Entre com a sua conta para puxar a lista oficial.', true);
@@ -1640,7 +1653,7 @@
         }
     };
     $('codigo-sugerir').onclick = async function () {
-        if (!listaPresente || !window.MaluListas) return;
+        if (!listaPresente || !window.MaluListas || !Nuvem.podeCodigo()) return;
         const perfil = Nuvem.perfil();
         const mudancas = MaluListas.diferencas(listaPresente.oficial, MaluListas.lerTexto($('codigo-lista').value));
         const grupos = MaluListas.agrupar(listaPresente.ano || (prova && prova.ano), mudancas);
@@ -1675,7 +1688,7 @@
         repaginar();
     });
     $('codigo-gerar').onclick = async function () {
-        if (!prova) return;
+        if (!prova || !Nuvem.podeCodigo()) return;
         prova.turmasCodigo = lerTurmasDoPainel();
         if (window.MaluListas && $('codigo-lista').value.trim()) {
             const lido = MaluListas.lerTexto($('codigo-lista').value);
@@ -1697,7 +1710,7 @@
         const erro = $('codigo-erro');
         if (pacote.erros.length && !pacote.copias.length) {
             erro.hidden = false;
-            erro.textContent = pacote.erros[0] + ' Os enunciados precisam de palavras começando com A, C, E, F, P, R, T ou V, em pelo menos 6 questões.';
+            erro.textContent = pacote.erros[0] + ' A prova precisa de pelo menos ' + MontarCodigo.MIN_QUESTOES + ' questões. Depois da primeira, os enunciados precisam de palavras começando com A, C, E, F, P, R, T ou V, em pelo menos 3 questões.';
             return;
         }
         prova.codigos = pacote.copias;
@@ -1757,7 +1770,9 @@
         depoisDeImprimir();
         salvar.agora();
         if (paginar.pendente()) paginar.agora();
-        const nome = Modelos.nomeArquivo(prova) + (chave ? '-GABARITO-PROFESSOR' : '');
+        /* A prova que vai para o Identificador leva a chave no nome (e no título
+           do PDF); o gabarito do professor não vai para lá. */
+        const nome = chave ? Modelos.nomeArquivo(prova) + '-GABARITO-PROFESSOR' : Modelos.nomeParaImpressao(prova);
         tituloAntesDeImprimir = document.title;
         document.title = nome;
         if (chave) {
@@ -1776,7 +1791,7 @@
     function imprimirGabaritos(porFolha) {
         depoisDeImprimir();
         salvar.agora();
-        const nome = Modelos.nomeArquivo(prova) + (porFolha === 4 ? '-GABARITOS-4-POR-FOLHA' : '-GABARITO');
+        const nome = Modelos.nomeParaImpressao(prova) + (porFolha === 4 ? '-GABARITOS-4-POR-FOLHA' : '-GABARITO');
         tituloAntesDeImprimir = document.title;
         document.title = nome;
         Paginar.montarGabaritos(prova, $('gabaritos-impressao'), { porFolha: porFolha });
@@ -1808,21 +1823,6 @@
     $('ed-imprimir').onclick = function () { imprimir(false); };
     $('ed-chave').onclick = function () { imprimir(true); };
     $('ed-exportar').onclick = function () { salvar.agora(); exportar(prova); };
-
-    /* ----- versão B ----- */
-
-    $('ed-versaob').onclick = async function () {
-        const objetivas = Modelos.questoesNumeradas(prova).filter(function (i) { return i.questao.tipo === 'objetiva'; }).length;
-        if (!objetivas) { alert('A versão B troca a ordem das alternativas, e esta prova ainda não tem questões objetivas.'); return; }
-        if (!confirm('Criar uma cópia desta prova com as alternativas em outra ordem (Tipo B)? A resposta certa acompanha, e o gabarito do professor da versão B sai certo. Esta prova não muda.')) return;
-        salvar.agora();
-        const r = Modelos.versaoEmbaralhada(prova, 'B');
-        delete r.prova.nuvem;
-        r.prova.id = Modelos.novoId('prova');
-        await Armazem.salvar(r.prova);
-        if (r.presas.length) alert('Ficaram na ordem original as questões ' + r.presas.join(', ') + ', porque têm alternativas como "todas as anteriores" ou "a e b".');
-        location.hash = '#/prova/' + encodeURIComponent(r.prova.id);
-    };
 
     /* ----- colar várias questões ----- */
 
@@ -2457,6 +2457,7 @@
         $('area-modelo').innerHTML = opcoesHtml(Modelos.listar().map(function (m) { return [m.id, m.nome]; }), Modelos.FIXO_ID);
         $('area-componente').value = p.area || 'NAT';
         $('area-componente').disabled = p.papel !== 'gestao';
+        $('area-codigo-rotulo').hidden = !Nuvem.podeCodigo();
         $('area-serie').value = '1';
         $('area-bimestre').value = 'B' + Math.min(4, Math.max(1, Math.ceil((new Date().getMonth() + 1 - 1) / 3)));
         $('area-ano').value = String(new Date().getFullYear());
@@ -2484,7 +2485,7 @@
             const id = await Nuvem.criarProva({
                 modeloId: $('area-modelo').value, componente: $('area-componente').value, serie: $('area-serie').value,
                 bimestre: $('area-bimestre').value, ano: $('area-ano').value, prazo: $('area-prazo').value || null, secoes: secoes,
-                codigoVerificacao: $('area-codigo').checked
+                codigoVerificacao: Nuvem.podeCodigo() && $('area-codigo').checked
             });
             $('dialogo-area').close();
             location.hash = '#/area/' + encodeURIComponent(id);

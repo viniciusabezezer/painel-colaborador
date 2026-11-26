@@ -115,7 +115,8 @@ test('os códigos da prova usam o número oficial, não uma sequência nova', fu
         { numero: 3, questao: { tipo: 'objetiva', enunciado: 'A respiração celular libera energia para a célula.' } },
         { numero: 4, questao: { tipo: 'objetiva', enunciado: 'A parede celular é típica da célula vegetal.' } },
         { numero: 5, questao: { tipo: 'objetiva', enunciado: 'O vacúolo guarda líquido na célula vegetal.' } },
-        { numero: 6, questao: { tipo: 'objetiva', enunciado: 'A membrana controla o que entra na célula.' } }]);
+        { numero: 6, questao: { tipo: 'objetiva', enunciado: 'A membrana controla o que entra na célula.' } },
+        { numero: 7, questao: { tipo: 'objetiva', enunciado: 'O ribossomo produz proteínas para a célula.' } }]);
     assert.deepEqual(pacote.copias.map(function (c) { return c.lista; }), [7, 8]);
     assert.equal(JSON.stringify(pacote.copias).includes('Fictício'), false);
 });
@@ -165,6 +166,51 @@ test('a sugestão sai com o nome de quem pediu e a resposta não traz o segredo 
     assert.equal(resultado.body.enviadas, 1);
     assert.equal(JSON.stringify(resultado.body).includes(segredo), false);
     assert.equal(JSON.stringify(resultado.body).includes('Fictício'), false);
+});
+
+/* ===== a matrícula atravessa o texto da caixa de alunos ===== */
+
+const Identificacao = require(path.join(raiz, 'provas', 'js', 'identificacao.js'));
+const QrProva = require(path.join(raiz, 'provas', 'js', 'qrprova.js'));
+
+test('a matrícula do Malu Presente chega ao QR de cada aluno', function () {
+    const resposta = Listas.simular({ ano: '2026', turma: '1ºA' });
+    const texto = Listas.textoDaLista(resposta, undefined, { matricula: true });
+    assert.match(texto, /^TURMA 1A\n07 - Estudante Fictício 07 - 20260007\n08 - Estudante Fictício 08 - 20260008$/);
+    const lote = ProvasLista.lerLote(texto);
+    const alunos = lote.turmas[0].alunos;
+    assert.equal(alunos[0].nome, 'Estudante Fictício 07', 'o nome não leva a matrícula junto');
+    assert.equal(alunos[0].matricula, '20260007');
+    const ids = Identificacao.identificarTurma({ ano: '2026', bimestre: 'B3', turma: '1A', componente: 'LIN', alunos: alunos, chave: 'malu-2026', titulo: 'Avaliação' });
+    assert.equal(QrProva.ler(ids[0].conteudoQr).matricula, '20260007');
+    assert.equal(QrProva.ler(ids[1].conteudoQr).matricula, '20260008');
+});
+
+test('sem pedir a matrícula, o texto é o de sempre (o Montador e o Gabaritos não a mostram)', function () {
+    const resposta = Listas.simular({ ano: '2026', turma: '1ºA' });
+    assert.equal(Listas.textoDaLista(resposta).includes('2026000'), false);
+    assert.equal(Listas.textoDaLista(resposta, undefined, {}).includes('2026000'), false);
+});
+
+test('o texto com matrícula volta igual e sem sugestão de mudança que ninguém fez', function () {
+    const resposta = Listas.simular({ ano: '2026', turma: '1ºA' });
+    const texto = Listas.textoDaLista(resposta, undefined, { matricula: true });
+    const lido = Listas.lerTexto(texto);
+    assert.equal(lido.turmas[0].alunos[0].nome, 'Estudante Fictício 07');
+    assert.equal(lido.turmas[0].alunos[0].matricula, '20260007');
+    assert.equal(Listas.textoDaLista(lido, undefined, { matricula: true }), texto, 'ida e volta sem perder nada');
+    assert.deepEqual(Listas.diferencas(Listas.pacoteAtivo(resposta), lido), [], 'ler o texto de volta não vira "corrigir nome"');
+});
+
+test('só um número de 4 a 12 dígitos depois de um traço é matrícula', function () {
+    const lido = Listas.lerTexto('TURMA 1A\n05 - Fulano 2024\n06 - Beltrano - 12\n07 - Ciclano - 20260007\n08 - Maria da Silva - 123456789012');
+    const a = lido.turmas[0].alunos;
+    assert.equal(a[0].nome, 'Fulano 2024');
+    assert.equal(a[0].matricula, undefined, 'número colado no nome, sem traço, é do nome');
+    assert.equal(a[1].nome, 'Beltrano - 12');
+    assert.equal(a[1].matricula, undefined, 'dois dígitos não são matrícula');
+    assert.equal(a[2].matricula, '20260007');
+    assert.equal(a[3].matricula, '123456789012');
 });
 
 test('o navegador não recebe o nome dos segredos e as cópias do módulo são iguais', function () {
