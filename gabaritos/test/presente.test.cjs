@@ -62,12 +62,9 @@ test('o corpo segue o contrato e não leva nome, resposta, código nem foto', fu
     l.nome = 'Estudante Fictício 07';
     l.codigo = 'PFE963';
     l.respostas[1].valor = 'A';
-    const rec = { [l.id]: { status: 'aberta', prazo: '2026-12-05' } };
     const corpo = Presente.montarCorpo({
         prova: prova(),
         leituras: [l],
-        recuperacoes: rec,
-        hoje: '2026-12-02',
         loteId: '22222222-2222-4222-8222-222222222222',
         nome: pca.nome
     });
@@ -90,11 +87,11 @@ test('o corpo segue o contrato e não leva nome, resposta, código nem foto', fu
     assert.equal(corpo.notas[0].lista, 7);
     assert.equal(typeof corpo.notas[0].nota, 'number');
     assert.ok(corpo.notas[0].nota >= 0 && corpo.notas[0].nota <= 10);
-    assert.equal(corpo.notas[0].nota, 7);
+    assert.equal(corpo.notas[0].nota, 8, 'código errado não tira ponto: a nota é a das questões');
     assert.equal(corpo.notas[0].status_codigo, 'incorreto');
-    assert.equal(corpo.notas[0].ponto_pendente, true);
-    assert.equal(corpo.notas[0].recuperacao, 'aberta');
-    assert.equal(corpo.notas[0].prazo_recuperacao, '2026-12-05');
+    assert.equal(corpo.notas[0].ponto_pendente, false);
+    assert.equal(corpo.notas[0].recuperacao, null);
+    assert.equal(corpo.notas[0].prazo_recuperacao, null);
     const texto = JSON.stringify(corpo);
     assert.equal(texto.includes('Estudante Fictício'), false);
     assert.equal(texto.includes('PFE963'), false);
@@ -103,20 +100,20 @@ test('o corpo segue o contrato e não leva nome, resposta, código nem foto', fu
     assert.equal(texto.includes('imagem'), false);
 });
 
-test('recuperar não muda a nota e tira o ponto pendente', function () {
-    const l = leitura();
-    const aberta = Presente.montarCorpo({
-        prova: prova(), leituras: [l], recuperacoes: { [l.id]: { status: 'aberta', prazo: '2026-12-05' } },
-        hoje: '2026-12-02', loteId: 'a', nome: pca.nome
-    }).notas[0];
-    const recuperada = Presente.montarCorpo({
-        prova: prova(), leituras: [l], recuperacoes: { [l.id]: { status: 'recuperada', prazo: '2026-12-05' } },
-        hoje: '2026-12-02', loteId: 'b', nome: pca.nome
-    }).notas[0];
-    assert.equal(aberta.nota, recuperada.nota);
-    assert.equal(recuperada.ponto_pendente, false);
-    assert.equal(recuperada.recuperacao, 'recuperada');
-    assert.equal(Presente.motivoReenvio(Presente.assinatura([aberta]), [recuperada]), 'recuperacao');
+test('código em branco ou errado não tira ponto nem deixa pendência', function () {
+    ['incorreto', 'em_branco'].forEach(function (situacao) {
+        const nota = Presente.montarCorpo({
+            prova: prova(), leituras: [leitura({ statusCodigo: situacao })], loteId: 'a', nome: pca.nome
+        }).notas[0];
+        assert.equal(nota.nota, 8, situacao + ': a nota é só a das questões');
+        assert.equal(nota.status_codigo, situacao);
+        assert.equal(nota.ponto_pendente, false);
+        assert.equal(nota.recuperacao, null);
+        assert.equal(nota.prazo_recuperacao, null);
+    });
+    const zero = leitura({ statusCodigo: 'em_branco', respostas: {} });
+    const semAcerto = Presente.montarCorpo({ prova: prova(), leituras: [zero], loteId: 'b', nome: pca.nome }).notas[0];
+    assert.equal(semAcerto.nota, 0);
 });
 
 test('código certo soma 1, prova sem código não manda situação de código', function () {
@@ -125,7 +122,7 @@ test('código certo soma 1, prova sem código não manda situação de código',
         certa.respostas[q] = { valor: prova().gabarito[q], status: 'marcada' };
     });
     const notaCerta = Presente.montarCorpo({
-        prova: prova(), leituras: [certa], hoje: '2026-12-02', loteId: 'c', nome: pca.nome
+        prova: prova(), leituras: [certa], loteId: 'c', nome: pca.nome
     }).notas[0];
     assert.equal(notaCerta.nota, 10);
     assert.equal(notaCerta.status_codigo, 'correto');
@@ -135,7 +132,7 @@ test('código certo soma 1, prova sem código não manda situação de código',
     const sem = Presente.montarCorpo({
         prova: prova({ codigoVerificacao: false }),
         leituras: [leitura({ statusCodigo: null })],
-        hoje: '2026-12-02', loteId: 'd', nome: pca.nome
+        loteId: 'd', nome: pca.nome
     }).notas[0];
     assert.equal(sem.status_codigo, 'sem_codigo');
     assert.equal(sem.recuperacao, null);
@@ -166,8 +163,6 @@ test('a função manda o token só ao Malu Presente e não devolve o segredo', a
         perfil: pca,
         prova: prova(),
         leituras: [leitura()],
-        recuperacoes: { 'lei-1': { status: 'aberta', prazo: '2026-12-05' } },
-        hoje: '2026-12-02',
         loteId: '44444444-4444-4444-8444-444444444444',
         env: { url: 'https://presente.exemplo/', token: segredo },
         fetch: async function (url, init) {

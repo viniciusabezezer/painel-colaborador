@@ -60,13 +60,10 @@
         const questoes = await c.from('montador_questoes').select('id,prova_id,secao_id,ordem,dados').in('prova_id', ids);
         let copias = [];
         let leituras = [];
-        let recuperacoes = [];
         const tabelaCopias = await c.from('corretor_copias').select('*').in('prova_id', ids);
         if (!tabelaCopias.error) copias = tabelaCopias.data || [];
         const tabelaLeituras = await c.from('corretor_leituras').select('*').in('prova_id', ids);
         if (!tabelaLeituras.error) leituras = tabelaLeituras.data || [];
-        const tabelaRec = await c.from('corretor_recuperacoes').select('*').in('prova_id', ids);
-        if (!tabelaRec.error) recuperacoes = tabelaRec.data || [];
         const prazos = await c.from('corretor_prazos').select('ano,bimestre,prazo');
         const mapaPrazo = {};
         if (!prazos.error) (prazos.data || []).forEach(function (p) { mapaPrazo[p.ano + '|' + p.bimestre] = p.prazo; });
@@ -173,25 +170,6 @@
         return { ok: true };
     }
 
-    async function salvarRecuperacao(r) {
-        const c = obter();
-        if (!c) return { ok: false, local: true };
-        const linha = {
-            leitura_id: r.leituraId,
-            prova_id: r.provaId,
-            status: r.status,
-            modalidade: r.modalidade,
-            quando: r.quando || null,
-            obs: r.obs || '',
-            prazo: r.prazo || null
-        };
-        if (r.id) linha.id = r.id;
-        const { data, error } = await c.from('corretor_recuperacoes').upsert(linha).select().maybeSingle();
-        if (error) return { ok: false, local: true, motivo: error.message };
-        if (data) r.id = data.id;
-        return { ok: true };
-    }
-
     async function salvarChave(ajuste) {
         const c = obter();
         if (!c) return { ok: false };
@@ -286,7 +264,6 @@
         provasTravadas: provasTravadas,
         linhaParaLeitura: linhaParaLeitura,
         salvarLeitura: salvarLeitura,
-        salvarRecuperacao: salvarRecuperacao,
         salvarChave: salvarChave,
         enviarFoto: enviarFoto,
         apagarFoto: apagarFoto,

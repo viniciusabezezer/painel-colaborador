@@ -13,7 +13,6 @@
         RED: 'Redação'
     };
     var STATUS_OK = { correto: 1, em_branco: 1, incorreto: 1, sem_codigo: 1 };
-    var REC_OK = { aberta: 1, recuperada: 1, nao_recuperada: 1 };
 
     function arred(n) { return Math.round(n * 10) / 10; }
 
@@ -25,7 +24,7 @@
         if (!op.comCodigo) return { nota: arred(base), ponto: null, base: arred(base) };
         if (op.statusCodigo === 'correto') return { nota: arred(Math.min(10, base + 1)), ponto: 1, base: arred(base) };
         if (op.statusCodigo === 'ambiguo' || !op.statusCodigo) return { nota: null, ponto: null, base: arred(base), pendente: true };
-        return { nota: arred(Math.max(0, base - 1)), ponto: -1, base: arred(base) };
+        return { nota: arred(base), ponto: null, base: arred(base) };
     }
 
     function acertosDe(respostas, gabarito) {
@@ -61,19 +60,6 @@
         return false;
     }
 
-    function recuperacaoEfetiva(rec, hoje) {
-        if (!rec) return null;
-        var dia = hoje || new Date().toISOString().slice(0, 10);
-        if (rec.status === 'aberta' && rec.prazo && String(rec.prazo).slice(0, 10) < dia) {
-            return { status: 'nao_recuperada', prazo: rec.prazo, vencida: true };
-        }
-        return { status: rec.status, prazo: rec.prazo || null };
-    }
-
-    function devePonto(status) {
-        return status === 'incorreto' || status === 'em_branco';
-    }
-
     function bimestreNumero(v) {
         var n = String(v == null ? '' : v).replace(/\D/g, '');
         return n;
@@ -89,7 +75,9 @@
         return '';
     }
 
-    function notaDoAluno(prova, leitura, rec, hoje) {
+    /* O código só soma (+1 se certo). Em branco ou errado não tira nada, então
+       não há ponto a recuperar: o Malu Presente recebe sempre sem pendência. */
+    function notaDoAluno(prova, leitura) {
         var contagem = acertosDe(leitura.respostas || {}, prova.gabarito || {});
         var status = prova.codigoVerificacao ? leitura.statusCodigo : 'sem_codigo';
         var calc = notaRegistrada({
@@ -98,19 +86,14 @@
             comCodigo: !!prova.codigoVerificacao,
             statusCodigo: leitura.statusCodigo
         });
-        var efetivo = devePonto(status)
-            ? (recuperacaoEfetiva(rec, hoje) || { status: 'aberta', prazo: prova.prazoNotas || null })
-            : null;
-        var recuperacao = efetivo ? efetivo.status : null;
-        if (recuperacao && !REC_OK[recuperacao]) recuperacao = 'aberta';
         return {
             turma: String(leitura.turma || '').trim(),
             lista: Number(leitura.lista),
             nota: calc.nota,
             status_codigo: status,
-            ponto_pendente: !!(devePonto(status) && recuperacao === 'aberta'),
-            recuperacao: recuperacao,
-            prazo_recuperacao: devePonto(status) ? (String((efetivo && efetivo.prazo) || prova.prazoNotas || '').slice(0, 10) || null) : null
+            ponto_pendente: false,
+            recuperacao: null,
+            prazo_recuperacao: null
         };
     }
 
@@ -128,12 +111,11 @@
         return 'Só o PCA da área desta prova envia as notas.';
     }
 
-    function resumo(prova, leituras, recuperacoes, hoje) {
+    function resumo(prova, leituras) {
         var lista = leituras || [];
         var bloqueadas = lista.filter(function (l) { return bloqueia(prova, l); });
         var notas = lista.filter(function (l) { return !bloqueia(prova, l); }).map(function (l) {
-            var rec = recuperacoes && (recuperacoes[l.id] || recuperacoes[l.leituraId]);
-            return notaDoAluno(prova, l, rec, hoje);
+            return notaDoAluno(prova, l);
         }).filter(function (n) { return n.nota != null && STATUS_OK[n.status_codigo]; });
         notas.sort(function (a, b) {
             if (a.turma < b.turma) return -1;
@@ -157,7 +139,7 @@
     function montarCorpo(op) {
         op = op || {};
         var prova = op.prova || {};
-        var pacote = resumo(prova, op.leituras, op.recuperacoes, op.hoje);
+        var pacote = resumo(prova, op.leituras);
         var area = prova.componenteNome || AREAS[prova.componente] || prova.componente || '';
         return {
             lote_id: op.loteId,
@@ -178,25 +160,11 @@
         return JSON.stringify(notas || []);
     }
 
-    function mesmoLugar(a, b) {
-        return a.turma === b.turma && a.lista === b.lista && a.nota === b.nota && a.status_codigo === b.status_codigo;
-    }
-
     function motivoReenvio(assinaturaAnterior, notas) {
         var agora = assinatura(notas);
         if (!assinaturaAnterior) return 'primeiro';
         if (assinaturaAnterior === agora) return null;
-        var antes;
-        try { antes = JSON.parse(assinaturaAnterior); } catch (e) { return 'correcoes'; }
-        if (!Array.isArray(antes) || antes.length !== (notas || []).length) return 'correcoes';
-        var mudouAviso = false;
-        for (var i = 0; i < antes.length; i++) {
-            if (!mesmoLugar(antes[i], notas[i])) return 'correcoes';
-            if (antes[i].ponto_pendente !== notas[i].ponto_pendente ||
-                antes[i].recuperacao !== notas[i].recuperacao ||
-                antes[i].prazo_recuperacao !== notas[i].prazo_recuperacao) mudouAviso = true;
-        }
-        return mudouAviso ? 'recuperacao' : 'correcoes';
+        return 'correcoes';
     }
 
     function urlNotas(base) {
@@ -222,7 +190,7 @@
         if (!prova || prova.situacao !== 'travada') {
             return { status: 409, body: { erro: 'A prova precisa estar fechada no Montador.' } };
         }
-        var pacote = resumo(prova, op.leituras, op.recuperacoes, op.hoje);
+        var pacote = resumo(prova, op.leituras);
         if (pacote.bloqueado) {
             return {
                 status: 409,
@@ -243,8 +211,6 @@
         var payload = montarCorpo({
             prova: prova,
             leituras: op.leituras,
-            recuperacoes: op.recuperacoes,
-            hoje: op.hoje,
             loteId: loteId,
             nome: perfil.nome
         });
@@ -331,11 +297,7 @@
                 revisar: (row.alertas || []).length > 0 || row.status_codigo === 'ambiguo'
             };
         });
-        var recuperacoes = {};
-        (bruto.recuperacoes || []).forEach(function (r) {
-            recuperacoes[r.leitura_id] = { status: r.status, prazo: r.prazo };
-        });
-        return { prova: prova, leituras: leituras, recuperacoes: recuperacoes };
+        return { prova: prova, leituras: leituras };
     }
 
     /* A demonstração não chama o Malu Presente e não usa segredo. */

@@ -130,7 +130,4 @@ test('análise de item marca discriminação negativa e o CSV usa ponto e vírgu
         ['1º A', '01', '8,5']
     ]);
     assert.match(texto, /1º A;01;8,5/);
-    const rec = Analise.recuperacaoEfetiva({ status: 'aberta', prazo: '2026-11-01' }, '2026-11-22');
-    assert.equal(rec.status, 'nao_recuperada');
-    assert.equal(Analise.diasAte('2026-11-25', '2026-11-22'), 3);
 });

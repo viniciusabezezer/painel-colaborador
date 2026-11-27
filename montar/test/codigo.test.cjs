@@ -212,19 +212,18 @@ test('conferir o código lido: certo, em branco, errado e ambíguo', () => {
     assert.equal(Codigo.conferir('PFE963', { texto: 'P?E963' }), 'ambiguo');
 });
 
-test('a nota soma 1 se o código está certo e tira 1 se deve, mesmo depois de recuperar', () => {
+test('a nota soma 1 se o código está certo; em branco ou errado não tira nada', () => {
     const cheio = Codigo.notaDaProva({ acertos: 10, total: 10, comCodigo: true, statusCodigo: 'correto' });
     assert.equal(cheio.nota, 10);
     const oito = Codigo.notaDaProva({ acertos: 8, total: 10, comCodigo: true, statusCodigo: 'correto' });
     assert.equal(oito.nota, 9);
-    const deve = Codigo.notaDaProva({ acertos: 8, total: 10, comCodigo: true, statusCodigo: 'incorreto' });
-    assert.equal(deve.nota, 7);
-    assert.equal(deve.ponto, -1);
-    const branco = Codigo.notaDaProva({ acertos: 0, total: 10, comCodigo: true, statusCodigo: 'em_branco' });
-    assert.equal(branco.nota, 0);
-    const recuperou = Codigo.notaDaProva({ acertos: 8, total: 10, comCodigo: true, statusCodigo: 'incorreto', recuperada: true });
-    assert.equal(recuperou.nota, 7, 'recuperar não altera a nota registrada');
-    assert.equal(recuperou.ponto, -1);
+    const errou = Codigo.notaDaProva({ acertos: 8, total: 10, comCodigo: true, statusCodigo: 'incorreto' });
+    assert.equal(errou.nota, 8, 'código errado não tira ponto');
+    assert.equal(errou.ponto, null);
+    const branco = Codigo.notaDaProva({ acertos: 8, total: 10, comCodigo: true, statusCodigo: 'em_branco' });
+    assert.equal(branco.nota, 8, 'código em branco não tira ponto');
+    const zero = Codigo.notaDaProva({ acertos: 0, total: 10, comCodigo: true, statusCodigo: 'em_branco' });
+    assert.equal(zero.nota, 0, 'e a nota nunca fica abaixo do que as questões deram');
     const sem = Codigo.notaDaProva({ acertos: 8, total: 10, comCodigo: false });
     assert.equal(sem.nota, 8);
     assert.equal(sem.ponto, null);

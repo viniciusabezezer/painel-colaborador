@@ -467,12 +467,36 @@
         preencherInstrucoes();
         desenharFormato();
         desenharSecoes();
+        /* Prova com código ligado e ainda sem códigos: a prévia já abre na cópia
+           de exemplo, para a coordenação ver a instrução e as pistas. */
+        if (prova.codigoVerificacao && Nuvem.podeCodigo() && !(prova.codigos || []).length && !prova.copiaPrevia) prova.copiaPrevia = EXEMPLO;
         desenharCodigo();
+    }
+
+    /* Antes de gerar os códigos da turma não há cópia de aluno. Para a
+       coordenação ver como fica (instrução e pistas), a prévia pode mostrar
+       uma cópia de EXEMPLO, gerada na hora e nunca guardada. */
+    const EXEMPLO = '__exemplo__';
+
+    function copiaDeExemplo() {
+        if (!prova || !window.MontarCodigo) return { erro: '' };
+        try {
+            const pacote = MontarCodigo.gerarPacote(
+                Object.assign({}, prova, { turmasCodigo: [{ turma: 'Exemplo', sala: '', quantidade: 1 }] }),
+                Modelos.questoesNumeradas(prova));
+            if (pacote.copias[0]) return { copia: pacote.copias[0], erro: '' };
+            return { erro: pacote.erros[0] || '' };
+        } catch (e) { return { erro: e.message }; }
     }
 
     /* A prévia mostra as pistas da cópia escolhida. A prova guardada fica limpa. */
     function provaDaPrevia() {
-        if (!prova || !prova.codigoVerificacao || !prova.copiaPrevia || !global.MontarCodigo) return prova;
+        if (!prova || !prova.codigoVerificacao || !prova.copiaPrevia || !window.MontarCodigo) return prova;
+        if (prova.copiaPrevia === EXEMPLO) {
+            const ex = copiaDeExemplo();
+            if (!ex.copia) return prova;
+            try { return MontarCodigo.aplicar(prova, ex.copia); } catch (e) { return prova; }
+        }
         const c = (prova.codigos || []).filter(function (x) { return x.copiaId === prova.copiaPrevia; })[0];
         if (!c) return prova;
         try { return MontarCodigo.aplicar(prova, c); } catch (e) { return prova; }
@@ -1532,20 +1556,19 @@
         if (painel.hidden) return;
         $('codigo-ligado').checked = ligado;
         $('codigo-corpo').hidden = !ligado;
-        $('codigo-prazo').value = prova.prazoNotas || '';
         const caixa = $('codigo-turmas');
         const turmas = (prova.turmasCodigo && prova.turmasCodigo.length) ? prova.turmasCodigo : [{ turma: '', sala: '', quantidade: 30 }];
         caixa.innerHTML = turmas.map(htmlTurma).join('');
         const sel = $('codigo-copia');
         const atual = prova.copiaPrevia || '';
         sel.innerHTML = '<option value="">Prova sem as pistas (modelo)</option>' +
+            '<option value="' + EXEMPLO + '"' + (atual === EXEMPLO ? ' selected' : '') + '>Cópia de exemplo (instrução e pistas, sem aluno)</option>' +
             (prova.codigos || []).map(function (c) {
                 const rot = (c.turma || 'Turma') + ' · sala ' + (c.sala || '—') + ' · lista ' + String(c.lista).padStart(2, '0') + ' · ' + c.codigo;
                 return '<option value="' + esc(c.copiaId) + '"' + (c.copiaId === atual ? ' selected' : '') + '>' + esc(rot) + '</option>';
             }).join('');
         const pode = !prova.nuvem || Nuvem.podeFormatar(prova);
         $('codigo-ligado').disabled = !pode;
-        $('codigo-prazo').disabled = !pode;
         $('codigo-gerar').disabled = !pode;
         $('codigo-mais-turma').disabled = !pode;
         $('codigo-puxar').disabled = !pode;
@@ -1554,8 +1577,12 @@
         erro.className = 'aviso aviso--erro';
         erro.hidden = true;
         if (coordenacao && ligado && !(prova.codigos || []).length) {
+            const ex = atual === EXEMPLO ? copiaDeExemplo() : { erro: '' };
             erro.hidden = false;
-            erro.textContent = 'Ainda não há códigos. Cadastre sala, turma e a quantidade de alunos e clique em Gerar os códigos.';
+            erro.textContent = ex.erro
+                ? 'Não consegui montar a cópia de exemplo: ' + ex.erro + ' A prova precisa de pelo menos ' + MontarCodigo.MIN_QUESTOES + ' questões, e depois da primeira os enunciados precisam de palavras que comecem com A, C, E, F, P, R, T ou V.'
+                : (atual === EXEMPLO ? 'A prévia mostra uma cópia de EXEMPLO, com a instrução no enunciado da primeira questão e as pistas nas seguintes. ' : '') +
+                    'Ainda não há códigos dos alunos: cadastre sala, turma e a quantidade de alunos e clique em Gerar os códigos. Só as cópias geradas saem com o código de cada um.';
         } else if (coordenacao && ligado && (prova.codigos || []).some(function (c) { return !c.instrucao; })) {
             erro.hidden = false;
             erro.className = 'aviso';
@@ -1567,14 +1594,10 @@
         if (!prova || !Nuvem.podeCodigo()) return;
         prova.codigoVerificacao = this.checked;
         if (!this.checked) prova.copiaPrevia = '';
+        else if (!(prova.codigos || []).length) prova.copiaPrevia = EXEMPLO;
         mudou();
         desenharCodigo();
         repaginar();
-    });
-    $('codigo-prazo').addEventListener('change', function () {
-        if (!prova || !Nuvem.podeCodigo()) return;
-        prova.prazoNotas = this.value;
-        mudou();
     });
     $('codigo-mais-turma').onclick = function () {
         if (!Nuvem.podeCodigo()) return;
@@ -1767,6 +1790,9 @@
     let tituloAntesDeImprimir = null;
 
     function imprimir(chave) {
+        /* A cópia de exemplo é só para ver como fica: não é de aluno nenhum. */
+        if (!chave && prova && prova.codigoVerificacao && prova.copiaPrevia === EXEMPLO &&
+            !confirm('A prévia está mostrando uma cópia de EXEMPLO do código de verificação, que não é de nenhum aluno. Para imprimir as provas dos alunos, gere os códigos e use "Imprimir todas as cópias". Imprimir o exemplo mesmo assim?')) return;
         depoisDeImprimir();
         salvar.agora();
         if (paginar.pendente()) paginar.agora();

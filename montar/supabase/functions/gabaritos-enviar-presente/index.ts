@@ -1,8 +1,9 @@
 // Envia as notas de uma prova fechada para o Malu Presente.
 //
-// NÃO está publicada. Quando for publicar, no projeto MapaDeAulas:
+// Publicada no projeto MapaDeAulas. Para publicar de novo (index.ts e lote.js
+// juntos; lote.js é cópia exata de gabaritos/js/presente.js):
 //   supabase functions deploy gabaritos-enviar-presente
-// e crie os segredos MALU_PRESENTE_URL e MALU_PRESENTE_TOKEN
+// Segredos: MALU_PRESENTE_URL e MALU_PRESENTE_TOKEN
 // (a URL é a origem do portal, sem caminho; o token não vai para o navegador).
 //
 // Quem chama precisa ser o PCA ativo da área da prova. Gestão e professor
@@ -62,9 +63,7 @@ Deno.serve(async (req: Request) => {
         const questoes = await admin.from('montador_questoes').select('id,secao_id,ordem,dados').eq('prova_id', provaId);
         const leituras = await admin.from('corretor_leituras')
             .select('id,turma,lista,respostas,status_codigo,alertas').eq('prova_id', provaId);
-        const recuperacoes = await admin.from('corretor_recuperacoes')
-            .select('leitura_id,status,prazo').eq('prova_id', provaId);
-        if (secoes.error || questoes.error || leituras.error || recuperacoes.error) {
+        if (secoes.error || questoes.error || leituras.error) {
             return resposta({ erro: 'Não consegui ler as notas desta prova.' }, 500);
         }
 
@@ -74,7 +73,6 @@ Deno.serve(async (req: Request) => {
             secoes: secoes.data || [],
             questoes: questoes.data || [],
             leituras: leituras.data || [],
-            recuperacoes: recuperacoes.data || [],
             prazoTabela: dados.prazoNotas || ''
         });
 
@@ -83,8 +81,6 @@ Deno.serve(async (req: Request) => {
             perfil: perfil,
             prova: preparado.prova,
             leituras: (preparado as { leituras: unknown }).leituras,
-            recuperacoes: (preparado as { recuperacoes: unknown }).recuperacoes,
-            hoje: new Date().toISOString().slice(0, 10),
             loteId: loteId,
             env: {
                 url: Deno.env.get('MALU_PRESENTE_URL') || '',
